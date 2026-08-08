@@ -8,5 +8,7 @@ router.post('/webhook', botcakeController.handleWebhook);
 
 // Account number verification endpoint (called from Botcake flow)
 router.get('/verify', botcakeController.verifyAccountNumber);
+router.get('/webhook/verify', botcakeController.verifyAccountNumber);
+router.post('/verify', botcakeController.verifyAccountNumber);
 
 module.exports = router;

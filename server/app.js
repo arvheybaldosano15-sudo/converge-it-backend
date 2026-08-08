@@ -60,6 +60,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/technicians', technicianRoutes);
 app.use('/api/messenger', messengerRoutes);
 app.use('/api/botcake', botcakeRoutes);
+app.use('/api/webhooks/botcake', botcakeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
 app.use('/api/reports', reportRoutes);
