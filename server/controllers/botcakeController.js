@@ -25,29 +25,22 @@ exports.verifyAccountNumber = async (req, res) => {
   let rawAcc = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
 
   logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
-
-  // Sanitize input: remove brackets, quotes, braces, and Botcake internal ID prefixes like {{390234//11113}}
   let accNum = String(rawAcc).replace(/.*?\/\//, '').replace(/[\{\}\"\']/g, '').trim();
+  let digitsOnly = accNum.replace(/\D/g, '');
 
-  // If accNum is empty, fail gracefully
-  if (!accNum) {
-    logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
-    return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
-  }
-
-  try {
-    // Try exact match first (case-insensitive), then try matching with/without prefix
+    // Try flexible match
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
        WHERE LOWER(account_number) = LOWER($1)
           OR LOWER(account_number) = LOWER('ACC-' || $1)
           OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
+          OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
        LIMIT 1`,
-      [accNum]
+      [accNum, digitsOnly]
     );
 
     if (result.rows.length === 0) {
-      logger.warn(`❌ Account number not found in DB: "${accNum}"`);
+      logger.warn(`❌ Account number not found in DB: "${accNum}" (digits: "${digitsOnly}")`);
       return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number not found in the system.' });
     }
 
@@ -71,8 +64,6 @@ exports.verifyAccountNumber = async (req, res) => {
   }
 };
 
-
-
 // POST /api/botcake/webhook - Handle incoming Botcake AI webhook events
 exports.handleWebhook = async (req, res) => {
   res.status(200).json({ status: 'success' }); // Respond immediately to Botcake
@@ -81,37 +72,29 @@ exports.handleWebhook = async (req, res) => {
     const payload = req.body;
     logger.info('Botcake Webhook Event received:', JSON.stringify(payload).substring(0, 200));
 
-    // Handle Botcake payload structure or standard Messenger structure forwarded by Botcake
     const psid = payload.psid || payload.subscriber?.id || payload.sender?.id || payload.entry?.[0]?.messaging?.[0]?.sender?.id;
     const messageText = payload.text || payload.message?.text || payload.entry?.[0]?.messaging?.[0]?.message?.text;
     const customerName = payload.subscriber?.name || (payload.subscriber?.first_name ? `${payload.subscriber?.first_name} ${payload.subscriber?.last_name || ''}` : 'Botcake Customer');
-    const phone = payload.subscriber?.phone || payload.subscriber?.phone_number || '';
-    const completeAddress = payload.subscriber?.address || '';
 
     if (!psid || !messageText) return;
 
-    // Get customer by messenger_psid
     let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [psid]);
     let customer = custResult.rows[0];
 
     if (!customer) {
-      // Check if message text contains a valid account number
-      const accMatch = messageText.match(/ACC-?\d+/i);
-      let matchedCustomer = null;
+      const cleanMsg = messageText.trim();
+      const digitsOnly = cleanMsg.replace(/\D/g, '');
 
-      if (accMatch) {
-        const accNum = accMatch[0].toUpperCase();
-        const accNumAlt = accNum.replace('-', '');
-        const matchResult = await query(
-          "SELECT * FROM customers WHERE UPPER(account_number) = $1 OR UPPER(REPLACE(account_number, '-', '')) = $2",
-          [accNum, accNumAlt]
-        );
-        matchedCustomer = matchResult.rows[0];
-      } else {
-        // Fallback: check if entire message text matches an account number
-        const cleanMsg = messageText.trim().toUpperCase();
-        const matchResult = await query('SELECT * FROM customers WHERE UPPER(account_number) = $1', [cleanMsg]);
-        matchedCustomer = matchResult.rows[0];
+      const matchResult = await query(
+        `SELECT * FROM customers
+         WHERE LOWER(account_number) = LOWER($1)
+            OR LOWER(account_number) = LOWER('ACC-' || $1)
+            OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
+            OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
+         LIMIT 1`,
+        [cleanMsg, digitsOnly]
+      );
+      let matchedCustomer = matchResult.rows[0];0];
       }
 
       if (matchedCustomer) {
