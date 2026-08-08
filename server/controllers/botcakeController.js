@@ -42,12 +42,12 @@ exports.verifyAccountNumber = async (req, res) => {
     if (accNum && !/\d/.test(accNum)) {
       // accNum has no digits - likely a variable name was passed, not a real value
       logger.warn(`⚠️ Received variable name instead of value: "${accNum}" from raw: "${rawAcc}"`);
-      return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number variable was not substituted. Check Botcake custom field.' });
+      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number variable was not substituted. Check Botcake custom field.' });
     }
 
     if (!accNum && !digitsOnly) {
       logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
-      return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
+      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
     }
 
     const result = await query(
@@ -62,7 +62,7 @@ exports.verifyAccountNumber = async (req, res) => {
 
     if (result.rows.length === 0) {
       logger.warn(`❌ Account number not found in DB: "${accNum}" (digits: "${digitsOnly}")`);
-      return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number not found in the system.' });
+      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number not found in the system.' });
     }
 
     const customer = result.rows[0];
