@@ -20,6 +20,42 @@ exports.verifyWebhook = (req, res) => {
   res.status(403).json({ error: 'Invalid verify token' });
 };
 
+// GET /api/botcake/verify?account_number=ACC-XXXXXX - Verify account number from Botcake flow
+exports.verifyAccountNumber = async (req, res) => {
+  const { account_number } = req.query;
+
+  if (!account_number) {
+    return res.status(400).json({ found: false, message: 'Account number is required.' });
+  }
+
+  try {
+    const result = await query(
+      'SELECT id, full_name, account_number, contact_number FROM customers WHERE account_number = $1 LIMIT 1',
+      [account_number.trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({ found: false, message: 'Account number not found in the system.' });
+    }
+
+    const customer = result.rows[0];
+    return res.status(200).json({
+      found: true,
+      customer: {
+        id: customer.id,
+        name: customer.full_name,
+        account_number: customer.account_number,
+        contact_number: customer.contact_number
+      }
+    });
+  } catch (err) {
+    logger.error('Account verification error:', err);
+    return res.status(500).json({ found: false, message: 'Server error during verification.' });
+  }
+};
+
+
+
 // POST /api/botcake/webhook - Handle incoming Botcake AI webhook events
 exports.handleWebhook = async (req, res) => {
   res.status(200).json({ status: 'success' }); // Respond immediately to Botcake
