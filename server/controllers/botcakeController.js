@@ -22,13 +22,19 @@ exports.verifyWebhook = (req, res) => {
 
 // GET /api/botcake/verify?account_number=ACC-XXXXXX - Verify account number from Botcake flow
 exports.verifyAccountNumber = async (req, res) => {
-  let rawAcc = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
+  try {
+    let rawAcc = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
 
-  logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
-  let accNum = String(rawAcc).replace(/.*?\/\//, '').replace(/[\{\}\"\']/g, '').trim();
-  let digitsOnly = accNum.replace(/\D/g, '');
+    logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
 
-    // Try flexible match
+    let accNum = String(rawAcc).replace(/.*?\/\//, '').replace(/[\{\}\"\']/g, '').trim();
+    let digitsOnly = accNum.replace(/\D/g, '');
+
+    if (!accNum) {
+      logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
+      return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
+    }
+
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
        WHERE LOWER(account_number) = LOWER($1)
@@ -74,7 +80,6 @@ exports.handleWebhook = async (req, res) => {
 
     const psid = payload.psid || payload.subscriber?.id || payload.sender?.id || payload.entry?.[0]?.messaging?.[0]?.sender?.id;
     const messageText = payload.text || payload.message?.text || payload.entry?.[0]?.messaging?.[0]?.message?.text;
-    const customerName = payload.subscriber?.name || (payload.subscriber?.first_name ? `${payload.subscriber?.first_name} ${payload.subscriber?.last_name || ''}` : 'Botcake Customer');
 
     if (!psid || !messageText) return;
 
@@ -94,8 +99,7 @@ exports.handleWebhook = async (req, res) => {
          LIMIT 1`,
         [cleanMsg, digitsOnly]
       );
-      let matchedCustomer = matchResult.rows[0];0];
-      }
+      let matchedCustomer = matchResult.rows[0];
 
       if (matchedCustomer) {
         // Link the existing customer's messenger_psid
@@ -122,69 +126,47 @@ exports.handleWebhook = async (req, res) => {
       }
     }
 
-    // Run AI classification (Only for already linked customers)
-    const aiResult = await classifyAndGenerateTicket([], messageText);
+    // Customer is found & linked -> Auto-generate ticket using AI
+    logger.info(`Generating ticket for customer "${customer.full_name}"...`);
+    const aiResult = await classifyAndGenerateTicket(messageText, customer);
 
-    // Get matching category ID from service_categories
-    let categoryName = 'Other';
-    if (aiResult.category) {
-      if (aiResult.category === 'starlink_internet') categoryName = 'Starlink Internet';
-      else if (aiResult.category === 'cctv_system') categoryName = 'CCTV System';
-      else if (aiResult.category === 'smart_devices') categoryName = 'Smart Devices';
-      else if (aiResult.category === 'installation') categoryName = 'Installation';
-    }
+    const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const catResult = await query('SELECT id, name FROM service_categories WHERE name ILIKE $1', [categoryName]);
-    const categoryId = catResult.rows[0]?.id || null;
-    const finalCategoryName = catResult.rows[0]?.name || 'Other';
-
-    // Auto-generate ticket
-    const ticketResult = await query(
-      `INSERT INTO tickets (customer_id, service_category_id, priority, status, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours, ai_classification_confidence)
-       VALUES ($1, $2, $3, 'open', $4, $5, $6, $7, $8) RETURNING *`,
+    const newTicket = await query(
+      `INSERT INTO tickets (
+        ticket_number, customer_id, service_category_id, subject, description,
+        priority, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
+      RETURNING *`,
       [
+        ticketNumber,
         customer.id,
-        categoryId,
-        aiResult.priority || 'medium',
-        aiResult.title || 'Botcake Customer Support Case',
-        aiResult.description || messageText,
-        aiResult.priority || 'medium',
-        aiResult.etaHours || 24,
-        aiResult.confidence || 90
+        aiResult.category_id || null,
+        aiResult.title || 'Support Request via Messenger',
+        messageText,
+        aiResult.priority || 'medium'
       ]
     );
-    const ticket = ticketResult.rows[0];
-    ticket.categoryName = finalCategoryName;
 
-    // Log the incoming message submission
-    await query(
-      `INSERT INTO messenger_submissions (ticket_id, customer_id, raw_payload, ip_address)
-       VALUES ($1, $2, $3, $4)`,
-      [ticket.id, customer.id, JSON.stringify(payload), '127.0.0.1']
-    );
+    const createdTicket = newTicket.rows[0];
+    logger.info(`Ticket created: ${createdTicket.ticket_number}`);
 
-    // Format Botcake response message
-    const replyText = `🤖 Botcake AI Support Ticket Generated!\n\n📋 Ticket Number: ${ticket.ticket_number}\n📌 Category: ${finalCategoryName}\n⚡ Priority: ${ticket.priority.toUpperCase()}\n⏱️ Estimated Resolution: ${ticket.ai_estimated_resolution_hours || 24} hours\n\nOur technical team at Converge IT Solutions has been assigned to your concern. Thank you!`;
-
-    // Try sending reply via Botcake API first, or fallback to Meta Messenger API
-    try {
-      await sendBotcakeMessage(psid, replyText);
-    } catch (err) {
-      await sendTextMessage(psid, replyText).catch(() => {});
-    }
-
-    // Sync ticket number to Botcake customer profile custom fields
-    await updateBotcakeCustomerField(psid, {
-      last_ticket_number: ticket.ticket_number,
-      last_ticket_status: ticket.status,
-      last_ticket_priority: ticket.priority
+    // Emit real-time socket event to Admin Dashboard
+    emitToAdmins('ticket_created', {
+      ticket: createdTicket,
+      customer: customer,
+      message: 'New ticket generated automatically via Messenger'
     });
 
-    // Notify administrators real-time
-    emitToAdmins('ticket:created_via_botcake', { ticket, customerName: customer.full_name });
+    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${aiResult.category_name || 'General Support'}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.eta_hours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
+
+    try {
+      await sendBotcakeMessage(psid, replyMsg);
+    } catch (err) {
+      await sendTextMessage(psid, replyMsg).catch(() => {});
+    }
 
   } catch (error) {
-    logger.error('Botcake webhook handler error:', error);
+    logger.error('Error handling Botcake webhook:', error);
   }
 };
-
