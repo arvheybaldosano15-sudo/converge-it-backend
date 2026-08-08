@@ -1,0 +1,17 @@
+{
+  "name": "converge-it-ticketing-system",
+  "version": "1.0.0",
+  "description": "Mobile-Based Messenger Integrated Customer Support and Automated Ticketing System for Converge IT Solutions",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "start": "cd server && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

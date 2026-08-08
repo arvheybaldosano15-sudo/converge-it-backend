@@ -1,0 +1,8 @@
+-- ============================================================
+-- Converge IT Solutions - Mobile Ticketing System
+-- Seed File
+-- ============================================================
+-- This file intentionally contains no INSERT statements.
+-- All data is created through the application after deployment.
+-- The default administrator account is created in schema.sql.
+-- ============================================================
