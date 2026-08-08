@@ -66,18 +66,14 @@ exports.verifyAccountNumber = async (req, res) => {
       .replace(/[\{\}\"\']/g, '')        // strip remaining brackets/quotes
       .trim();
 
-    // If stripping left us with a non-numeric word like 'account_number', try digits-only from original
-    let digitsOnly = accNum.replace(/\D/g, '');
-    if (accNum && !/\d/.test(accNum)) {
-      // accNum has no digits - likely a variable name was passed, not a real value
-      logger.warn(`⚠️ Received variable name instead of value: "${accNum}" from raw: "${rawAcc}"`);
-      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number variable was not substituted. Check Botcake custom field.' });
-    }
+    let digitsOnly = String(rawAcc).replace(/\D/g, '');
 
     if (!accNum && !digitsOnly) {
       logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
       return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
     }
+
+    logger.info(`🔍 Querying DB for accNum: "${accNum}", digitsOnly: "${digitsOnly}"`);
 
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
