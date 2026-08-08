@@ -26,11 +26,11 @@ exports.verifyAccountNumber = async (req, res) => {
 
   logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
 
-  // Sanitize input: remove brackets, quotes, braces if Botcake passes unreplaced template tags
-  let accNum = String(rawAcc).replace(/[\{\}\"\']/g, '').trim();
+  // Sanitize input: remove brackets, quotes, braces, and Botcake internal ID prefixes like {{390234//11113}}
+  let accNum = String(rawAcc).replace(/.*?\/\//, '').replace(/[\{\}\"\']/g, '').trim();
 
-  // If accNum still contains '//' or is empty, fail gracefully
-  if (!accNum || accNum.includes('//')) {
+  // If accNum is empty, fail gracefully
+  if (!accNum) {
     logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
     return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
   }
