@@ -5,6 +5,14 @@ const { sendTextMessage } = require('../services/messengerService');
 const { emitToAdmins } = require('../services/socketService');
 const logger = require('../config/logger');
 
+// Recent request log buffer for debugging live Botcake requests
+const recentVerifyRequests = [];
+
+// GET /api/botcake/debug-logs
+exports.getDebugLogs = (req, res) => {
+  res.json({ count: recentVerifyRequests.length, logs: recentVerifyRequests.reverse() });
+};
+
 // GET /api/botcake/webhook - Verify webhook endpoint
 exports.verifyWebhook = (req, res) => {
   const mode = req.query['hub.mode'] || req.query['mode'];
@@ -27,6 +35,17 @@ exports.verifyAccountNumber = async (req, res) => {
     let rawAccRaw = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
     // If Express parsed it as an array (param sent twice), take the first value
     let rawAcc = Array.isArray(rawAccRaw) ? rawAccRaw[0] : rawAccRaw;
+
+    // Push to debug log buffer
+    recentVerifyRequests.push({
+      timestamp: new Date().toISOString(),
+      query: req.query,
+      body: req.body,
+      rawAcc: rawAcc,
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    if (recentVerifyRequests.length > 50) recentVerifyRequests.shift();
 
     logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
     logger.info(`🔍 Raw account value received: "${rawAcc}"`);
