@@ -31,15 +31,24 @@ exports.verifyWebhook = (req, res) => {
 // GET /api/botcake/verify?account_number=ACC-XXXXXX - Verify account number from Botcake flow
 exports.verifyAccountNumber = async (req, res) => {
   try {
-    // Handle duplicate params (Botcake sends account_number in both URL and Params tab)
-    let rawAccRaw = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
+    // Normalize query object by trimming whitespace from all key names
+    const normalizedQuery = {};
+    if (req.query) {
+      for (const k of Object.keys(req.query)) {
+        normalizedQuery[k.trim()] = req.query[k];
+      }
+    }
+
+    // Handle duplicate params or params with leading spaces
+    let rawAccRaw = normalizedQuery.account_number || normalizedQuery.account || normalizedQuery.acc || normalizedQuery.text || req.body?.account_number || req.body?.text || '';
     // If Express parsed it as an array (param sent twice), take the first value
     let rawAcc = Array.isArray(rawAccRaw) ? rawAccRaw[0] : rawAccRaw;
 
     // Push to debug log buffer
     recentVerifyRequests.push({
       timestamp: new Date().toISOString(),
-      query: req.query,
+      rawQuery: req.query,
+      normalizedQuery: normalizedQuery,
       body: req.body,
       rawAcc: rawAcc,
       ip: req.ip,
@@ -47,7 +56,8 @@ exports.verifyAccountNumber = async (req, res) => {
     });
     if (recentVerifyRequests.length > 50) recentVerifyRequests.shift();
 
-    logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
+    logger.info(`🔍 Botcake requested verify with raw query:`, JSON.stringify(req.query));
+    logger.info(`🔍 Normalized query:`, JSON.stringify(normalizedQuery));
     logger.info(`🔍 Raw account value received: "${rawAcc}"`);
 
     // Strip Botcake template tags like {{390234//account_number}} or {{390234//11114}}
