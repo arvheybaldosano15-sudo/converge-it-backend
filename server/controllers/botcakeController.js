@@ -23,14 +23,29 @@ exports.verifyWebhook = (req, res) => {
 // GET /api/botcake/verify?account_number=ACC-XXXXXX - Verify account number from Botcake flow
 exports.verifyAccountNumber = async (req, res) => {
   try {
-    let rawAcc = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
+    // Handle duplicate params (Botcake sends account_number in both URL and Params tab)
+    let rawAccRaw = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
+    // If Express parsed it as an array (param sent twice), take the first value
+    let rawAcc = Array.isArray(rawAccRaw) ? rawAccRaw[0] : rawAccRaw;
 
     logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
+    logger.info(`🔍 Raw account value received: "${rawAcc}"`);
 
-    let accNum = String(rawAcc).replace(/.*?\/\//, '').replace(/[\{\}\"\']/g, '').trim();
+    // Strip Botcake template tags like {{390234//account_number}} or {{390234//11114}}
+    let accNum = String(rawAcc)
+      .replace(/\{\{[^}]*?\/\//g, '')   // strip {{...//
+      .replace(/[\{\}\"\']/g, '')        // strip remaining brackets/quotes
+      .trim();
+
+    // If stripping left us with a non-numeric word like 'account_number', try digits-only from original
     let digitsOnly = accNum.replace(/\D/g, '');
+    if (accNum && !/\d/.test(accNum)) {
+      // accNum has no digits - likely a variable name was passed, not a real value
+      logger.warn(`⚠️ Received variable name instead of value: "${accNum}" from raw: "${rawAcc}"`);
+      return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number variable was not substituted. Check Botcake custom field.' });
+    }
 
-    if (!accNum) {
+    if (!accNum && !digitsOnly) {
       logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
       return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
     }
