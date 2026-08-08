@@ -11,4 +11,9 @@ router.get('/verify', botcakeController.verifyAccountNumber);
 router.get('/webhook/verify', botcakeController.verifyAccountNumber);
 router.post('/verify', botcakeController.verifyAccountNumber);
 
+// DIAGNOSTIC: Always returns found=true (used to test if Condition #1 is working)
+router.get('/test-always-found', (req, res) => {
+  res.json({ success: true, found: true, found_str: "true", status: "found" });
+});
+
 module.exports = router;
