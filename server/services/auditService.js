@@ -12,7 +12,7 @@ exports.logAudit = async ({
       [
         actorId || null,
         action,
-        targetType || null,
+        targetType || 'system',
         targetId || null,
         oldValues ? JSON.stringify(oldValues) : null,
         newValues ? JSON.stringify(newValues) : null,

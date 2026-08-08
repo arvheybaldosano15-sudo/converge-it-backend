@@ -29,9 +29,16 @@ exports.verifyAccountNumber = async (req, res) => {
   }
 
   try {
+    const accNum = account_number.trim();
+
+    // Try exact match first (case-insensitive), then try matching with/without prefix
     const result = await query(
-      'SELECT id, full_name, account_number, contact_number FROM customers WHERE account_number = $1 LIMIT 1',
-      [account_number.trim()]
+      `SELECT id, full_name, account_number, contact_number FROM customers
+       WHERE LOWER(account_number) = LOWER($1)
+          OR LOWER(account_number) = LOWER('ACC-' || $1)
+          OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
+       LIMIT 1`,
+      [accNum]
     );
 
     if (result.rows.length === 0) {
