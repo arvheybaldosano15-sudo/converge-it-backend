@@ -22,18 +22,20 @@ exports.verifyWebhook = (req, res) => {
 
 // GET /api/botcake/verify?account_number=ACC-XXXXXX - Verify account number from Botcake flow
 exports.verifyAccountNumber = async (req, res) => {
-  let { account_number } = req.query;
+  let rawAcc = req.query.account_number || req.query.account || req.query.acc || req.query.text || req.body?.account_number || req.body?.text || '';
 
-  logger.info(`🔍 Botcake requested verify for account_number: "${account_number}"`);
+  logger.info(`🔍 Botcake requested verify with query:`, JSON.stringify(req.query));
 
-  if (!account_number) {
-    return res.status(400).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
+  // Sanitize input: remove brackets, quotes, braces if Botcake passes unreplaced template tags
+  let accNum = String(rawAcc).replace(/[\{\}\"\']/g, '').trim();
+
+  // If accNum still contains '//' or is empty, fail gracefully
+  if (!accNum || accNum.includes('//')) {
+    logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
+    return res.status(404).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
   }
 
   try {
-    // Clean account_number if template characters exist
-    let accNum = account_number.trim();
-
     // Try exact match first (case-insensitive), then try matching with/without prefix
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
