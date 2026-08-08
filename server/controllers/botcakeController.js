@@ -70,7 +70,7 @@ exports.verifyAccountNumber = async (req, res) => {
 
     if (!accNum && !digitsOnly) {
       logger.warn(`⚠️ Invalid or empty account number received: "${rawAcc}"`);
-      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
+      return res.status(200).json({ success: false, found: false, found_str: "false", found_account: "not_found", status: "not_found", message: 'Account number is required.' });
     }
 
     logger.info(`🔍 Querying DB for accNum: "${accNum}", digitsOnly: "${digitsOnly}"`);
@@ -87,7 +87,7 @@ exports.verifyAccountNumber = async (req, res) => {
 
     if (result.rows.length === 0) {
       logger.warn(`❌ Account number not found in DB: "${accNum}" (digits: "${digitsOnly}")`);
-      return res.status(200).json({ success: false, found: false, found_str: "false", status: "not_found", message: 'Account number not found in the system.' });
+      return res.status(200).json({ success: false, found: false, found_str: "false", found_account: "not_found", status: "not_found", message: 'Account number not found in the system.' });
     }
 
     const customer = result.rows[0];
@@ -96,6 +96,7 @@ exports.verifyAccountNumber = async (req, res) => {
       success: true,
       found: true,
       found_str: "true",
+      found_account: "found",
       status: "found",
       customer: {
         id: customer.id,
