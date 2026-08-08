@@ -24,8 +24,10 @@ exports.verifyWebhook = (req, res) => {
 exports.verifyAccountNumber = async (req, res) => {
   const { account_number } = req.query;
 
+  logger.info(`🔍 Botcake requested verify for account_number: "${account_number}"`);
+
   if (!account_number) {
-    return res.status(400).json({ found: false, message: 'Account number is required.' });
+    return res.status(400).json({ found: false, found_str: "false", status: "not_found", message: 'Account number is required.' });
   }
 
   try {
@@ -42,12 +44,16 @@ exports.verifyAccountNumber = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(200).json({ found: false, message: 'Account number not found in the system.' });
+      logger.warn(`❌ Account number not found in DB: "${accNum}"`);
+      return res.status(200).json({ found: false, found_str: "false", status: "not_found", message: 'Account number not found in the system.' });
     }
 
     const customer = result.rows[0];
+    logger.info(`✅ Account number verified for customer: "${customer.full_name}" (${customer.account_number})`);
     return res.status(200).json({
       found: true,
+      found_str: "true",
+      status: "found",
       customer: {
         id: customer.id,
         name: customer.full_name,
@@ -57,7 +63,7 @@ exports.verifyAccountNumber = async (req, res) => {
     });
   } catch (err) {
     logger.error('Account verification error:', err);
-    return res.status(500).json({ found: false, message: 'Server error during verification.' });
+    return res.status(500).json({ found: false, found_str: "false", status: "error", message: 'Server error during verification.' });
   }
 };
 
