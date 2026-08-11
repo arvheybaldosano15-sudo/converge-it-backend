@@ -309,6 +309,17 @@ exports.verifyAndBroadcast = async (req, res) => {
 
     if (result.rows.length === 0) {
       logger.warn(`❌ verify-and-broadcast: account not found in DB for rawAcc="${rawAcc}" accNum="${accNum}" digits="${digitsOnly}"`);
+      
+      // Direct message reply to subscriber if subscriberId is available
+      if (subscriberId) {
+        const notFoundText = `❌ Account Number Not Found\n\nWe couldn't find an account matching "${rawAcc}" in our system.\n\n📌 Please make sure you enter your registered Account Number (e.g. 11114 or ACC-11114).\n\nIf you need assistance, please contact customer support.`;
+        try {
+          await sendBotcakeMessage(subscriberId, notFoundText);
+        } catch (msgErr) {
+          await sendTextMessage(subscriberId, notFoundText).catch(() => {});
+        }
+      }
+
       return res.status(200).json({
         success: false, found: false, found_str: 'false',
         found_account: 'not_found', status: 'not_found',
@@ -326,6 +337,14 @@ exports.verifyAndBroadcast = async (req, res) => {
         logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer ${customer.full_name}`);
       } catch (linkErr) {
         logger.warn('Failed to auto-link subscriber PSID:', linkErr.message);
+      }
+
+      // Direct message reply to subscriber with success message!
+      const successText = `✅ Account linked successfully!\n\nHello, ${customer.full_name}! 👋\nYour Messenger has been linked to Account Number: ${customer.account_number}.\n\nPlease describe your concern (e.g. internet issue, installation request) and I will create a support ticket for you.`;
+      try {
+        await sendBotcakeMessage(subscriberId, successText);
+      } catch (msgErr) {
+        await sendTextMessage(subscriberId, successText).catch(() => {});
       }
     }
 
@@ -352,17 +371,6 @@ exports.verifyAndBroadcast = async (req, res) => {
         status: 'found',
         found_account: 'found',
         found: true
-      },
-      // Native Botcake / ManyChat action format to force set custom field
-      version: 'v2',
-      content: {
-        actions: [
-          {
-            action: 'set_field_value',
-            field_name: 'found_account',
-            value: 'found'
-          }
-        ]
       },
       customer: {
         id: customer.id,
