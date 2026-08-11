@@ -6,6 +6,7 @@ const { authLimiter } = require('../middleware/rateLimiter');
 const { uploadProfileImage } = require('../middleware/upload');
 
 router.post('/login', authLimiter, authController.login);
+router.post('/pin-login', authLimiter, authController.pinLogin);
 router.post('/register-technician', authLimiter, authController.registerTechnician);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authenticate, authController.logout);

@@ -12,7 +12,7 @@ exports.getOverview = async (req, res, next) => {
              COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS sla_breached
              FROM tickets`),
       query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '${days} days') AS period_new FROM customers`),
-      query(`SELECT COUNT(*) FILTER (WHERE tech.approval_status = 'approved') AS active, COUNT(*) FILTER (WHERE tech.approval_status = 'pending') AS pending FROM users u JOIN technicians tech ON u.id = tech.user_id WHERE u.role = 'technician'`),
+      query(`SELECT COUNT(*) FILTER (WHERE u.status = 'active') AS active, COUNT(*) FILTER (WHERE u.status = 'pending') AS pending FROM users u WHERE u.role = 'technician'`),
       query(`SELECT ROUND(AVG(rating)::numeric, 2) AS avg_rating, COUNT(*) AS total_feedback FROM feedback`)
     ]);
     res.json({ success: true, data: { tickets: tickets.rows[0], customers: customers.rows[0], technicians: technicians.rows[0], satisfaction: satisfaction.rows[0] } });
@@ -51,8 +51,8 @@ exports.getTechnicianPerformance = async (req, res, next) => {
              COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active,
              ROUND(AVG(EXTRACT(EPOCH FROM (t.resolved_at - t.created_at))/3600) FILTER (WHERE t.resolved_at IS NOT NULL)::numeric, 2) AS avg_resolution_hours,
              ROUND(AVG(f.rating)::numeric, 2) AS avg_satisfaction
-      FROM users u JOIN technicians tech ON u.id = tech.user_id LEFT JOIN tickets t ON u.id = t.assigned_technician_id LEFT JOIN feedback f ON t.id = f.ticket_id
-      WHERE u.role = 'technician' AND tech.approval_status = 'approved'
+      FROM users u LEFT JOIN tickets t ON u.id = t.assigned_technician_id LEFT JOIN feedback f ON t.id = f.ticket_id
+      WHERE u.role = 'technician' AND u.status = 'active'
       GROUP BY u.id ORDER BY completed DESC`);
     res.json({ success: true, data: result.rows });
   } catch (error) { next(error); }

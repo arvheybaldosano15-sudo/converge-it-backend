@@ -7,7 +7,7 @@ import DataTable from '../../components/common/DataTable';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
-import { Wrench, UserCheck, CheckCircle, XCircle, Trash2, Phone, Star } from 'lucide-react';
+import { Wrench, UserCheck, UserSearch, UserX, Eye, Power, CheckCircle, XCircle, Trash2, Phone, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TechnicianManagement = () => {
@@ -17,7 +17,7 @@ const TechnicianManagement = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const [techToDelete, setTechToDelete] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -44,7 +44,8 @@ const TechnicianManagement = () => {
   }, [page, statusFilter, searchQuery]);
 
   const toggleStatus = async (tech) => {
-    const newStatus = tech.status === 'active' ? 'inactive' : 'active';
+    const isCurrentlyActive = tech.status === 'approved' || tech.status === 'active';
+    const newStatus = isCurrentlyActive ? 'inactive' : 'approved';
     try {
       const res = await api.put(`/technicians/${tech.id}/status`, { status: newStatus });
       if (res.success) {
@@ -52,7 +53,7 @@ const TechnicianManagement = () => {
         fetchTechnicians();
       }
     } catch (e) {
-      toast.error('Failed to update status');
+      toast.error(e.message || 'Failed to update status');
     }
   };
 
@@ -95,48 +96,70 @@ const TechnicianManagement = () => {
     },
     {
       header: 'Status',
-      cell: (row) => (
-        <Badge variant={row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'default'}>
-          {row.status}
-        </Badge>
-      ),
+      cell: (row) => {
+        const isActive = row.status === 'approved' || row.status === 'active';
+        const isPending = row.status === 'pending';
+        return (
+          <Badge variant={isActive ? 'success' : isPending ? 'warning' : 'danger'}>
+            {row.status}
+          </Badge>
+        );
+      },
     },
     {
       header: 'Actions',
-      cell: (row) => (
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={row.status === 'active' ? 'secondary' : 'success'}
-            size="sm"
-            onClick={() => toggleStatus(row)}
-          >
-            {row.status === 'active' ? 'Deactivate' : 'Activate'}
-          </Button>
-          <button
-            onClick={() => {
-              setTechToDelete(row);
-              setIsDeleteModalOpen(true);
-            }}
-            className="p-1.5 rounded-lg glass-panel hover:bg-rose-500/20 text-rose-400"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      cell: (row) => {
+        const isActive = row.status === 'approved' || row.status === 'active';
+        const isPending = row.status === 'pending';
+        return (
+          <div className="flex items-center space-x-2">
+            {isPending ? (
+              <button
+                onClick={() => navigate('/admin/approvals')}
+                className="p-2 rounded-xl glass-panel hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 transition-all"
+                title="Review Technician Application"
+              >
+                <UserSearch className="w-4 h-4" />
+              </button>
+            ) : isActive ? (
+              <button
+                onClick={() => toggleStatus(row)}
+                className="p-2 rounded-xl glass-panel hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all"
+                title="Deactivate Technician"
+              >
+                <Power className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => toggleStatus(row)}
+                className="p-2 rounded-xl glass-panel hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all"
+                title="Activate Technician"
+              >
+                <Power className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setTechToDelete(row);
+                setIsDeleteModalOpen(true);
+              }}
+              className="p-2 rounded-xl glass-panel hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all"
+              title="Remove Technician"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+      <div>
           <h1 className="text-2xl font-bold text-white font-display">Technician Roster Management</h1>
           <p className="text-xs text-slate-400">Monitor field staff productivity, status, and task assignments</p>
         </div>
-        <Button variant="warning" onClick={() => navigate('/admin/approvals')} icon={UserCheck}>
-          Pending Registrations
-        </Button>
-      </div>
 
       <Card className="flex items-center gap-3 py-2.5 px-4">
         <span className="text-xs font-semibold text-slate-300">Filter Status:</span>
@@ -145,9 +168,10 @@ const TechnicianManagement = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="glass-input text-xs rounded-xl py-1.5 px-3"
         >
+          <option value="all" className="bg-slate-900">All Technicians</option>
           <option value="active" className="bg-slate-900">Active Only</option>
+          <option value="pending" className="bg-slate-900">Pending Approval</option>
           <option value="inactive" className="bg-slate-900">Inactive Only</option>
-          <option value="" className="bg-slate-900">All Technicians</option>
         </select>
       </Card>
 

@@ -62,9 +62,7 @@ const UpdateTicket = () => {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center text-xs text-slate-400 hover:text-cyan-400 transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Assigned Tasks
-      </button>
+
 
       {/* Ticket Header Card */}
       <Card glow className="space-y-4">

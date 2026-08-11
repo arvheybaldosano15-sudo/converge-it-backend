@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-import { Wrench, Mail, Lock, User, Phone, MapPin, BadgeCheck, ArrowLeft } from 'lucide-react';
+import { Wrench, Mail, Lock, User, Phone, BadgeCheck, ArrowLeft, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -17,15 +17,19 @@ const schema = z.object({
   contactNumber: z.string().min(10, 'Contact number is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Please confirm your password'),
-  address: z.string().optional(),
+  pin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4 to 6 digits'),
+  confirmPin: z.string().min(4, 'Please confirm your PIN'),
   specialization: z.string().optional(),
   department: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
+}).refine((data) => data.pin === data.confirmPin, {
+  message: "PINs don't match",
+  path: ['confirmPin'],
 });
 
-const TechnicianSignUp = () => {
+const TechnicianSignUp = ({ isModal = false, onClose }) => {
   const { registerTechnician } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +46,7 @@ const TechnicianSignUp = () => {
     setIsLoading(true);
     try {
       await registerTechnician(data);
+      if (onClose) onClose();
       navigate('/pending-approval');
     } catch (err) {
       toast.error(err.message || 'Registration failed');
@@ -50,22 +55,19 @@ const TechnicianSignUp = () => {
     }
   };
 
-  return (
-    <Card className="shadow-2xl border-cyan-500/20 backdrop-blur-2xl bg-slate-900/90 p-8 max-w-lg mx-auto" glow>
+  const content = (
+    <div>
       {/* Header */}
       <div className="mb-6">
-        <Link to="/login" className="inline-flex items-center text-xs text-slate-400 hover:text-cyan-400 transition-colors mb-4">
-          <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-          Back to Login
-        </Link>
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
-            <Wrench className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-white font-display">Technician Registration</h2>
-            <p className="text-xs text-cyan-400">Join Converge IT Solutions Field Support Team</p>
-          </div>
+        {!isModal && (
+          <Link to="/login" className="inline-flex items-center text-xs text-slate-400 hover:text-blue-400 transition-colors mb-4">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            Back to Login
+          </Link>
+        )}
+        <div>
+          <h2 className="text-xl font-extrabold text-white font-display">Technician Registration</h2>
+          <p className="text-xs text-blue-400">Join Converge IT Solutions Field Support Team</p>
         </div>
       </div>
 
@@ -124,13 +126,28 @@ const TechnicianSignUp = () => {
           />
         </div>
 
-        <Input
-          label="Address"
-          icon={MapPin}
-          placeholder="Barangay, City, Province"
-          error={errors.address?.message}
-          {...register('address')}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="4-6 Digit Portal PIN"
+            type="password"
+            icon={KeyRound}
+            placeholder="••••"
+            maxLength={6}
+            inputMode="numeric"
+            error={errors.pin?.message}
+            {...register('pin')}
+          />
+          <Input
+            label="Confirm PIN"
+            type="password"
+            icon={KeyRound}
+            placeholder="••••"
+            maxLength={6}
+            inputMode="numeric"
+            error={errors.confirmPin?.message}
+            {...register('confirmPin')}
+          />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col space-y-1.5">
@@ -170,6 +187,16 @@ const TechnicianSignUp = () => {
           </Button>
         </div>
       </form>
+    </div>
+  );
+
+  if (isModal) {
+    return content;
+  }
+
+  return (
+    <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-8 max-w-lg mx-auto" glow>
+      {content}
     </Card>
   );
 };

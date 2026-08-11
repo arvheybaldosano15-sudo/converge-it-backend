@@ -8,6 +8,7 @@ router.get('/', authenticate, authorize('admin'), technicianController.getTechni
 router.get('/:id', authenticate, technicianController.getTechnicianById);
 router.post('/:id/approve', authenticate, authorize('admin'), technicianController.approveTechnician);
 router.post('/:id/reject', authenticate, authorize('admin'), technicianController.rejectTechnician);
+router.post('/:id/suspend', authenticate, authorize('admin'), technicianController.suspendTechnician);
 router.put('/:id/status', authenticate, authorize('admin'), technicianController.updateTechnicianStatus);
 router.delete('/:id', authenticate, authorize('admin'), technicianController.deleteTechnician);
 

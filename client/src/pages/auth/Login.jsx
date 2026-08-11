@@ -7,7 +7,10 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-import { Mail, Lock, LogIn, Wrench, ShieldAlert } from 'lucide-react';
+import Modal from '../../components/common/Modal';
+import TechnicianSignUp from './TechnicianSignUp';
+import TechnicianPinLogin from './TechnicianPinLogin';
+import { Mail, Lock, LogIn, Wrench, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -19,6 +22,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   const {
     register,
@@ -27,8 +32,8 @@ const Login = () => {
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: 'admin@convergeit.com',
-      password: 'Admin@Converge2024!',
+      email: '',
+      password: '',
     },
   });
 
@@ -53,73 +58,104 @@ const Login = () => {
   };
 
   return (
-    <Card className="shadow-2xl border-cyan-500/20 backdrop-blur-2xl bg-slate-900/90 p-8" glow>
-      {/* Brand Header */}
-      <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-teal-400 flex items-center justify-center text-white font-extrabold text-2xl mx-auto shadow-lg shadow-cyan-500/30 mb-3 animate-float">
-          C
+    <>
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-6 sm:p-8 max-w-md w-full mx-auto" glow>
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-extrabold text-white font-display tracking-tight">
+            Converge IT Solutions
+          </h2>
+          <p className="text-xs text-blue-400 font-medium mt-1">
+            Customer Support & Automated Ticketing System
+          </p>
         </div>
-        <h2 className="text-2xl font-extrabold text-white font-display tracking-tight">
-          Converge IT Solutions
-        </h2>
-        <p className="text-xs text-cyan-400 font-medium mt-1">
-          Customer Support & Automated Ticketing System
-        </p>
-      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Input
-          label="Email Address"
-          type="email"
-          icon={Mail}
-          placeholder="admin@convergeit.com"
-          error={errors.email?.message}
-          {...register('email')}
-        />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" autoComplete="off">
+          <Input
+            label="Email Address"
+            type="email"
+            icon={Mail}
+            placeholder="Enter your email"
+            autoComplete="off"
+            error={errors.email?.message}
+            {...register('email')}
+          />
 
-        <Input
-          label="Password"
-          type="password"
-          icon={Lock}
-          placeholder="••••••••"
-          error={errors.password?.message}
-          {...register('password')}
-        />
+          <Input
+            label="Password"
+            type="password"
+            icon={Lock}
+            placeholder="Enter your password"
+            autoComplete="new-password"
+            error={errors.password?.message}
+            {...register('password')}
+          />
 
-        <div className="flex items-center justify-between text-xs">
-          <Link
-            to="/forgot-password"
-            className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium ml-auto"
+          <div className="flex items-center justify-between text-xs">
+            <Link
+              to="/forgot-password"
+              className="text-blue-400 hover:text-blue-300 transition-colors font-medium ml-auto"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full py-3 font-semibold text-sm"
+            isLoading={isLoading}
+            icon={LogIn}
           >
-            Forgot Password?
-          </Link>
+            Sign In
+          </Button>
+        </form>
+
+        {/* Footer Info */}
+        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center space-y-3">
+          <p className="text-xs text-slate-400">
+            Are you a field service technician?
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPinModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>PIN Portal Login</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsRegisterModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-800 to-indigo-700 hover:from-blue-700 hover:to-indigo-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/30 border border-blue-400/30 active:scale-[0.98] cursor-pointer"
+            >
+              <Wrench className="w-4 h-4 text-blue-300" />
+              <span>Technician Registration</span>
+            </button>
+          </div>
         </div>
+      </Card>
 
-        <Button
-          type="submit"
-          variant="primary"
-          className="w-full py-3 font-semibold text-sm"
-          isLoading={isLoading}
-          icon={LogIn}
-        >
-          Sign In
-        </Button>
-      </form>
+      {/* Technician PIN Login Modal */}
+      <Modal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        maxWidth="max-w-sm"
+      >
+        <TechnicianPinLogin isModal onClose={() => setIsPinModalOpen(false)} />
+      </Modal>
 
-      {/* Footer Info */}
-      <div className="mt-8 pt-6 border-t border-slate-800/80 text-center space-y-3">
-        <p className="text-xs text-slate-400">
-          Are you a field service technician?
-        </p>
-        <Link
-          to="/register-technician"
-          className="inline-flex items-center space-x-2 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
-        >
-          <Wrench className="w-4 h-4" />
-          <span>Register as Technician</span>
-        </Link>
-      </div>
-    </Card>
+      {/* Technician Registration Modal */}
+      <Modal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        maxWidth="max-w-xl"
+      >
+        <TechnicianSignUp isModal onClose={() => setIsRegisterModalOpen(false)} />
+      </Modal>
+    </>
   );
 };
 

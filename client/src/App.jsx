@@ -13,6 +13,7 @@ import RoleRoute from './routes/RoleRoute';
 // Auth Pages
 import Login from './pages/auth/Login';
 import TechnicianSignUp from './pages/auth/TechnicianSignUp';
+import TechnicianPinLogin from './pages/auth/TechnicianPinLogin';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import PendingApproval from './pages/auth/PendingApproval';
 import Unauthorized from './pages/auth/Unauthorized';
@@ -26,7 +27,6 @@ import TechnicianManagement from './pages/admin/TechnicianManagement';
 import TechnicianApproval from './pages/admin/TechnicianApproval';
 import KnowledgeBase from './pages/admin/KnowledgeBase';
 import Reports from './pages/admin/Reports';
-import Analytics from './pages/admin/Analytics';
 import Notifications from './pages/admin/Notifications';
 import AuditLogs from './pages/admin/AuditLogs';
 import AIRecommendations from './pages/admin/AIRecommendations';
@@ -60,6 +60,7 @@ function App() {
       {/* Auth Pages */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
+        <Route path="/technician-login" element={<TechnicianPinLogin />} />
         <Route path="/register-technician" element={<TechnicianSignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
@@ -78,7 +79,7 @@ function App() {
             <Route path="/admin/approvals" element={<TechnicianApproval />} />
             <Route path="/admin/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/admin/reports" element={<Reports />} />
-            <Route path="/admin/analytics" element={<Analytics />} />
+            <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />
             <Route path="/admin/ai" element={<AIRecommendations />} />
             <Route path="/admin/notifications" element={<Notifications />} />
             <Route path="/admin/audit-logs" element={<AuditLogs />} />

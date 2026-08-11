@@ -8,6 +8,20 @@ const logger = require('../config/logger');
 // Recent request log buffer for debugging live Botcake requests
 const recentVerifyRequests = [];
 
+/**
+ * Middleware: Validate x-api-key header sent by Botcake to our server.
+ * The key in Botcake flow must match BOTCAKE_INCOMING_API_KEY in .env.
+ */
+exports.validateIncomingApiKey = (req, res, next) => {
+  const expectedKey = process.env.BOTCAKE_INCOMING_API_KEY || 'converge_botcake_2026';
+  const receivedKey = req.headers['x-api-key'];
+  if (!receivedKey || receivedKey !== expectedKey) {
+    logger.warn(`❌ Invalid x-api-key from Botcake: "${receivedKey}"`);
+    return res.status(401).json({ success: false, message: 'Unauthorized: invalid x-api-key' });
+  }
+  next();
+};
+
 // GET /api/botcake/debug-logs
 exports.getDebugLogs = (req, res) => {
   res.json({ count: recentVerifyRequests.length, logs: recentVerifyRequests.reverse() });
@@ -75,14 +89,19 @@ exports.verifyAccountNumber = async (req, res) => {
 
     logger.info(`🔍 Querying DB for accNum: "${accNum}", digitsOnly: "${digitsOnly}"`);
 
+    const withPrefix = `ACC-${digitsOnly}`;
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
        WHERE LOWER(account_number) = LOWER($1)
-          OR LOWER(account_number) = LOWER('ACC-' || $1)
+          OR LOWER(account_number) = LOWER($2)
+          OR LOWER(account_number) = LOWER($3)
           OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
-          OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
+          OR ($4 != '' AND (
+               REPLACE(LOWER(account_number), 'acc-', '') = $4
+               OR LOWER(account_number) ILIKE '%' || $4 || '%'
+          ))
        LIMIT 1`,
-      [accNum, digitsOnly]
+      [accNum, withPrefix, digitsOnly, digitsOnly]
     );
 
     if (result.rows.length === 0) {
@@ -129,25 +148,30 @@ exports.handleWebhook = async (req, res) => {
 
     if (!customer) {
       const cleanMsg = messageText.trim();
+      // Extract only digits for flexible matching (e.g. user types "11114" → matches "ACC-11114")
       const digitsOnly = cleanMsg.replace(/\D/g, '');
+      // Also build the ACC- prefixed form
+      const withPrefix = `ACC-${digitsOnly}`;
 
       const matchResult = await query(
         `SELECT * FROM customers
          WHERE LOWER(account_number) = LOWER($1)
-            OR LOWER(account_number) = LOWER('ACC-' || $1)
+            OR LOWER(account_number) = LOWER($2)
+            OR LOWER(account_number) = LOWER($3)
             OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
-            OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
+            OR ($4 != '' AND (
+                 REPLACE(LOWER(account_number), 'acc-', '') = $4
+                 OR LOWER(account_number) ILIKE '%' || $4 || '%'
+            ))
          LIMIT 1`,
-        [cleanMsg, digitsOnly]
+        [cleanMsg, withPrefix, digitsOnly, digitsOnly]
       );
       let matchedCustomer = matchResult.rows[0];
 
       if (matchedCustomer) {
         // Link the existing customer's messenger_psid
         await query('UPDATE customers SET messenger_psid = $1 WHERE id = $2', [psid, matchedCustomer.id]);
-        
-        const replyText = `✅ Account linked successfully!\n\nHello, ${matchedCustomer.full_name}. Your Messenger account has been linked to Account Number: ${matchedCustomer.account_number}.\n\nPlease describe your concern (e.g. internet issue, installation request) and I will generate a support ticket for you.`;
-        
+        const replyText = `✅ Account linked successfully!\n\nHello, ${matchedCustomer.full_name}! 👋\nYour Messenger has been linked to Account Number: ${matchedCustomer.account_number}.\n\nPlease describe your concern (e.g. internet issue, installation request) and I will create a support ticket for you.`;
         try {
           await sendBotcakeMessage(psid, replyText);
         } catch (err) {
@@ -155,9 +179,8 @@ exports.handleWebhook = async (req, res) => {
         }
         return;
       } else {
-        // No customer found, and no valid account number provided
-        const replyText = `❌ Account not found.\n\nWe couldn't find a customer record matching "${messageText}".\n\nPlease reply with your registered Account Number (e.g. ACC-123456) to link your Messenger profile and request support.`;
-        
+        // Not found — give helpful message with expected format
+        const replyText = `❌ Account Number Not Found\n\nWe couldn't find an account matching "${messageText}" in our system.\n\n📌 Please make sure you enter the correct Account Number:\n   • Format: ACC-XXXXX (e.g. ACC-11114)\n   • Or just the numbers: 11114\n\nIf you're a new customer, please contact us directly to register.`;
         try {
           await sendBotcakeMessage(psid, replyText);
         } catch (err) {
@@ -209,5 +232,89 @@ exports.handleWebhook = async (req, res) => {
 
   } catch (error) {
     logger.error('Error handling Botcake webhook:', error);
+  }
+};
+
+/**
+ * POST /api/botcake/verify-and-broadcast
+ * Called by Botcake flow to verify an account number and broadcast the result
+ * to the admin dashboard in real-time via socket.
+ * Requires x-api-key header matching BOTCAKE_INCOMING_API_KEY.
+ */
+exports.verifyAndBroadcast = async (req, res) => {
+  try {
+    // Normalize query params (handle leading whitespace from Botcake templates)
+    const normalizedQuery = {};
+    for (const k of Object.keys(req.query || {})) {
+      normalizedQuery[k.trim()] = req.query[k];
+    }
+
+    const subscriberId = normalizedQuery.subscriber_id || req.body?.subscriber_id || '';
+    let rawAcc = normalizedQuery.account_number || req.body?.account_number || req.body?.text || '';
+    if (Array.isArray(rawAcc)) rawAcc = rawAcc[0];
+
+    logger.info(`🔍 verify-and-broadcast: subscriber=${subscriberId} acc=${rawAcc}`);
+
+    // Strip Botcake template tags like {{390234//account_number}}
+    let accNum = String(rawAcc)
+      .replace(/\{\{[^}]*?\/\//g, '')
+      .replace(/[\{\}\"\']/g, '')
+      .trim();
+    let digitsOnly = String(rawAcc).replace(/\D/g, '');
+
+    if (!accNum && !digitsOnly) {
+      return res.status(200).json({
+        success: false, found: false, found_str: 'false',
+        found_account: 'not_found', status: 'not_found',
+        message: 'Account number is required.'
+      });
+    }
+
+    const result = await query(
+      `SELECT id, full_name, account_number, contact_number FROM customers
+       WHERE LOWER(account_number) = LOWER($1)
+          OR LOWER(account_number) = LOWER('ACC-' || $1)
+          OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
+          OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
+       LIMIT 1`,
+      [accNum, digitsOnly]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn(`❌ verify-and-broadcast: account not found "${accNum}"`);
+      return res.status(200).json({
+        success: false, found: false, found_str: 'false',
+        found_account: 'not_found', status: 'not_found',
+        message: 'Account number not found.'
+      });
+    }
+
+    const customer = result.rows[0];
+    logger.info(`✅ verify-and-broadcast: found "${customer.full_name}" (${customer.account_number})`);
+
+    // Broadcast to admin dashboard via socket
+    emitToAdmins('botcake:account_verified', {
+      subscriber_id: subscriberId,
+      customer: {
+        id: customer.id,
+        name: customer.full_name,
+        account_number: customer.account_number,
+        contact_number: customer.contact_number
+      }
+    });
+
+    return res.status(200).json({
+      success: true, found: true, found_str: 'true',
+      found_account: 'found', status: 'found',
+      customer: {
+        id: customer.id,
+        name: customer.full_name,
+        account_number: customer.account_number,
+        contact_number: customer.contact_number
+      }
+    });
+  } catch (err) {
+    logger.error('verify-and-broadcast error:', err);
+    return res.status(500).json({ success: false, status: 'error', message: 'Server error.' });
   }
 };

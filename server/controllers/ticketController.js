@@ -24,7 +24,7 @@ exports.getTickets = async (req, res, next) => {
     const dataParams = [...params, parseInt(limit), offset];
     const [data, count] = await Promise.all([
       query(`SELECT t.id, t.ticket_number, t.subject, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
-             t.created_at, t.updated_at, t.sla_deadline, t.resolved_at,
+             t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
              c.full_name AS customer_name, c.contact_number AS customer_contact, c.messenger_psid,
              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color,
              u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.employee_id AS assignee_employee_id
@@ -53,11 +53,22 @@ exports.getTicketById = async (req, res, next) => {
     if (!ticketRes.rows[0]) throw createError('Ticket not found', 404);
     const ticket = ticketRes.rows[0];
     if (req.user.role === 'technician' && ticket.assigned_technician_id !== req.user.id) throw createError('Access denied', 403);
-    const [updates] = await Promise.all([
+    const [updates, serviceReport] = await Promise.all([
       query(`SELECT tu.*, u.full_name AS user_name, u.role AS user_role, u.profile_image_url AS user_avatar
-             FROM ticket_updates tu LEFT JOIN users u ON tu.updated_by = u.id WHERE tu.ticket_id = $1 ORDER BY tu.created_at ASC`, [id])
+             FROM ticket_updates tu LEFT JOIN users u ON tu.updated_by = u.id WHERE tu.ticket_id = $1 ORDER BY tu.created_at ASC`, [id]),
+      query(`SELECT sr.*, u.full_name AS technician_name, u.employee_id AS technician_employee_id
+             FROM service_reports sr
+             LEFT JOIN users u ON sr.technician_id = u.id
+             WHERE sr.ticket_id = $1`, [id])
     ]);
-    res.json({ success: true, data: { ...ticket, updates: updates.rows } });
+    res.json({
+      success: true,
+      data: {
+        ...ticket,
+        updates: updates.rows,
+        serviceReport: serviceReport.rows[0] || null
+      }
+    });
   } catch (error) { next(error); }
 };
 

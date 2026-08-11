@@ -8,7 +8,7 @@ const BOTCAKE_API_URL = process.env.BOTCAKE_API_URL || 'https://botcake.io/api/v
  */
 exports.sendBotcakeMessage = async (psid, text) => {
   const pageId = process.env.BOTCAKE_PAGE_ID;
-  const apiKey = process.env.BOTCAKE_API_KEY;
+  const apiKey = process.env.BOTCAKE_PLATFORM_KEY || process.env.BOTCAKE_API_KEY;
 
   if (!apiKey || !pageId) {
     logger.warn('Botcake API key or Page ID missing in .env - falling back to direct Meta Messenger API');
@@ -41,7 +41,7 @@ exports.sendBotcakeMessage = async (psid, text) => {
  */
 exports.updateBotcakeCustomerField = async (psid, fields) => {
   const pageId = process.env.BOTCAKE_PAGE_ID;
-  const apiKey = process.env.BOTCAKE_API_KEY;
+  const apiKey = process.env.BOTCAKE_PLATFORM_KEY || process.env.BOTCAKE_API_KEY;
 
   if (!apiKey || !pageId) return null;
 

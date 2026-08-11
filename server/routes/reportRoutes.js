@@ -36,7 +36,7 @@ router.get('/technician-performance', authenticate, authorize('admin'), async (r
              COUNT(t.id) AS total_assigned, COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed') ${tWhere}) AS completed,
              ROUND(AVG(EXTRACT(EPOCH FROM (t.resolved_at - t.created_at))/3600) FILTER (WHERE t.resolved_at IS NOT NULL ${tWhere})::numeric, 2) AS avg_resolution_hours,
              ROUND(AVG(f.rating)::numeric, 2) AS avg_satisfaction
-      FROM users u LEFT JOIN tickets t ON u.id = t.assigned_to AND 1=1 ${tWhere} LEFT JOIN feedback f ON t.id = f.ticket_id
+      FROM users u LEFT JOIN tickets t ON u.id = t.assigned_technician_id AND 1=1 ${tWhere} LEFT JOIN feedback f ON t.id = f.ticket_id
       WHERE ${conditions.join(' AND ')} GROUP BY u.id ORDER BY completed DESC`, params);
     res.json({ success: true, data: result.rows });
   } catch (error) { next(error); }
@@ -51,7 +51,7 @@ router.get('/download/pdf', authenticate, authorize('admin'), async (req, res, n
     if (startDate) { conditions.push(`created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`created_at <= $${idx++}`); params.push(endDate); }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const tickets = await query(`SELECT t.ticket_number, t.title, t.status, t.priority, t.created_at, t.resolved_at, c.full_name AS customer_name, cat.name AS category_name, u.full_name AS assignee_name FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN categories cat ON t.category_id = cat.id LEFT JOIN users u ON t.assigned_to = u.id ${where} ORDER BY t.created_at DESC LIMIT 1000`, params);
+    const tickets = await query(`SELECT t.ticket_number, t.subject, t.status, t.priority, t.created_at, t.resolved_at, c.full_name AS customer_name, cat.name AS category_name, u.full_name AS assignee_name FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN service_categories cat ON t.service_category_id = cat.id LEFT JOIN users u ON t.assigned_technician_id = u.id ${where} ORDER BY t.created_at DESC LIMIT 1000`, params);
 
     const doc = new PDFDocument({ margin: 50 });
     res.setHeader('Content-Type', 'application/pdf');
@@ -79,7 +79,7 @@ router.get('/download/pdf', authenticate, authorize('admin'), async (req, res, n
     tickets.rows.forEach(row => {
       if (doc.y > 700) { doc.addPage(); }
       x = 50; y = doc.y + 5;
-      const values = [row.ticket_number, row.title?.substring(0, 20), row.status, row.priority, row.customer_name || '-', row.category_name || '-', row.assignee_name || 'Unassigned', new Date(row.created_at).toLocaleDateString()];
+      const values = [row.ticket_number, row.subject?.substring(0, 20), row.status, row.priority, row.customer_name || '-', row.category_name || '-', row.assignee_name || 'Unassigned', new Date(row.created_at).toLocaleDateString()];
       values.forEach((v, i) => { doc.text(v || '-', x, y, { width: colWidths[i], lineBreak: false }); x += colWidths[i]; });
       doc.moveDown(1);
     });
@@ -97,7 +97,7 @@ router.get('/download/excel', authenticate, authorize('admin'), async (req, res,
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const tickets = await query(`SELECT t.ticket_number, t.title, t.status, t.priority, t.created_at, t.resolved_at, t.sla_due_at, c.full_name AS customer_name, c.contact_number AS customer_contact, cat.name AS category_name, u.full_name AS assignee_name FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN categories cat ON t.category_id = cat.id LEFT JOIN users u ON t.assigned_to = u.id ${where} ORDER BY t.created_at DESC`, params);
+    const tickets = await query(`SELECT t.ticket_number, t.subject, t.status, t.priority, t.created_at, t.resolved_at, t.sla_deadline, c.full_name AS customer_name, c.contact_number AS customer_contact, cat.name AS category_name, u.full_name AS assignee_name FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN service_categories cat ON t.service_category_id = cat.id LEFT JOIN users u ON t.assigned_technician_id = u.id ${where} ORDER BY t.created_at DESC`, params);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Converge IT Solutions';
@@ -106,7 +106,7 @@ router.get('/download/excel', authenticate, authorize('admin'), async (req, res,
     const sheet = workbook.addWorksheet('Tickets', { properties: { tabColor: { argb: '1e40af' } } });
     sheet.columns = [
       { header: 'Ticket #', key: 'ticket_number', width: 15 },
-      { header: 'Title', key: 'title', width: 40 },
+      { header: 'Subject', key: 'subject', width: 40 },
       { header: 'Status', key: 'status', width: 15 },
       { header: 'Priority', key: 'priority', width: 12 },
       { header: 'Customer', key: 'customer_name', width: 25 },
@@ -115,7 +115,7 @@ router.get('/download/excel', authenticate, authorize('admin'), async (req, res,
       { header: 'Assignee', key: 'assignee_name', width: 25 },
       { header: 'Created', key: 'created_at', width: 20 },
       { header: 'Resolved', key: 'resolved_at', width: 20 },
-      { header: 'SLA Due', key: 'sla_due_at', width: 20 }
+      { header: 'SLA Deadline', key: 'sla_deadline', width: 20 }
     ];
 
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
@@ -127,7 +127,7 @@ router.get('/download/excel', authenticate, authorize('admin'), async (req, res,
         ...row,
         created_at: row.created_at ? new Date(row.created_at).toLocaleString() : '-',
         resolved_at: row.resolved_at ? new Date(row.resolved_at).toLocaleString() : '-',
-        sla_due_at: row.sla_due_at ? new Date(row.sla_due_at).toLocaleString() : '-',
+        sla_deadline: row.sla_deadline ? new Date(row.sla_deadline).toLocaleString() : '-',
         assignee_name: row.assignee_name || 'Unassigned'
       });
     });

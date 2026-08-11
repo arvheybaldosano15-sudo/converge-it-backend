@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
+import { Bell } from 'lucide-react';
 
 const SocketContext = createContext(null);
 
@@ -33,7 +34,7 @@ export const SocketProvider = ({ children }) => {
       toast.custom((t) => (
         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} glass-panel max-w-md w-full bg-slate-900/90 text-white p-4 rounded-xl shadow-glass border border-cyan-500/30 flex items-start space-x-3 pointer-events-auto`}>
           <div className="bg-cyan-500/20 p-2 rounded-lg text-cyan-400">
-            🔔
+            <Bell className="w-4 h-4" />
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-sm text-cyan-300">{notification.title}</h4>

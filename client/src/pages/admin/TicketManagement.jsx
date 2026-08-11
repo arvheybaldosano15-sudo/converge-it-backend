@@ -14,6 +14,7 @@ import {
   Plus,
   Filter,
   UserPlus,
+  UserCheck,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -22,12 +23,16 @@ import {
   Trash2,
   Edit,
   Send,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  Camera
 } from 'lucide-react';
+import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
 const TicketManagement = () => {
   const { searchQuery } = useOutletContext() || {};
+  const { socket } = useSocket();
   const [tickets, setTickets] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -104,6 +109,21 @@ const TicketManagement = () => {
   useEffect(() => {
     fetchTickets();
   }, [page, statusFilter, priorityFilter, categoryFilter, searchQuery]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleStatusUpdate = () => {
+      fetchTickets();
+    };
+    socket.on('ticket:updated', handleStatusUpdate);
+    socket.on('ticket:status_changed', handleStatusUpdate);
+    socket.on('ticket:resolved', handleStatusUpdate);
+    return () => {
+      socket.off('ticket:updated', handleStatusUpdate);
+      socket.off('ticket:status_changed', handleStatusUpdate);
+      socket.off('ticket:resolved', handleStatusUpdate);
+    };
+  }, [socket]);
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
@@ -211,39 +231,54 @@ const TicketManagement = () => {
     },
     {
       header: 'Status',
-      cell: (row) => (
-        <select
-          value={row.status}
-          onChange={(e) => handleStatusChange(row.id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          className="glass-input text-xs rounded-lg py-1 px-2 border-slate-700 bg-slate-900"
-        >
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="on_hold">On Hold</option>
-          <option value="resolved">Resolved</option>
-          <option value="closed">Closed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-      ),
+      cell: (row) => {
+        const getStatusVariant = (status) => {
+          switch (status) {
+            case 'open': return 'warning';
+            case 'in_progress': return 'cyan';
+            case 'resolved': return 'success';
+            case 'closed': return 'secondary';
+            case 'cancelled': return 'danger';
+            case 'on_hold': return 'warning';
+            default: return 'cyan';
+          }
+        };
+        const statusText = row.status ? row.status.replace('_', ' ') : 'open';
+        return (
+          <Badge variant={getStatusVariant(row.status)} className="capitalize font-semibold">
+            {statusText}
+          </Badge>
+        );
+      },
     },
     {
       header: 'Assignee',
-      cell: (row) => (
-        <select
-          value={row.assigned_to || ''}
-          onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          className="glass-input text-xs rounded-lg py-1 px-2 border-slate-700 bg-slate-900 max-w-[130px]"
-        >
-          <option value="">Unassigned</option>
-          {technicians.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.full_name}
-            </option>
-          ))}
-        </select>
-      ),
+      cell: (row) => {
+        if (row.assigned_to || row.assignee_name) {
+          return (
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/40 border border-cyan-500/30 text-xs font-semibold text-cyan-300 max-w-[150px]">
+              <UserCheck className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+              <span className="truncate">{row.assignee_name || 'Assigned'}</span>
+            </div>
+          );
+        }
+
+        return (
+          <select
+            value={row.assigned_to || ''}
+            onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="glass-input text-xs rounded-lg py-1 px-2 border-slate-700 bg-slate-900 max-w-[140px]"
+          >
+            <option value="">Select Technician...</option>
+            {technicians.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.full_name}
+              </option>
+            ))}
+          </select>
+        );
+      },
     },
     {
       header: 'Actions',
@@ -477,20 +512,67 @@ const TicketManagement = () => {
               </div>
             )}
 
-            {/* Updates History */}
-            {selectedTicket.updates && selectedTicket.updates.length > 0 && (
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Activity Trail</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedTicket.updates.map((u, idx) => (
-                    <div key={idx} className="text-xs bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
-                      <div>
-                        <span className="font-bold text-slate-200">{u.user_name || 'System'}:</span>{' '}
-                        <span className="text-slate-300">{u.note || `Status changed to ${u.new_status}`}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500">{new Date(u.created_at).toLocaleString()}</span>
+            {/* Field Service Report Submitted by Technician */}
+            {selectedTicket.serviceReport && (
+              <div className="bg-slate-900/80 p-4 rounded-xl border border-blue-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center space-x-2 text-blue-400 font-bold text-xs">
+                    <FileText className="w-4 h-4" />
+                    <span>Field Service Completion Report</span>
+                  </div>
+                  <Badge variant="success">Completed Report</Badge>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Report Title</span>
+                  <h4 className="text-sm font-bold text-white">{selectedTicket.serviceReport.title}</h4>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Work Performed</span>
+                  <p className="text-xs text-slate-300 whitespace-pre-wrap bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mt-1">
+                    {selectedTicket.serviceReport.work_performed}
+                  </p>
+                </div>
+
+                {selectedTicket.serviceReport.materials_used && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Materials / Equipment Used</span>
+                    <p className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mt-1">
+                      {selectedTicket.serviceReport.materials_used}
+                    </p>
+                  </div>
+                )}
+
+                {/* Proof Photos Gallery */}
+                {selectedTicket.serviceReport.images_urls && selectedTicket.serviceReport.images_urls.length > 0 && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1">
+                      <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({selectedTicket.serviceReport.images_urls.length})
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
+                      {selectedTicket.serviceReport.images_urls.map((url, i) => (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video block"
+                        >
+                          <img
+                            src={url}
+                            alt={`Proof Photo ${i + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        </a>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-slate-800/80 text-xs text-slate-400">
+                  <span>Customer Acknowledged: <strong className="text-white">{selectedTicket.serviceReport.customer_name_signed || 'Signed'}</strong></span>
+                  <span>Submitted by: <strong className="text-blue-300">{selectedTicket.serviceReport.technician_name || selectedTicket.assignee_name || 'Technician'}</strong></span>
                 </div>
               </div>
             )}

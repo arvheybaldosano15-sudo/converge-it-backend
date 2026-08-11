@@ -36,20 +36,26 @@ api.interceptors.response.use(
             return api(originalRequest);
           }
         } catch (refreshErr) {
-          // Refresh token also invalid — clear everything and redirect
-          localStorage.clear();
-          window.location.href = '/login';
-          return Promise.reject(refreshErr);
+          // Token refresh failed
         }
-      } else {
-        // No refresh token available
-        localStorage.clear();
-        if (window.location.pathname !== '/login' && !window.location.pathname.startsWith('/track') && !window.location.pathname.startsWith('/kb')) {
+      }
+
+      // Token invalid / expired — clear session and redirect cleanly
+      localStorage.clear();
+      const currentPath = window.location.pathname;
+      if (
+        currentPath !== '/login' &&
+        currentPath !== '/technician-login' &&
+        !currentPath.startsWith('/track') &&
+        !currentPath.startsWith('/kb')
+      ) {
+        if (currentPath.startsWith('/technician')) {
+          window.location.href = '/technician-login';
+        } else {
           window.location.href = '/login';
         }
       }
     }
-    // For non-401 errors (500, network issues), do NOT clear storage
     return Promise.reject(error.response?.data || error);
   }
 );

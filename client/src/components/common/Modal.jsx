@@ -36,23 +36,26 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.4 }}
-            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/90 rounded-2xl shadow-2xl border border-cyan-500/20 z-10 my-8 overflow-hidden`}
+            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-2xl shadow-2xl border border-cyan-500/20 z-10 my-auto max-h-[90vh] flex flex-col overflow-hidden`}
           >
+            {/* Top Right Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-20 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-                <h3 className="text-lg font-semibold text-slate-100 font-display">{title}</h3>
-                <button
-                  onClick={onClose}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-800/80 pr-12">
+                <h3 className="text-base sm:text-lg font-semibold text-slate-100 font-display">{title}</h3>
               </div>
             )}
 
-            {/* Body */}
-            <div className="p-6">{children}</div>
+            {/* Body (Scrollable on mobile) */}
+            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1">{children}</div>
           </motion.div>
         </div>
       )}

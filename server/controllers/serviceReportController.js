@@ -10,7 +10,7 @@ exports.getServiceReports = async (req, res, next) => {
     if (ticketId) { conditions.push(`sr.ticket_id = $${idx++}`); params.push(ticketId); }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await query(`
-      SELECT sr.*, t.ticket_number, t.title AS ticket_title, u.full_name AS technician_name
+      SELECT sr.*, t.ticket_number, t.subject AS ticket_title, u.full_name AS technician_name
       FROM service_reports sr JOIN tickets t ON sr.ticket_id = t.id JOIN users u ON sr.technician_id = u.id
       ${where} ORDER BY sr.created_at DESC LIMIT $${idx++} OFFSET $${idx}`, [...params, parseInt(limit), offset]);
     res.json({ success: true, data: result.rows });
@@ -19,7 +19,7 @@ exports.getServiceReports = async (req, res, next) => {
 
 exports.getServiceReportById = async (req, res, next) => {
   try {
-    const result = await query(`SELECT sr.*, t.ticket_number, t.title AS ticket_title, u.full_name AS technician_name, u.contact_number AS technician_contact FROM service_reports sr JOIN tickets t ON sr.ticket_id = t.id JOIN users u ON sr.technician_id = u.id WHERE sr.id = $1`, [req.params.id]);
+    const result = await query(`SELECT sr.*, t.ticket_number, t.subject AS ticket_title, u.full_name AS technician_name, u.contact_number AS technician_contact FROM service_reports sr JOIN tickets t ON sr.ticket_id = t.id JOIN users u ON sr.technician_id = u.id WHERE sr.id = $1`, [req.params.id]);
     if (!result.rows[0]) throw createError('Service report not found', 404);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) { next(error); }

@@ -42,8 +42,8 @@ export default {
         'glass-glow': '0 0 25px rgba(6, 182, 212, 0.3)',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'sans-serif'],
+        sans: ['"Century Gothic"', 'CenturyGothic', 'AppleGothic', 'sans-serif'],
+        display: ['"Century Gothic"', 'CenturyGothic', 'AppleGothic', 'sans-serif'],
       }
     },
   },
