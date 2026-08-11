@@ -242,15 +242,35 @@ exports.handleWebhook = async (req, res) => {
  * Requires x-api-key header matching BOTCAKE_INCOMING_API_KEY.
  */
 exports.verifyAndBroadcast = async (req, res) => {
+  // Log EVERYTHING so we can debug what Botcake sends
+  const debugEntry = {
+    ts: new Date().toISOString(),
+    method: req.method,
+    query: req.query,
+    body: req.body,
+    headers: {
+      'x-api-key': req.headers['x-api-key'],
+      'content-type': req.headers['content-type'],
+    }
+  };
+  recentVerifyRequests.push(debugEntry);
+  if (recentVerifyRequests.length > 20) recentVerifyRequests.shift();
+  logger.info('verify-and-broadcast hit:', JSON.stringify(debugEntry));
+
   try {
     // Normalize query params (handle leading whitespace from Botcake templates)
     const normalizedQuery = {};
     for (const k of Object.keys(req.query || {})) {
       normalizedQuery[k.trim()] = req.query[k];
     }
+    // Also normalize body keys
+    const normalizedBody = {};
+    for (const k of Object.keys(req.body || {})) {
+      normalizedBody[k.trim()] = req.body[k];
+    }
 
-    const subscriberId = normalizedQuery.subscriber_id || req.body?.subscriber_id || '';
-    let rawAcc = normalizedQuery.account_number || req.body?.account_number || req.body?.text || '';
+    const subscriberId = normalizedQuery.subscriber_id || normalizedBody.subscriber_id || '';
+    let rawAcc = normalizedQuery.account_number || normalizedBody.account_number || normalizedBody.text || '';
     if (Array.isArray(rawAcc)) rawAcc = rawAcc[0];
 
     logger.info(`🔍 verify-and-broadcast: subscriber=${subscriberId} acc=${rawAcc}`);
