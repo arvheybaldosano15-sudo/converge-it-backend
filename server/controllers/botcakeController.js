@@ -312,6 +312,16 @@ exports.verifyAndBroadcast = async (req, res) => {
     const customer = result.rows[0];
     logger.info(`✅ verify-and-broadcast: found "${customer.full_name}" (${customer.account_number})`);
 
+    // Auto-link messenger_psid if subscriberId is passed
+    if (subscriberId) {
+      try {
+        await query('UPDATE customers SET messenger_psid = $1 WHERE id = $2', [subscriberId, customer.id]);
+        logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer ${customer.full_name}`);
+      } catch (linkErr) {
+        logger.warn('Failed to auto-link subscriber PSID:', linkErr.message);
+      }
+    }
+
     // Broadcast to admin dashboard via socket
     emitToAdmins('botcake:account_verified', {
       subscriber_id: subscriberId,
@@ -324,8 +334,18 @@ exports.verifyAndBroadcast = async (req, res) => {
     });
 
     return res.status(200).json({
-      success: true, found: true, found_str: 'true',
-      found_account: 'found', status: 'found',
+      success: true,
+      found: true,
+      found_str: 'true',
+      found_account: 'found',
+      status: 'found',
+      result: 'found',
+      value: 'found',
+      data: {
+        status: 'found',
+        found_account: 'found',
+        found: true
+      },
       customer: {
         id: customer.id,
         name: customer.full_name,
