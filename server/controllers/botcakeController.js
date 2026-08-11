@@ -136,6 +136,12 @@ exports.handleWebhook = async (req, res) => {
 
   try {
     const payload = req.body;
+    recentVerifyRequests.push({
+      ts: new Date().toISOString(),
+      type: 'webhook',
+      payload: payload
+    });
+    if (recentVerifyRequests.length > 20) recentVerifyRequests.shift();
     logger.info('Botcake Webhook Event received:', JSON.stringify(payload).substring(0, 200));
 
     const psid = payload.psid || payload.subscriber?.id || payload.sender?.id || payload.entry?.[0]?.messaging?.[0]?.sender?.id;
@@ -404,5 +410,118 @@ exports.verifyAndBroadcast = async (req, res) => {
   } catch (err) {
     logger.error('verify-and-broadcast error:', err);
     return res.status(500).json({ success: false, status: 'error', message: 'Server error.' });
+  }
+};
+
+/**
+ * GET/POST /api/botcake/create-ticket
+ * Called by Botcake flow to generate an AI ticket from customer input.
+ */
+exports.createTicket = async (req, res) => {
+  const debugEntry = {
+    ts: new Date().toISOString(),
+    type: 'create-ticket',
+    query: req.query,
+    body: req.body
+  };
+  recentVerifyRequests.push(debugEntry);
+  if (recentVerifyRequests.length > 20) recentVerifyRequests.shift();
+
+  try {
+    const subscriberId = req.query.subscriber_id || req.body?.subscriber_id || req.query.psid || req.body?.psid || '';
+    let concernText = req.query.concern || req.query.text || req.body?.concern || req.body?.text || '';
+
+    logger.info(`🔍 createTicket hit: subscriberId="${subscriberId}", concern="${concernText}"`);
+
+    if (!concernText) {
+      return res.status(200).json({ success: false, message: 'Concern text is required.' });
+    }
+
+    // Find customer by subscriberId or fallback to latest customer
+    let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
+    let customer = custResult.rows[0];
+
+    if (!customer) {
+      const fallbackCust = await query('SELECT * FROM customers ORDER BY updated_at DESC LIMIT 1');
+      customer = fallbackCust.rows[0];
+    }
+
+    if (!customer) {
+      return res.status(200).json({ success: false, message: 'No linked customer found.' });
+    }
+
+    // AI Classification
+    const aiResult = await classifyAndGenerateTicket([], concernText);
+
+    let categoryId = null;
+    let categoryName = 'General Support';
+    if (aiResult.category) {
+      const catRes = await query(
+        `SELECT id, name FROM service_categories 
+         WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
+            OR LOWER(slug) = LOWER($1)
+         LIMIT 1`,
+        [aiResult.category]
+      );
+      if (catRes.rows.length > 0) {
+        categoryId = catRes.rows[0].id;
+        categoryName = catRes.rows[0].name;
+      }
+    }
+
+    const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newTicket = await query(
+      `INSERT INTO tickets (
+        ticket_number, customer_id, service_category_id, subject, description,
+        priority, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
+      RETURNING *`,
+      [
+        ticketNumber,
+        customer.id,
+        categoryId,
+        aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger',
+        concernText,
+        aiResult.priority || 'medium'
+      ]
+    );
+
+    const createdTicket = newTicket.rows[0];
+    logger.info(`✅ Ticket created successfully via endpoint: ${createdTicket.ticket_number}`);
+
+    // Emit socket event to Admin Dashboard
+    emitToAdmins('ticket_created', {
+      ticket: {
+        ...createdTicket,
+        customer_name: customer.full_name,
+        customer_contact: customer.contact_number,
+        category_name: categoryName
+      },
+      customer: customer,
+      message: 'New ticket generated automatically via Messenger'
+    });
+
+    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
+
+    if (subscriberId) {
+      try {
+        await sendBotcakeMessage(subscriberId, replyMsg);
+      } catch (err) {
+        await sendTextMessage(subscriberId, replyMsg).catch(() => {});
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      ticket_number: createdTicket.ticket_number,
+      category: categoryName,
+      priority: createdTicket.priority,
+      customer_name: customer.full_name,
+      reply_message: replyMsg
+    });
+  } catch (err) {
+    logger.error('createTicket endpoint error:', err);
+    return res.status(500).json({ success: false, message: 'Server error creating ticket' });
   }
 };

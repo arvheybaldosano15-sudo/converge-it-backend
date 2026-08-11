@@ -15,6 +15,10 @@ router.post('/verify', botcakeController.verifyAccountNumber);
 router.get('/verify-and-broadcast', botcakeController.verifyAndBroadcast);
 router.post('/verify-and-broadcast', botcakeController.verifyAndBroadcast);
 
+// create-ticket: creates AI ticket directly from Botcake HTTP action node
+router.get('/create-ticket', botcakeController.createTicket);
+router.post('/create-ticket', botcakeController.createTicket);
+
 // DEBUG route
 router.get('/debug-logs', botcakeController.getDebugLogs);
 
