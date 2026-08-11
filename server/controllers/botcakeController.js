@@ -281,6 +281,7 @@ exports.verifyAndBroadcast = async (req, res) => {
       .replace(/[\{\}\"\']/g, '')
       .trim();
     let digitsOnly = String(rawAcc).replace(/\D/g, '');
+    let withPrefix = `ACC-${digitsOnly}`;
 
     if (!accNum && !digitsOnly) {
       return res.status(200).json({
@@ -290,18 +291,24 @@ exports.verifyAndBroadcast = async (req, res) => {
       });
     }
 
+    logger.info(`🔍 DB search in verifyAndBroadcast for accNum="${accNum}", digits="${digitsOnly}", withPrefix="${withPrefix}"`);
+
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
-       WHERE LOWER(account_number) = LOWER($1)
-          OR LOWER(account_number) = LOWER('ACC-' || $1)
-          OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
-          OR ($2 != '' AND (REPLACE(LOWER(account_number), 'acc-', '') = $2 OR account_number = $2))
+       WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
+          OR ($4 != '' AND (
+               TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4
+               OR LOWER(account_number) ILIKE '%' || $4 || '%'
+          ))
        LIMIT 1`,
-      [accNum, digitsOnly]
+      [accNum, withPrefix, digitsOnly, digitsOnly]
     );
 
     if (result.rows.length === 0) {
-      logger.warn(`❌ verify-and-broadcast: account not found "${accNum}"`);
+      logger.warn(`❌ verify-and-broadcast: account not found in DB for rawAcc="${rawAcc}" accNum="${accNum}" digits="${digitsOnly}"`);
       return res.status(200).json({
         success: false, found: false, found_str: 'false',
         found_account: 'not_found', status: 'not_found',
