@@ -346,6 +346,17 @@ exports.verifyAndBroadcast = async (req, res) => {
         found_account: 'found',
         found: true
       },
+      // Native Botcake / ManyChat action format to force set custom field
+      version: 'v2',
+      content: {
+        actions: [
+          {
+            action: 'set_field_value',
+            field_name: 'found_account',
+            value: 'found'
+          }
+        ]
+      },
       customer: {
         id: customer.id,
         name: customer.full_name,
