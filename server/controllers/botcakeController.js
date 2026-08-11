@@ -192,7 +192,24 @@ exports.handleWebhook = async (req, res) => {
 
     // Customer is found & linked -> Auto-generate ticket using AI
     logger.info(`Generating ticket for customer "${customer.full_name}"...`);
-    const aiResult = await classifyAndGenerateTicket(messageText, customer);
+    const aiResult = await classifyAndGenerateTicket([], messageText);
+
+    // Map AI category slug to service_category UUID
+    let categoryId = null;
+    let categoryName = 'General Support';
+    if (aiResult.category) {
+      const catRes = await query(
+        `SELECT id, name FROM service_categories 
+         WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
+            OR LOWER(slug) = LOWER($1)
+         LIMIT 1`,
+        [aiResult.category]
+      );
+      if (catRes.rows.length > 0) {
+        categoryId = catRes.rows[0].id;
+        categoryName = catRes.rows[0].name;
+      }
+    }
 
     const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -205,24 +222,29 @@ exports.handleWebhook = async (req, res) => {
       [
         ticketNumber,
         customer.id,
-        aiResult.category_id || null,
-        aiResult.title || 'Support Request via Messenger',
+        categoryId,
+        aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger',
         messageText,
         aiResult.priority || 'medium'
       ]
     );
 
     const createdTicket = newTicket.rows[0];
-    logger.info(`Ticket created: ${createdTicket.ticket_number}`);
+    logger.info(`Ticket created successfully: ${createdTicket.ticket_number}`);
 
     // Emit real-time socket event to Admin Dashboard
     emitToAdmins('ticket_created', {
-      ticket: createdTicket,
+      ticket: {
+        ...createdTicket,
+        customer_name: customer.full_name,
+        customer_contact: customer.contact_number,
+        category_name: categoryName
+      },
       customer: customer,
       message: 'New ticket generated automatically via Messenger'
     });
 
-    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${aiResult.category_name || 'General Support'}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.eta_hours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
+    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 
     try {
       await sendBotcakeMessage(psid, replyMsg);
