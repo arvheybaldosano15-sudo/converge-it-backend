@@ -217,38 +217,33 @@ exports.handleWebhook = async (req, res) => {
       }
     }
 
-    const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
+    const subjectVal = aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger';
 
-    const newTicket = await query(
-      `INSERT INTO tickets (
-        ticket_number, customer_id, service_category_id, subject, description,
-        priority, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
-      RETURNING *`,
-      [
-        ticketNumber,
-        customer.id,
-        categoryId,
-        aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger',
-        messageText,
-        aiResult.priority || 'medium'
-      ]
-    );
+    let createdTicket;
+    try {
+      const newTicket = await query(
+        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [customer.id, categoryId, priorityVal, subjectVal, messageText, priorityVal, aiResult.etaHours || 24]
+      );
+      createdTicket = newTicket.rows[0];
+    } catch (insertErr) {
+      logger.warn('Initial ticket insert failed, using fallback insert:', insertErr.message);
+      const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newTicket = await query(
+        `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, messageText]
+      );
+      createdTicket = newTicket.rows[0];
+    }
 
-    const createdTicket = newTicket.rows[0];
-    logger.info(`Ticket created successfully: ${createdTicket.ticket_number}`);
+    logger.info(`✅ Ticket created successfully: ${createdTicket.ticket_number}`);
 
-    // Emit real-time socket event to Admin Dashboard
-    emitToAdmins('ticket_created', {
-      ticket: {
-        ...createdTicket,
-        customer_name: customer.full_name,
-        customer_contact: customer.contact_number,
-        category_name: categoryName
-      },
-      customer: customer,
-      message: 'New ticket generated automatically via Messenger'
-    });
+    // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
+    emitToAdmins('ticket:created', { ticket: createdTicket });
+    emitToAdmins('ticket_created', { ticket: createdTicket });
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 
@@ -469,38 +464,33 @@ exports.createTicket = async (req, res) => {
       }
     }
 
-    const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
+    const subjectVal = aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger';
 
-    const newTicket = await query(
-      `INSERT INTO tickets (
-        ticket_number, customer_id, service_category_id, subject, description,
-        priority, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
-      RETURNING *`,
-      [
-        ticketNumber,
-        customer.id,
-        categoryId,
-        aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger',
-        concernText,
-        aiResult.priority || 'medium'
-      ]
-    );
+    let createdTicket;
+    try {
+      const newTicket = await query(
+        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [customer.id, categoryId, priorityVal, subjectVal, concernText, priorityVal, aiResult.etaHours || 24]
+      );
+      createdTicket = newTicket.rows[0];
+    } catch (insertErr) {
+      logger.warn('Initial ticket insert failed in createTicket endpoint, using fallback insert:', insertErr.message);
+      const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newTicket = await query(
+        `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, concernText]
+      );
+      createdTicket = newTicket.rows[0];
+    }
 
-    const createdTicket = newTicket.rows[0];
     logger.info(`✅ Ticket created successfully via endpoint: ${createdTicket.ticket_number}`);
 
-    // Emit socket event to Admin Dashboard
-    emitToAdmins('ticket_created', {
-      ticket: {
-        ...createdTicket,
-        customer_name: customer.full_name,
-        customer_contact: customer.contact_number,
-        category_name: categoryName
-      },
-      customer: customer,
-      message: 'New ticket generated automatically via Messenger'
-    });
+    // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
+    emitToAdmins('ticket:created', { ticket: createdTicket });
+    emitToAdmins('ticket_created', { ticket: createdTicket });
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 
