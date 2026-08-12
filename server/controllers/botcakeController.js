@@ -335,7 +335,7 @@ exports.verifyAndBroadcast = async (req, res) => {
       
       // Direct message reply to subscriber if subscriberId is available
       if (subscriberId) {
-        const notFoundText = `❌ Account Number Not Found\n\nWe couldn't find an account matching "${rawAcc}" in our system.\n\n📌 Please make sure you enter your registered Account Number (e.g. 11114 or ACC-11114).\n\nIf you need assistance, please contact customer support.`;
+        const notFoundText = `❌ Invalid account number.\nPlease check your account number and try again.`;
         try {
           await sendBotcakeMessage(subscriberId, notFoundText);
         } catch (msgErr) {
@@ -346,7 +346,7 @@ exports.verifyAndBroadcast = async (req, res) => {
       return res.status(200).json({
         success: false, found: false, found_str: 'false',
         found_account: 'not_found', status: 'not_found',
-        message: 'Account number not found.'
+        message: 'Invalid account number.'
       });
     }
 
@@ -362,12 +362,12 @@ exports.verifyAndBroadcast = async (req, res) => {
         logger.warn('Failed to auto-link subscriber PSID:', linkErr.message);
       }
 
-      // Direct message reply to subscriber with success message!
-      const successText = `✅ Account linked successfully!\n\nHello, ${customer.full_name}! 👋\nYour Messenger has been linked to Account Number: ${customer.account_number}.\n\nPlease describe your concern (e.g. internet issue, installation request) and I will create a support ticket for you.`;
+      // Direct message reply matching user's requested verification prompt
+      const verifiedPromptText = `✅ Account Number Verified!\n\nTo create a support ticket, please send the following information in one message:\n\nName:\nContact Number:\nAddress:\nLandmark:\nProblem:`;
       try {
-        await sendBotcakeMessage(subscriberId, successText);
+        await sendBotcakeMessage(subscriberId, verifiedPromptText);
       } catch (msgErr) {
-        await sendTextMessage(subscriberId, successText).catch(() => {});
+        await sendTextMessage(subscriberId, verifiedPromptText).catch(() => {});
       }
     }
 
@@ -445,8 +445,37 @@ exports.createTicket = async (req, res) => {
       return res.status(200).json({ success: false, message: 'No linked customer found.' });
     }
 
-    // AI Classification
-    const aiResult = await classifyAndGenerateTicket([], concernText);
+    // Parse structured form fields if present (Name, Contact Number, Address, Landmark, Problem)
+    const nameMatch = concernText.match(/Name:\s*([^\n]+)/i);
+    const phoneMatch = concernText.match(/(?:Contact Number|Contact|Phone):\s*([^\n]+)/i);
+    const addressMatch = concernText.match(/Address:\s*([^\n]+)/i);
+    const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
+    const problemMatch = concernText.match(/Problem:\s*([\s\S]+)/i);
+
+    const actualProblem = problemMatch ? problemMatch[1].trim() : concernText;
+
+    // Update customer details in DB if provided in structured format
+    if (nameMatch || phoneMatch || addressMatch || landmarkMatch) {
+      await query(
+        `UPDATE customers SET 
+           full_name = COALESCE(NULLIF($1, ''), full_name),
+           contact_number = COALESCE(NULLIF($2, ''), contact_number),
+           complete_address = COALESCE(NULLIF($3, ''), complete_address),
+           nearby_landmark = COALESCE(NULLIF($4, ''), nearby_landmark),
+           updated_at = NOW()
+         WHERE id = $5`,
+        [
+          nameMatch ? nameMatch[1].trim() : '',
+          phoneMatch ? phoneMatch[1].trim() : '',
+          addressMatch ? addressMatch[1].trim() : '',
+          landmarkMatch ? landmarkMatch[1].trim() : '',
+          customer.id
+        ]
+      );
+    }
+
+    // AI Classification of the Problem
+    const aiResult = await classifyAndGenerateTicket([], actualProblem);
 
     let categoryId = null;
     let categoryName = 'General Support';
