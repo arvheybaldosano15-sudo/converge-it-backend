@@ -561,19 +561,34 @@ exports.createTicket = async (req, res) => {
  * Diagnostic: test DB connection and check tickets table columns
  */
 exports.testDb = async (req, res) => {
+  const result = {};
   try {
-    const cols = await query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'tickets' ORDER BY ordinal_position`);
-    const custCols = await query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'customers' ORDER BY ordinal_position`);
-    const cats = await query('SELECT id, name, slug FROM service_categories LIMIT 10');
-    const recentTickets = await query('SELECT id, ticket_number, customer_id, priority, subject, created_at FROM tickets ORDER BY created_at DESC LIMIT 5');
-    return res.json({
-      status: 'ok',
-      tickets_columns: cols.rows.map(r => r.column_name),
-      customers_columns: custCols.rows.map(r => r.column_name),
-      service_categories: cats.rows,
-      recent_tickets: recentTickets.rows
-    });
+    const cols = await query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'tickets' ORDER BY ordinal_position`);
+    result.tickets_columns = cols.rows;
   } catch (err) {
-    return res.status(500).json({ status: 'error', message: err.message });
+    result.tickets_columns_error = err.message;
   }
+
+  try {
+    const custCols = await query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'customers' ORDER BY ordinal_position`);
+    result.customers_columns = custCols.rows;
+  } catch (err) {
+    result.customers_columns_error = err.message;
+  }
+
+  try {
+    const recentTickets = await query('SELECT * FROM tickets ORDER BY created_at DESC LIMIT 5');
+    result.recent_tickets = recentTickets.rows;
+  } catch (err) {
+    result.recent_tickets_error = err.message;
+  }
+
+  try {
+    const recentCust = await query('SELECT * FROM customers ORDER BY created_at DESC LIMIT 5');
+    result.recent_customers = recentCust.rows;
+  } catch (err) {
+    result.recent_customers_error = err.message;
+  }
+
+  return res.json(result);
 };
