@@ -580,5 +580,16 @@ exports.testDb = async (req, res) => {
     result.recent_customers_error = err.message;
   }
 
+  try {
+    const triggers = await query(`
+      SELECT trigger_name, event_manipulation, action_statement, action_orientation 
+      FROM information_schema.triggers 
+      WHERE event_object_table = 'tickets'
+    `);
+    result.tickets_triggers = triggers.rows;
+  } catch (err) {
+    result.tickets_triggers_error = err.message;
+  }
+
   return res.json(result);
 };
