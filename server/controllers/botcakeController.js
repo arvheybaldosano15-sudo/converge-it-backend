@@ -207,7 +207,6 @@ exports.handleWebhook = async (req, res) => {
       const catRes = await query(
         `SELECT id, name FROM service_categories 
          WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
-            OR LOWER(slug) = LOWER($1)
          LIMIT 1`,
         [aiResult.category]
       );
@@ -484,7 +483,6 @@ exports.createTicket = async (req, res) => {
       const catRes = await query(
         `SELECT id, name FROM service_categories 
          WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
-            OR LOWER(slug) = LOWER($1)
          LIMIT 1`,
         [aiResult.category]
       );
