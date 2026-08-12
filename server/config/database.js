@@ -44,6 +44,31 @@ const getClient = async () => await getPool().connect();
 const testConnection = async () => {
   const result = await query('SELECT NOW() as current_time');
   logger.info('Database time:', result.rows[0].current_time);
+
+  // Auto-repair set_sla_due_date PostgreSQL function if it has invalid table/column references
+  try {
+    await query(`
+      CREATE OR REPLACE FUNCTION set_sla_due_date()
+      RETURNS TRIGGER AS $$
+      DECLARE
+          sla_hours INTEGER := 24;
+      BEGIN
+          IF NEW.priority = 'critical' THEN sla_hours := 4;
+          ELSIF NEW.priority = 'high' THEN sla_hours := 8;
+          ELSIF NEW.priority = 'medium' THEN sla_hours := 24;
+          ELSE sla_hours := 72;
+          END IF;
+          
+          NEW.sla_deadline := NOW() + (sla_hours || ' hours')::INTERVAL;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    logger.info('✅ Database function set_sla_due_date updated/repaired successfully');
+  } catch (err) {
+    logger.warn('Could not auto-repair set_sla_due_date function:', err.message);
+  }
+
   return result;
 };
 
