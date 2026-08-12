@@ -215,6 +215,13 @@ exports.handleWebhook = async (req, res) => {
         categoryName = catRes.rows[0].name;
       }
     }
+    if (!categoryId) {
+      const defaultCat = await query(`SELECT id, name FROM service_categories LIMIT 1`);
+      if (defaultCat.rows.length > 0) {
+        categoryId = defaultCat.rows[0].id;
+        categoryName = defaultCat.rows[0].name;
+      }
+    }
 
     const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
     const validPriorities = ['low', 'medium', 'high', 'critical'];
@@ -489,6 +496,13 @@ exports.createTicket = async (req, res) => {
       if (catRes.rows.length > 0) {
         categoryId = catRes.rows[0].id;
         categoryName = catRes.rows[0].name;
+      }
+    }
+    if (!categoryId) {
+      const defaultCat = await query(`SELECT id, name FROM service_categories LIMIT 1`);
+      if (defaultCat.rows.length > 0) {
+        categoryId = defaultCat.rows[0].id;
+        categoryName = defaultCat.rows[0].name;
       }
     }
 
