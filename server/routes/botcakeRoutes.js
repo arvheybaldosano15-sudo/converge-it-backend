@@ -22,6 +22,9 @@ router.post('/create-ticket', botcakeController.createTicket);
 // DEBUG route
 router.get('/debug-logs', botcakeController.getDebugLogs);
 
+// DIAGNOSTIC: Test DB connection and check table columns
+router.get('/test-db', botcakeController.testDb);
+
 // DIAGNOSTIC: Always returns found=true (used to test Botcake conditions)
 router.get('/test-always-found', (req, res) => {
   res.json({ success: true, found: true, found_str: 'true', status: 'found' });

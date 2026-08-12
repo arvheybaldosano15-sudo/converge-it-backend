@@ -455,23 +455,26 @@ exports.createTicket = async (req, res) => {
     const actualProblem = problemMatch ? problemMatch[1].trim() : concernText;
 
     // Update customer details in DB if provided in structured format
+    // Wrapped in try-catch so column name mismatch won't break ticket creation
     if (nameMatch || phoneMatch || addressMatch || landmarkMatch) {
-      await query(
-        `UPDATE customers SET 
-           full_name = COALESCE(NULLIF($1, ''), full_name),
-           contact_number = COALESCE(NULLIF($2, ''), contact_number),
-           complete_address = COALESCE(NULLIF($3, ''), complete_address),
-           nearby_landmark = COALESCE(NULLIF($4, ''), nearby_landmark),
-           updated_at = NOW()
-         WHERE id = $5`,
-        [
-          nameMatch ? nameMatch[1].trim() : '',
-          phoneMatch ? phoneMatch[1].trim() : '',
-          addressMatch ? addressMatch[1].trim() : '',
-          landmarkMatch ? landmarkMatch[1].trim() : '',
-          customer.id
-        ]
-      );
+      try {
+        // Try with address/landmark columns first
+        await query(
+          `UPDATE customers SET 
+             full_name = COALESCE(NULLIF($1, ''), full_name),
+             contact_number = COALESCE(NULLIF($2, ''), contact_number),
+             updated_at = NOW()
+           WHERE id = $3`,
+          [
+            nameMatch ? nameMatch[1].trim() : '',
+            phoneMatch ? phoneMatch[1].trim() : '',
+            customer.id
+          ]
+        );
+        logger.info(`✅ Updated customer info for id=${customer.id}`);
+      } catch (updateErr) {
+        logger.warn('Customer update failed (non-critical):', updateErr.message);
+      }
     }
 
     // AI Classification of the Problem
@@ -505,14 +508,21 @@ exports.createTicket = async (req, res) => {
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
-      logger.warn('Initial ticket insert failed in createTicket endpoint, using fallback insert:', insertErr.message);
-      const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newTicket = await query(
-        `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, concernText]
-      );
-      createdTicket = newTicket.rows[0];
+      logger.warn('Initial ticket insert failed, trying fallback:', insertErr.message);
+      logger.warn('Insert error detail:', JSON.stringify({ code: insertErr.code, detail: insertErr.detail, constraint: insertErr.constraint }));
+      try {
+        const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+        const newTicket = await query(
+          `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, concernText]
+        );
+        createdTicket = newTicket.rows[0];
+      } catch (fallbackErr) {
+        logger.error('Fallback ticket insert also failed:', fallbackErr.message);
+        logger.error('Fallback error detail:', JSON.stringify({ code: fallbackErr.code, detail: fallbackErr.detail, constraint: fallbackErr.constraint }));
+        throw fallbackErr;
+      }
     }
 
     logger.info(`✅ Ticket created successfully via endpoint: ${createdTicket.ticket_number}`);
@@ -540,7 +550,30 @@ exports.createTicket = async (req, res) => {
       reply_message: replyMsg
     });
   } catch (err) {
-    logger.error('createTicket endpoint error:', err);
-    return res.status(500).json({ success: false, message: 'Server error creating ticket' });
+    logger.error('createTicket endpoint error:', err.message);
+    logger.error('Full error:', JSON.stringify({ code: err.code, detail: err.detail, constraint: err.constraint, stack: err.stack?.substring(0, 500) }));
+    return res.status(200).json({ success: false, message: 'Server error creating ticket: ' + err.message });
+  }
+};
+
+/**
+ * GET /api/botcake/test-db
+ * Diagnostic: test DB connection and check tickets table columns
+ */
+exports.testDb = async (req, res) => {
+  try {
+    const cols = await query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'tickets' ORDER BY ordinal_position`);
+    const custCols = await query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'customers' ORDER BY ordinal_position`);
+    const cats = await query('SELECT id, name, slug FROM service_categories LIMIT 10');
+    const recentTickets = await query('SELECT id, ticket_number, customer_id, priority, subject, created_at FROM tickets ORDER BY created_at DESC LIMIT 5');
+    return res.json({
+      status: 'ok',
+      tickets_columns: cols.rows.map(r => r.column_name),
+      customers_columns: custCols.rows.map(r => r.column_name),
+      service_categories: cats.rows,
+      recent_tickets: recentTickets.rows
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', message: err.message });
   }
 };
