@@ -75,10 +75,12 @@ exports.getTicketById = async (req, res, next) => {
 exports.createTicket = async (req, res, next) => {
   try {
     const { customerId, categoryId, assignedTo, priority, subject, description, aiPriority, aiEtaHours } = req.body;
+    const ticketNumber = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const priorityVal = (priority || 'medium').toLowerCase();
     const result = await query(
-      `INSERT INTO tickets (customer_id, service_category_id, assigned_technician_id, priority, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [customerId, categoryId, assignedTo || null, priority || 'medium', subject, description, aiPriority || null, aiEtaHours || null]
+      `INSERT INTO tickets (ticket_number, customer_id, service_category_id, assigned_technician_id, priority, status, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [ticketNumber, customerId, categoryId || null, assignedTo || null, priorityVal, 'open', subject, description, (aiPriority || priorityVal), aiEtaHours || 24]
     );
     const ticket = result.rows[0];
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number });

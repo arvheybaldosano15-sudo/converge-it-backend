@@ -218,25 +218,23 @@ exports.handleWebhook = async (req, res) => {
     }
 
     const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
     const subjectVal = aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger';
+    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     let createdTicket;
     try {
       const newTicket = await query(
-        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [customer.id, categoryId, priorityVal, subjectVal, messageText, priorityVal]
+        `INSERT INTO tickets (
+          ticket_number, customer_id, service_category_id, priority, status, subject, description, source, ai_priority_recommendation, ai_estimated_resolution_hours
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, messageText, 'messenger', priorityEnum, aiResult.etaHours || 24]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
-      logger.warn('Initial ticket insert failed, using fallback insert:', insertErr.message);
-      const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newTicket = await query(
-        `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, messageText]
-      );
-      createdTicket = newTicket.rows[0];
+      logger.error('handleWebhook ticket insert failed:', insertErr.message);
+      throw insertErr;
     }
 
     logger.info(`✅ Ticket created successfully: ${createdTicket.ticket_number}`);
@@ -497,42 +495,35 @@ exports.createTicket = async (req, res) => {
     }
 
     const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
     const subjectVal = aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger';
+    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     let createdTicket;
     try {
       const newTicket = await query(
-        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [customer.id, categoryId, priorityVal, subjectVal, concernText, priorityVal]
+        `INSERT INTO tickets (
+          ticket_number, customer_id, service_category_id, priority, status, subject, description, source, ai_priority_recommendation, ai_estimated_resolution_hours
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, concernText, 'messenger', priorityEnum, aiResult.etaHours || 24]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
-      logger.warn('Initial ticket insert failed, trying fallback:', insertErr.message);
-      logger.warn('Insert error detail:', JSON.stringify({ code: insertErr.code, detail: insertErr.detail, constraint: insertErr.constraint }));
-      try {
-        const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-        const newTicket = await query(
-          `INSERT INTO tickets (ticket_number, customer_id, service_category_id, priority, subject, description)
-           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-          [ticketNumber, customer.id, categoryId, priorityVal, subjectVal, concernText]
-        );
-        createdTicket = newTicket.rows[0];
-      } catch (fallbackErr) {
-        logger.error('Fallback ticket insert also failed:', fallbackErr.message);
-        logger.error('Fallback error detail:', JSON.stringify({ code: fallbackErr.code, detail: fallbackErr.detail, constraint: fallbackErr.constraint }));
-        throw fallbackErr;
-      }
+      logger.error('Ticket insert failed:', insertErr.message);
+      logger.error('Insert error details:', JSON.stringify({ code: insertErr.code, detail: insertErr.detail, constraint: insertErr.constraint }));
+      throw insertErr;
     }
 
     logger.info(`✅ Ticket created successfully via endpoint: ${createdTicket.ticket_number}`);
 
-    // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
+    // Emit real-time socket events to Admin Dashboard
     emitToAdmins('ticket:created', { ticket: createdTicket });
     emitToAdmins('ticket_created', { ticket: createdTicket });
 
-    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
+    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityEnum.toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 
+    // Try sending directly to Messenger if keys exist
     if (subscriberId) {
       try {
         await sendBotcakeMessage(subscriberId, replyMsg);
@@ -547,7 +538,8 @@ exports.createTicket = async (req, res) => {
       category: categoryName,
       priority: createdTicket.priority,
       customer_name: customer.full_name,
-      reply_message: replyMsg
+      reply_message: replyMsg,
+      messages: [{ text: replyMsg }]
     });
   } catch (err) {
     logger.error('createTicket endpoint error:', err.message);
