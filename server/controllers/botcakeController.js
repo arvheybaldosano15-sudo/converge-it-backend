@@ -223,9 +223,9 @@ exports.handleWebhook = async (req, res) => {
     let createdTicket;
     try {
       const newTicket = await query(
-        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [customer.id, categoryId, priorityVal, subjectVal, messageText, priorityVal, aiResult.etaHours || 24]
+        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [customer.id, categoryId, priorityVal, subjectVal, messageText, priorityVal]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
@@ -502,9 +502,9 @@ exports.createTicket = async (req, res) => {
     let createdTicket;
     try {
       const newTicket = await query(
-        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [customer.id, categoryId, priorityVal, subjectVal, concernText, priorityVal, aiResult.etaHours || 24]
+        `INSERT INTO tickets (customer_id, service_category_id, priority, subject, description, ai_priority)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [customer.id, categoryId, priorityVal, subjectVal, concernText, priorityVal]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
