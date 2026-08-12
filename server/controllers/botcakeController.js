@@ -436,17 +436,19 @@ exports.createTicket = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Concern text is required.' });
     }
 
-    // Find customer by subscriberId or fallback to latest customer
+    if (!subscriberId) {
+      return res.status(200).json({ success: false, message: 'Subscriber ID is required.' });
+    }
+
+    // Find customer ONLY by their specific messenger_psid — no unsafe fallback to random latest customer
     let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
     let customer = custResult.rows[0];
 
     if (!customer) {
-      const fallbackCust = await query('SELECT * FROM customers ORDER BY updated_at DESC LIMIT 1');
-      customer = fallbackCust.rows[0];
-    }
-
-    if (!customer) {
-      return res.status(200).json({ success: false, message: 'No linked customer found.' });
+      return res.status(200).json({
+        success: false,
+        message: 'No linked customer found. Please verify your account number first.'
+      });
     }
 
     // Parse structured form fields if present (Name, Contact Number, Address, Landmark, Problem)
@@ -458,26 +460,29 @@ exports.createTicket = async (req, res) => {
 
     const actualProblem = problemMatch ? problemMatch[1].trim() : concernText;
 
-    // Update customer details in DB if provided in structured format
-    // Wrapped in try-catch so column name mismatch won't break ticket creation
+    // Only update customer fields that are currently NULL/empty — never overwrite admin-verified data
     if (nameMatch || phoneMatch || addressMatch || landmarkMatch) {
       try {
-        // Try with address/landmark columns first
         await query(
           `UPDATE customers SET 
-             full_name = COALESCE(NULLIF($1, ''), full_name),
-             contact_number = COALESCE(NULLIF($2, ''), contact_number),
+             full_name = CASE WHEN (full_name IS NULL OR full_name = '') THEN $1 ELSE full_name END,
+             contact_number = CASE WHEN (contact_number IS NULL OR contact_number = '') THEN $2 ELSE contact_number END,
+             complete_address = CASE WHEN (complete_address IS NULL OR complete_address = '') THEN $3 ELSE complete_address END,
+             nearby_landmark = CASE WHEN (nearby_landmark IS NULL OR nearby_landmark = '') THEN $4 ELSE nearby_landmark END,
              updated_at = NOW()
-           WHERE id = $3`,
+           WHERE id = $5`,
           [
-            nameMatch ? nameMatch[1].trim() : '',
-            phoneMatch ? phoneMatch[1].trim() : '',
+            nameMatch ? nameMatch[1].trim() : null,
+            phoneMatch ? phoneMatch[1].trim() : null,
+            addressMatch ? addressMatch[1].trim() : null,
+            landmarkMatch ? landmarkMatch[1].trim() : null,
             customer.id
           ]
         );
-        logger.info(`✅ Updated customer info for id=${customer.id}`);
+        logger.info(`✅ Updated empty customer fields for id=${customer.id}`);
       } catch (updateErr) {
         logger.warn('Customer update failed (non-critical):', updateErr.message);
+
       }
     }
 
@@ -510,6 +515,26 @@ exports.createTicket = async (req, res) => {
     const validPriorities = ['low', 'medium', 'high', 'critical'];
     const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
     const subjectVal = aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger';
+
+    // Duplicate guard: if same customer already has an open ticket created in last 5 minutes, don't create another
+    const recentCheck = await query(
+      `SELECT * FROM tickets 
+       WHERE customer_id = $1 
+         AND status = 'open' 
+         AND created_at > NOW() - INTERVAL '5 minutes'
+       ORDER BY created_at DESC LIMIT 1`,
+      [customer.id]
+    );
+    if (recentCheck.rows.length > 0) {
+      const existingTicket = recentCheck.rows[0];
+      logger.info(`⚠️ Duplicate ticket prevented for customer ${customer.id} — existing: ${existingTicket.ticket_number}`);
+      const dupMsg = `✅ Your concern has already been submitted!\n\n📋 Ticket Number: ${existingTicket.ticket_number}\n\nOur team is already processing your request. Please wait for a technician to contact you.`;
+      if (subscriberId) {
+        try { await sendBotcakeMessage(subscriberId, dupMsg); } catch { await sendTextMessage(subscriberId, dupMsg).catch(() => {}); }
+      }
+      return res.status(200).json({ success: true, ticket_number: existingTicket.ticket_number, duplicate: true, reply_message: dupMsg, messages: [{ text: dupMsg }] });
+    }
+
     const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     let createdTicket;
