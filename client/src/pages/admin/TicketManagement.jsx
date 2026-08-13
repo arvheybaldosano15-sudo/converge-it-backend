@@ -490,8 +490,7 @@ const TicketManagement = () => {
                   return (
                     <tr
                       key={row.id}
-                      onClick={() => viewTicketDetail(row)}
-                      className="hover:bg-slate-900/70 transition-colors cursor-pointer"
+                      className="hover:bg-slate-900/70 transition-colors"
                     >
                       {/* Ticket Number */}
                       <td className="p-3.5 font-mono font-extrabold text-cyan-400">
@@ -591,7 +590,7 @@ const TicketManagement = () => {
                                   }}
                                   className="w-full text-left px-3 py-1.5 hover:bg-slate-800 text-slate-300 flex items-center gap-2"
                                 >
-                                  <Edit3 className="w-3.5 h-3.5 text-cyan-400" /> Edit / Update
+                                  <Eye className="w-3.5 h-3.5 text-cyan-400" /> View Details
                                 </button>
                                 <button
                                   onClick={() => {
