@@ -27,35 +27,46 @@ exports.getArticles = async (req, res, next) => {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const dataParams = [...params, parseInt(limit), offset];
 
-    const [data, count] = await Promise.all([
-      query(`
-        SELECT kb.id, kb.title, kb.slug, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
-               COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
-               kb.created_at, kb.updated_at,
-               COALESCE(cat.name, 'General') AS category_name,
-               u.full_name AS author_name
-        FROM knowledge_base kb
-        LEFT JOIN service_categories cat ON kb.category_id = cat.id
-        LEFT JOIN users u ON kb.author_id = u.id
-        ${where}
-        ORDER BY kb.created_at DESC
-        LIMIT $${idx++} OFFSET $${idx}`, dataParams).catch(async () => {
-          return query(`
-            SELECT kb.id, kb.title, kb.slug, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
-                   COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
-                   kb.created_at, kb.updated_at,
-                   'General' AS category_name,
-                   'Admin' AS author_name
-            FROM knowledge_base kb
-            ORDER BY kb.created_at DESC
-            LIMIT $1 OFFSET $2`, [parseInt(limit), offset]);
-        }),
-      query(`SELECT COUNT(*) FROM knowledge_base kb ${where}`, params).catch(() => ({ rows: [{ count: 0 }] }))
-    ]);
+    // Try with service_categories join first, fallback to plain query
+    let data, count;
+    try {
+      const dataParams = [...params, parseInt(limit), offset];
+      [data, count] = await Promise.all([
+        query(`
+          SELECT kb.id, kb.title, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
+                 COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
+                 kb.created_at, kb.updated_at,
+                 COALESCE(cat.name, 'General') AS category_name,
+                 u.full_name AS author_name
+          FROM knowledge_base kb
+          LEFT JOIN service_categories cat ON kb.category_id = cat.id
+          LEFT JOIN users u ON kb.author_id = u.id
+          ${where}
+          ORDER BY kb.created_at DESC
+          LIMIT $${idx} OFFSET $${idx + 1}`, dataParams),
+        query(`SELECT COUNT(*) FROM knowledge_base kb
+               LEFT JOIN service_categories cat ON kb.category_id = cat.id
+               ${where}`, params)
+      ]);
+    } catch (e) {
+      // Fallback: plain query without joins
+      const dataParams = [parseInt(limit), offset];
+      [data, count] = await Promise.all([
+        query(`
+          SELECT kb.id, kb.title, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
+                 COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
+                 kb.created_at, kb.updated_at,
+                 'General' AS category_name,
+                 'Admin' AS author_name
+          FROM knowledge_base kb
+          ORDER BY kb.created_at DESC
+          LIMIT $1 OFFSET $2`, dataParams),
+        query(`SELECT COUNT(*) FROM knowledge_base`)
+      ]);
+    }
 
-    const total = parseInt(count.rows[0]?.count || data.rows.length || 0);
+    const total = parseInt(count.rows[0]?.count || 0);
 
     res.json({
       success: true,
@@ -74,12 +85,17 @@ exports.getArticles = async (req, res, next) => {
 
 exports.getArticleById = async (req, res, next) => {
   try {
-    const result = await query(`
-      SELECT kb.*, COALESCE(cat.name, 'General') AS category_name, u.full_name AS author_name
-      FROM knowledge_base kb
-      LEFT JOIN service_categories cat ON kb.category_id = cat.id
-      LEFT JOIN users u ON kb.author_id = u.id
-      WHERE kb.id = $1`, [req.params.id]);
+    let result;
+    try {
+      result = await query(`
+        SELECT kb.*, COALESCE(cat.name, 'General') AS category_name, u.full_name AS author_name
+        FROM knowledge_base kb
+        LEFT JOIN service_categories cat ON kb.category_id = cat.id
+        LEFT JOIN users u ON kb.author_id = u.id
+        WHERE kb.id = $1`, [req.params.id]);
+    } catch (e) {
+      result = await query(`SELECT * FROM knowledge_base WHERE id = $1`, [req.params.id]);
+    }
 
     if (!result.rows[0]) throw createError('Article not found', 404);
     await query('UPDATE knowledge_base SET views = COALESCE(views, 0) + 1 WHERE id = $1', [result.rows[0].id]).catch(() => {});
@@ -96,42 +112,65 @@ exports.createArticle = async (req, res, next) => {
     if (!title || !title.trim()) throw createError('Article title is required', 400);
     if (!content || !content.trim()) throw createError('Article content is required', 400);
 
+    // Resolve categoryId: accept UUID directly, or look up by name/slug
     let validCategoryId = null;
     if (categoryId && isUuid(categoryId)) {
       validCategoryId = categoryId;
     } else if (categoryId) {
       const catLookup = await query(
         `SELECT id FROM service_categories WHERE name ILIKE $1 OR name ILIKE $2 LIMIT 1`,
-        [`%${categoryId.replace('_', ' ')}%`, `%${categoryId}%`]
+        [`%${categoryId.replace(/_/g, ' ')}%`, `%${categoryId}%`]
       ).catch(() => ({ rows: [] }));
       if (catLookup.rows[0]) {
         validCategoryId = catLookup.rows[0].id;
       }
     }
 
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now();
     const userId = req.user?.id || null;
+    const publish = isPublished !== undefined ? isPublished : true;
 
-    const result = await query(
-      `INSERT INTO knowledge_base (title, slug, content, excerpt, category_id, author_id, tags, is_published, is_featured, published_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [
-        title.trim(),
-        slug,
-        content.trim(),
-        excerpt || content.trim().substring(0, 150),
-        validCategoryId,
-        userId,
-        tags || [],
-        isPublished !== undefined ? isPublished : true,
-        isFeatured || false,
-        isPublished ? new Date() : null
-      ]
-    );
+    let result;
+    try {
+      // Try with author_id column
+      result = await query(
+        `INSERT INTO knowledge_base (title, content, excerpt, category_id, author_id, tags, is_published, is_featured)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        [
+          title.trim(),
+          content.trim(),
+          excerpt || content.trim().substring(0, 150),
+          validCategoryId,
+          userId,
+          tags || [],
+          publish,
+          isFeatured || false
+        ]
+      );
+    } catch (e) {
+      // Fallback: try with created_by column if author_id doesn't exist
+      if (e.message && e.message.includes('author_id')) {
+        result = await query(
+          `INSERT INTO knowledge_base (title, content, excerpt, category_id, created_by, tags, is_published, is_featured)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+          [
+            title.trim(),
+            content.trim(),
+            excerpt || content.trim().substring(0, 150),
+            validCategoryId,
+            userId,
+            tags || [],
+            publish,
+            isFeatured || false
+          ]
+        );
+      } else {
+        throw e;
+      }
+    }
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Article created successfully' });
   } catch (error) {
-    console.error('createArticle error:', error);
+    console.error('createArticle error:', error.message);
     next(error);
   }
 };
@@ -160,7 +199,10 @@ exports.updateArticle = async (req, res, next) => {
     updates.push(`updated_at = NOW()`);
     values.push(req.params.id);
 
-    const result = await query(`UPDATE knowledge_base SET ${updates.join(', ')} WHERE id = $${i} RETURNING *`, values);
+    const result = await query(
+      `UPDATE knowledge_base SET ${updates.join(', ')} WHERE id = $${i} RETURNING *`,
+      values
+    );
     if (!result.rows[0]) throw createError('Article not found', 404);
     res.json({ success: true, data: result.rows[0], message: 'Article updated successfully' });
   } catch (error) {
