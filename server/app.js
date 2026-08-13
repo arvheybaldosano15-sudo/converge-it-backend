@@ -31,11 +31,29 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',');
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
+    // Allow non-browser requests (mobile apps, postman, curl)
+    if (!origin) return callback(null, true);
+
+    // Always allow localhost, render.com deployments, vercel, netlify
+    if (
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.onrender.com') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.netlify.app')
+    ) {
+      return callback(null, true);
+    }
+
+    const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim());
+    if (envOrigins.includes('*') || envOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Default fallback to allow connection
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
