@@ -3,10 +3,43 @@ const { createError } = require('../middleware/errorHandler');
 
 const isUuid = (str) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
+// Detect which columns actually exist in the knowledge_base table
+let _kbColumns = null;
+async function getKbColumns() {
+  if (_kbColumns) return _kbColumns;
+  try {
+    const result = await query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'knowledge_base'
+    `);
+    _kbColumns = result.rows.map((r) => r.column_name);
+  } catch (e) {
+    _kbColumns = ['id', 'title', 'content', 'tags', 'is_published', 'view_count', 'created_at', 'updated_at', 'category_id', 'created_by'];
+  }
+  return _kbColumns;
+}
+
 exports.getArticles = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, category, search, published } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const cols = await getKbColumns();
+
+    const hasExcerpt = cols.includes('excerpt');
+    const hasAuthorId = cols.includes('author_id');
+    const hasIsFeatured = cols.includes('is_featured');
+    const hasViews = cols.includes('views');
+    const hasViewCount = cols.includes('view_count');
+    const hasCreatedBy = cols.includes('created_by');
+
+    const viewCol = hasViews ? 'COALESCE(kb.views, 0)' : hasViewCount ? 'COALESCE(kb.view_count, 0)' : '0';
+    const authorJoin = hasAuthorId
+      ? `LEFT JOIN users u ON kb.author_id = u.id`
+      : hasCreatedBy
+      ? `LEFT JOIN users u ON kb.created_by = u.id`
+      : '';
+    const authorSelect = hasAuthorId || hasCreatedBy ? `u.full_name AS author_name` : `'Admin' AS author_name`;
+
     const conditions = [];
     const params = [];
     let idx = 1;
@@ -21,27 +54,32 @@ exports.getArticles = async (req, res, next) => {
       idx++;
     }
     if (search) {
-      conditions.push(`(kb.title ILIKE $${idx} OR kb.content ILIKE $${idx} OR kb.excerpt ILIKE $${idx})`);
+      const searchCols = [`kb.title ILIKE $${idx}`, `kb.content ILIKE $${idx}`];
+      if (hasExcerpt) searchCols.push(`kb.excerpt ILIKE $${idx}`);
+      conditions.push(`(${searchCols.join(' OR ')})`);
       params.push(`%${search}%`);
       idx++;
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const dataParams = [...params, parseInt(limit), offset];
 
-    // Try with service_categories join first, fallback to plain query
     let data, count;
     try {
-      const dataParams = [...params, parseInt(limit), offset];
       [data, count] = await Promise.all([
         query(`
-          SELECT kb.id, kb.title, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
-                 COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
+          SELECT kb.id, kb.title, kb.content,
+                 ${hasExcerpt ? 'kb.excerpt,' : "'' AS excerpt,"}
+                 ${hasIsFeatured ? 'kb.is_featured,' : 'false AS is_featured,'}
+                 kb.tags, kb.is_published,
+                 ${viewCol} AS views,
+                 COALESCE(kb.helpful_count, 0) AS helpful_count,
                  kb.created_at, kb.updated_at,
                  COALESCE(cat.name, 'General') AS category_name,
-                 u.full_name AS author_name
+                 ${authorSelect}
           FROM knowledge_base kb
           LEFT JOIN service_categories cat ON kb.category_id = cat.id
-          LEFT JOIN users u ON kb.author_id = u.id
+          ${authorJoin}
           ${where}
           ORDER BY kb.created_at DESC
           LIMIT $${idx} OFFSET $${idx + 1}`, dataParams),
@@ -50,18 +88,18 @@ exports.getArticles = async (req, res, next) => {
                ${where}`, params)
       ]);
     } catch (e) {
-      // Fallback: plain query without joins
-      const dataParams = [parseInt(limit), offset];
+      // Safest fallback: no joins, minimal columns
       [data, count] = await Promise.all([
         query(`
-          SELECT kb.id, kb.title, kb.content, kb.excerpt, kb.tags, kb.is_published, kb.is_featured,
-                 COALESCE(kb.views, 0) AS views, COALESCE(kb.helpful_count, 0) AS helpful_count,
-                 kb.created_at, kb.updated_at,
-                 'General' AS category_name,
-                 'Admin' AS author_name
-          FROM knowledge_base kb
-          ORDER BY kb.created_at DESC
-          LIMIT $1 OFFSET $2`, dataParams),
+          SELECT id, title, content, tags, is_published,
+                 ${viewCol} AS views,
+                 COALESCE(helpful_count, 0) AS helpful_count,
+                 created_at, updated_at,
+                 'General' AS category_name, 'Admin' AS author_name,
+                 '' AS excerpt, false AS is_featured
+          FROM knowledge_base
+          ORDER BY created_at DESC
+          LIMIT $1 OFFSET $2`, [parseInt(limit), offset]),
         query(`SELECT COUNT(*) FROM knowledge_base`)
       ]);
     }
@@ -85,20 +123,33 @@ exports.getArticles = async (req, res, next) => {
 
 exports.getArticleById = async (req, res, next) => {
   try {
+    const cols = await getKbColumns();
+    const hasAuthorId = cols.includes('author_id');
+    const hasCreatedBy = cols.includes('created_by');
+    const authorJoin = hasAuthorId
+      ? `LEFT JOIN users u ON kb.author_id = u.id`
+      : hasCreatedBy ? `LEFT JOIN users u ON kb.created_by = u.id` : '';
+    const authorSelect = hasAuthorId || hasCreatedBy ? `u.full_name AS author_name` : `'Admin' AS author_name`;
+
     let result;
     try {
       result = await query(`
-        SELECT kb.*, COALESCE(cat.name, 'General') AS category_name, u.full_name AS author_name
+        SELECT kb.*, COALESCE(cat.name, 'General') AS category_name, ${authorSelect}
         FROM knowledge_base kb
         LEFT JOIN service_categories cat ON kb.category_id = cat.id
-        LEFT JOIN users u ON kb.author_id = u.id
+        ${authorJoin}
         WHERE kb.id = $1`, [req.params.id]);
     } catch (e) {
       result = await query(`SELECT * FROM knowledge_base WHERE id = $1`, [req.params.id]);
     }
 
     if (!result.rows[0]) throw createError('Article not found', 404);
-    await query('UPDATE knowledge_base SET views = COALESCE(views, 0) + 1 WHERE id = $1', [result.rows[0].id]).catch(() => {});
+
+    const viewCol = cols.includes('views') ? 'views' : cols.includes('view_count') ? 'view_count' : null;
+    if (viewCol) {
+      await query(`UPDATE knowledge_base SET ${viewCol} = COALESCE(${viewCol}, 0) + 1 WHERE id = $1`, [result.rows[0].id]).catch(() => {});
+    }
+
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     next(error);
@@ -112,7 +163,9 @@ exports.createArticle = async (req, res, next) => {
     if (!title || !title.trim()) throw createError('Article title is required', 400);
     if (!content || !content.trim()) throw createError('Article content is required', 400);
 
-    // Resolve categoryId: accept UUID directly, or look up by name/slug
+    const cols = await getKbColumns();
+
+    // Resolve categoryId to UUID
     let validCategoryId = null;
     if (categoryId && isUuid(categoryId)) {
       validCategoryId = categoryId;
@@ -121,52 +174,27 @@ exports.createArticle = async (req, res, next) => {
         `SELECT id FROM service_categories WHERE name ILIKE $1 OR name ILIKE $2 LIMIT 1`,
         [`%${categoryId.replace(/_/g, ' ')}%`, `%${categoryId}%`]
       ).catch(() => ({ rows: [] }));
-      if (catLookup.rows[0]) {
-        validCategoryId = catLookup.rows[0].id;
-      }
+      if (catLookup.rows[0]) validCategoryId = catLookup.rows[0].id;
     }
 
     const userId = req.user?.id || null;
     const publish = isPublished !== undefined ? isPublished : true;
 
-    let result;
-    try {
-      // Try with author_id column
-      result = await query(
-        `INSERT INTO knowledge_base (title, content, excerpt, category_id, author_id, tags, is_published, is_featured)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-        [
-          title.trim(),
-          content.trim(),
-          excerpt || content.trim().substring(0, 150),
-          validCategoryId,
-          userId,
-          tags || [],
-          publish,
-          isFeatured || false
-        ]
-      );
-    } catch (e) {
-      // Fallback: try with created_by column if author_id doesn't exist
-      if (e.message && e.message.includes('author_id')) {
-        result = await query(
-          `INSERT INTO knowledge_base (title, content, excerpt, category_id, created_by, tags, is_published, is_featured)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-          [
-            title.trim(),
-            content.trim(),
-            excerpt || content.trim().substring(0, 150),
-            validCategoryId,
-            userId,
-            tags || [],
-            publish,
-            isFeatured || false
-          ]
-        );
-      } else {
-        throw e;
-      }
-    }
+    // Build INSERT dynamically based on existing columns
+    const insertCols = ['title', 'content', 'category_id', 'tags', 'is_published'];
+    const insertVals = [title.trim(), content.trim(), validCategoryId, tags || [], publish];
+
+    if (cols.includes('excerpt')) { insertCols.push('excerpt'); insertVals.push(excerpt || content.trim().substring(0, 150)); }
+    if (cols.includes('author_id')) { insertCols.push('author_id'); insertVals.push(userId); }
+    else if (cols.includes('created_by')) { insertCols.push('created_by'); insertVals.push(userId); }
+    if (cols.includes('is_featured')) { insertCols.push('is_featured'); insertVals.push(isFeatured || false); }
+
+    const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(', ');
+
+    const result = await query(
+      `INSERT INTO knowledge_base (${insertCols.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      insertVals
+    );
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Article created successfully' });
   } catch (error) {
@@ -178,25 +206,25 @@ exports.createArticle = async (req, res, next) => {
 exports.updateArticle = async (req, res, next) => {
   try {
     const { title, content, excerpt, categoryId, tags, isPublished, isFeatured } = req.body;
+    const cols = await getKbColumns();
     const updates = [];
     const values = [];
     let i = 1;
 
     if (title !== undefined) { updates.push(`title = $${i++}`); values.push(title); }
     if (content !== undefined) { updates.push(`content = $${i++}`); values.push(content); }
-    if (excerpt !== undefined) { updates.push(`excerpt = $${i++}`); values.push(excerpt); }
+    if (excerpt !== undefined && cols.includes('excerpt')) { updates.push(`excerpt = $${i++}`); values.push(excerpt); }
     if (categoryId !== undefined) {
-      const validId = isUuid(categoryId) ? categoryId : null;
       updates.push(`category_id = $${i++}`);
-      values.push(validId);
+      values.push(isUuid(categoryId) ? categoryId : null);
     }
     if (tags !== undefined) { updates.push(`tags = $${i++}`); values.push(tags); }
     if (isPublished !== undefined) { updates.push(`is_published = $${i++}`); values.push(isPublished); }
-    if (isFeatured !== undefined) { updates.push(`is_featured = $${i++}`); values.push(isFeatured); }
+    if (isFeatured !== undefined && cols.includes('is_featured')) { updates.push(`is_featured = $${i++}`); values.push(isFeatured); }
 
     if (updates.length === 0) throw createError('No fields to update', 400);
 
-    updates.push(`updated_at = NOW()`);
+    if (cols.includes('updated_at')) updates.push(`updated_at = NOW()`);
     values.push(req.params.id);
 
     const result = await query(
