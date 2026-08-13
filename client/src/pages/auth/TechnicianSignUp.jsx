@@ -195,7 +195,7 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
   }
 
   return (
-    <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-8 max-w-lg mx-auto" glow>
+    <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-8 max-w-lg w-full mx-auto" glow>
       {content}
     </Card>
   );

@@ -59,10 +59,10 @@ const Login = () => {
 
   return (
     <>
-      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-6 sm:p-8 max-w-md w-full mx-auto" glow>
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-8 max-w-sm sm:max-w-md w-full mx-auto" glow>
         {/* Brand Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-extrabold text-white font-display tracking-tight">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-white font-display tracking-tight">
             Converge IT Solutions
           </h2>
           <p className="text-xs text-blue-400 font-medium mt-1">
@@ -70,7 +70,7 @@ const Login = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" autoComplete="off">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5" autoComplete="off">
           <Input
             label="Email Address"
             type="email"
@@ -103,7 +103,7 @@ const Login = () => {
           <Button
             type="submit"
             variant="primary"
-            className="w-full py-3 font-semibold text-sm"
+            className="w-full py-3 font-semibold text-xs sm:text-sm active:scale-[0.99] transition-all"
             isLoading={isLoading}
             icon={LogIn}
           >
@@ -112,15 +112,15 @@ const Login = () => {
         </form>
 
         {/* Footer Info */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center space-y-3">
+        <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-800/80 text-center space-y-3">
           <p className="text-xs text-slate-400">
             Are you a field service technician?
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
             <button
               type="button"
               onClick={() => setIsPinModalOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+              className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition-all shadow-md shadow-blue-500/10 cursor-pointer active:scale-95"
             >
               <KeyRound className="w-4 h-4" />
               <span>PIN Portal Login</span>
@@ -129,7 +129,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setIsRegisterModalOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-800 to-indigo-700 hover:from-blue-700 hover:to-indigo-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/30 border border-blue-400/30 active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 sm:py-2 rounded-xl bg-gradient-to-r from-blue-800 to-indigo-700 hover:from-blue-700 hover:to-indigo-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/30 border border-blue-400/30 active:scale-95 cursor-pointer"
             >
               <Wrench className="w-4 h-4 text-blue-300" />
               <span>Technician Registration</span>
