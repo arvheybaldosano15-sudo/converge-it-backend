@@ -12,6 +12,28 @@ import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { Users, Phone, MapPin, Ticket, MessageSquare, Plus, User, Hash, Compass, Eye, Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// ─── Defined OUTSIDE the parent component to prevent remount on every keystroke ───
+const CustomerForm = ({ formData, onChange, onSubmit, onCancel, submitLabel }) => (
+  <form onSubmit={onSubmit} className="space-y-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Input label="Customer Full Name *" name="fullName" value={formData.fullName} onChange={onChange} placeholder="Enter customer full name" icon={User} required />
+      <Input label="Account Number (Optional)" name="accountNumber" value={formData.accountNumber} onChange={onChange} placeholder="Auto-generated if left blank" icon={Hash} />
+      <Input label="Contact Number" name="contactNumber" value={formData.contactNumber} onChange={onChange} placeholder="Enter contact number" icon={Phone} />
+      <Input label="Messenger PSID (Optional)" name="messengerPsid" value={formData.messengerPsid} onChange={onChange} placeholder="Enter Messenger PSID if linked" icon={MessageSquare} />
+      <div className="sm:col-span-2">
+        <Input label="Complete Address" name="completeAddress" value={formData.completeAddress} onChange={onChange} placeholder="Enter complete installation address" icon={MapPin} />
+      </div>
+      <div className="sm:col-span-2">
+        <Input label="Nearby Landmark" name="nearbyLandmark" value={formData.nearbyLandmark} onChange={onChange} placeholder="e.g. Near Barangay Hall, Beside Bakery" icon={Compass} />
+      </div>
+    </div>
+    <div className="flex justify-end space-x-3 pt-2">
+      <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+      <Button variant="primary" type="submit">{submitLabel}</Button>
+    </div>
+  </form>
+);
+
 const CustomerManagement = () => {
   const { searchQuery } = useOutletContext() || {};
   const [customers, setCustomers] = useState([]);
@@ -206,26 +228,6 @@ const CustomerManagement = () => {
     },
   ];
 
-  const CustomerForm = ({ onSubmit, submitLabel }) => (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input label="Customer Full Name *" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter customer full name" icon={User} required />
-        <Input label="Account Number (Optional)" name="accountNumber" value={formData.accountNumber} onChange={handleInputChange} placeholder="Auto-generated if left blank" icon={Hash} />
-        <Input label="Contact Number" name="contactNumber" value={formData.contactNumber} onChange={handleInputChange} placeholder="Enter contact number" icon={Phone} />
-        <Input label="Messenger PSID (Optional)" name="messengerPsid" value={formData.messengerPsid} onChange={handleInputChange} placeholder="Enter Messenger PSID if linked" icon={MessageSquare} />
-        <div className="sm:col-span-2">
-          <Input label="Complete Address" name="completeAddress" value={formData.completeAddress} onChange={handleInputChange} placeholder="Enter complete installation address" icon={MapPin} />
-        </div>
-        <div className="sm:col-span-2">
-          <Input label="Nearby Landmark" name="nearbyLandmark" value={formData.nearbyLandmark} onChange={handleInputChange} placeholder="e.g. Near Barangay Hall, Beside Bakery" icon={Compass} />
-        </div>
-      </div>
-      <div className="flex justify-end space-x-3 pt-2">
-        <Button variant="ghost" type="button" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }}>Cancel</Button>
-        <Button variant="primary" type="submit">{submitLabel}</Button>
-      </div>
-    </form>
-  );
 
   return (
     <div className="space-y-6">
@@ -283,12 +285,24 @@ const CustomerManagement = () => {
 
       {/* Add Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Customer" maxWidth="max-w-2xl">
-        <CustomerForm onSubmit={handleAddCustomer} submitLabel="Save Customer" />
+        <CustomerForm
+          formData={formData}
+          onChange={handleInputChange}
+          onSubmit={handleAddCustomer}
+          onCancel={() => setIsAddModalOpen(false)}
+          submitLabel="Save Customer"
+        />
       </Modal>
 
       {/* Edit Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Edit Customer — ${selectedCustomer?.full_name || ''}`} maxWidth="max-w-2xl">
-        <CustomerForm onSubmit={handleEditCustomer} submitLabel="Update Customer" />
+        <CustomerForm
+          formData={formData}
+          onChange={handleInputChange}
+          onSubmit={handleEditCustomer}
+          onCancel={() => setIsEditModalOpen(false)}
+          submitLabel="Update Customer"
+        />
       </Modal>
 
       {/* Delete Confirmation */}
