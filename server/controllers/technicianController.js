@@ -37,7 +37,18 @@ exports.getTechnicians = async (req, res, next) => {
     }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
-    const dataParams = [...params, parseInt(limit), offset];
+
+    // Having clause for workload filtering
+    let havingClause = '';
+    if (workload === 'available') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) <= 1`;
+    } else if (workload === 'normal') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) BETWEEN 1 AND 2`;
+    } else if (workload === 'busy') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) = 3`;
+    } else if (workload === 'overloaded') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) > 3`;
+    }
 
     let orderBy = 'u.created_at DESC';
     if (sortBy === 'full_name' || sortBy === 'name') {
@@ -52,41 +63,26 @@ exports.getTechnicians = async (req, res, next) => {
       orderBy = `u.created_at ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
     }
 
-    // Having clause for workload filtering
-    let havingClause = '';
-    if (workload === 'available') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) <= 1`;
-    } else if (workload === 'normal') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) BETWEEN 1 AND 2`;
-    } else if (workload === 'busy') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) = 3`;
-    } else if (workload === 'overloaded') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) > 3`;
-    }
+    const dataQuery = `
+      SELECT u.id, u.employee_id, u.full_name, u.email, u.contact_number, u.status, u.profile_image_url, u.specialization, u.department, u.last_login_at, u.created_at,
+             COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tickets,
+             COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed')) AS completed_tickets,
+             COUNT(t.id) AS total_tickets
+      FROM users u 
+      LEFT JOIN tickets t ON u.id = t.assigned_technician_id
+      ${where} 
+      GROUP BY u.id
+      ${havingClause}
+      ORDER BY ${orderBy}
+    `;
 
-    const [data, count] = await Promise.all([
-      query(
-        `SELECT u.id, u.employee_id, u.full_name, u.email, u.contact_number, u.status, u.profile_image_url, u.specialization, u.department, u.last_login_at, u.created_at,
-                COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tickets,
-                COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed')) AS completed_tickets,
-                COUNT(t.id) AS total_tickets
-         FROM users u 
-         LEFT JOIN tickets t ON u.id = t.assigned_technician_id
-         ${where} 
-         GROUP BY u.id
-         ${havingClause}
-         ORDER BY ${orderBy}
-         LIMIT $${idx++} OFFSET $${idx}`,
-        dataParams
-      ),
-      query(`SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN tickets t ON u.id = t.assigned_technician_id ${where} ${havingClause ? `GROUP BY u.id ${havingClause}` : ''}`, params)
-    ]);
-
-    const totalCount = havingClause ? count.rows.length : parseInt(count.rows[0]?.count || 0);
+    const allData = await query(dataQuery, params);
+    const totalCount = allData.rows.length;
+    const paginatedRows = allData.rows.slice(offset, offset + parseInt(limit));
 
     res.json({
       success: true,
-      data: data.rows,
+      data: paginatedRows,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -95,6 +91,7 @@ exports.getTechnicians = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('getTechnicians error:', error);
     next(error);
   }
 };
