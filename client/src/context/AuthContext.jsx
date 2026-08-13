@@ -1,51 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/axios';
+import { getAuthToken, getCachedUser, setAuthSession, clearAuthSession } from '../utils/authStorage';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Immediately restore from cache — no flash to login on refresh
-    try {
-      const cached = localStorage.getItem('user');
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
+    // Immediately restore role-scoped cached user
+    return getCachedUser();
   });
   const [loading, setLoading] = useState(true);
 
-  const setAndCacheUser = (userData) => {
-    if (userData) {
-      localStorage.setItem('user', JSON.stringify(userData));
-    } else {
-      localStorage.removeItem('user');
-    }
-    setUser(userData);
-  };
-
   useEffect(() => {
     const fetchMe = async () => {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!token) {
-        setAndCacheUser(null);
+        setUser(null);
         setLoading(false);
         return;
       }
       try {
         const res = await api.get('/auth/me');
         if (res.success) {
-          setAndCacheUser(res.data);
+          setAuthSession(res.data);
+          setUser(res.data);
         }
       } catch (err) {
         // Only clear session on confirmed 401 (invalid/expired token)
-        // Do NOT clear on 500 server errors or network failures (e.g. server restart)
         if (err?.status === 401 || err?.statusCode === 401) {
-          localStorage.clear();
+          clearAuthSession();
           setUser(null);
         }
-        // For all other errors (500, network), keep the cached user alive
         console.warn('Auth check failed (keeping session):', err?.message || err);
       } finally {
         setLoading(false);
@@ -58,9 +44,8 @@ export const AuthProvider = ({ children }) => {
     const res = await api.post('/auth/login', { email, password });
     if (res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      setAndCacheUser(userData);
+      setAuthSession(userData, accessToken, refreshToken);
+      setUser(userData);
       toast.success(`Welcome back, ${userData.fullName}!`);
       return userData;
     }
@@ -70,9 +55,8 @@ export const AuthProvider = ({ children }) => {
     const res = await api.post('/auth/pin-login', { pin });
     if (res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      setAndCacheUser(userData);
+      setAuthSession(userData, accessToken, refreshToken);
+      setUser(userData);
       toast.success(`Welcome back, ${userData.fullName || 'Technician'}!`);
       return userData;
     }
@@ -92,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // ignore
     } finally {
-      localStorage.clear();
+      clearAuthSession(user?.role);
       setUser(null);
       toast.success('Logged out successfully');
     }
@@ -101,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserProfile = (updatedData) => {
     setUser((prev) => {
       const updated = { ...prev, ...updatedData };
-      localStorage.setItem('user', JSON.stringify(updated));
+      setAuthSession(updated);
       return updated;
     });
   };

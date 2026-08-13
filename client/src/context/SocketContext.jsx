@@ -4,6 +4,8 @@ import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 
+import { getAuthToken } from '../utils/authStorage';
+
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
@@ -12,7 +14,7 @@ export const SocketProvider = ({ children }) => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken(user?.role);
     if (!user || !token) {
       if (socket) {
         socket.disconnect();
