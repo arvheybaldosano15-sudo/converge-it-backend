@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
@@ -44,10 +44,11 @@ const ReportsAndAnalytics = () => {
   const [responseTimes, setResponseTimes] = useState([]);
   const [slaData, setSlaData] = useState({});
 
-  // ── Filter state ──
-  const [trendPeriod, setTrendPeriod] = useState('30');
-  const [filters, setFilters] = useState({ period: '30', startDate: '', endDate: '' });
-  const [appliedFilters, setAppliedFilters] = useState({ period: '30', startDate: '', endDate: '' });
+  // ── Filter state (single source of truth) ──
+  // period: quick date in days. startDate/endDate: custom range.
+  const [period, setPeriod] = useState('30');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [useCustomDate, setUseCustomDate] = useState(false);
 
   // ── Report generator state ──
@@ -55,17 +56,13 @@ const ReportsAndAnalytics = () => {
   const [reportStart, setReportStart] = useState('');
   const [reportEnd, setReportEnd] = useState('');
 
-  // ─── Fetch all analytics data ────────────────────────────────────────────
-  const fetchAll = useCallback(async (f = appliedFilters, showRefresh = false) => {
+  // ─── Core fetch function — takes explicit params, no stale closure ────────
+  const fetchAll = async (params, showRefresh = false) => {
     if (showRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const params = f.startDate && f.endDate
-        ? { startDate: f.startDate, endDate: f.endDate }
-        : { period: f.period };
-
       const [overRes, trendRes, catRes, techRes, resTimeRes, slaRes] = await Promise.all([
         api.get('/analytics/overview', { params }),
-        api.get('/analytics/tickets-trend', { params: { ...params, period: trendPeriod } }),
+        api.get('/analytics/tickets-trend', { params }),
         api.get('/analytics/category-breakdown', { params }),
         api.get('/analytics/technician-performance', { params }),
         api.get('/analytics/response-times', { params }),
@@ -84,31 +81,38 @@ const ReportsAndAnalytics = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [appliedFilters, trendPeriod]);
-
-  useEffect(() => { fetchAll(); }, []);
-
-  // Re-fetch trend when trendPeriod changes
-  useEffect(() => {
-    const params = appliedFilters.startDate && appliedFilters.endDate
-      ? { startDate: appliedFilters.startDate, endDate: appliedFilters.endDate }
-      : { period: trendPeriod };
-    api.get('/analytics/tickets-trend', { params }).then((r) => { if (r.success) setTrend(r.data || []); }).catch(() => {});
-  }, [trendPeriod]);
-
-  const applyFilters = () => {
-    const f = { ...filters };
-    setAppliedFilters(f);
-    fetchAll(f, true);
   };
 
-  const resetFilters = () => {
-    const def = { period: '30', startDate: '', endDate: '' };
-    setFilters(def);
-    setAppliedFilters(def);
-    setTrendPeriod('30');
+  // Build params from current filter state
+  const buildParams = (p = period, sd = startDate, ed = endDate) =>
+    sd && ed ? { startDate: sd, endDate: ed } : { period: p };
+
+  // Initial load
+  useEffect(() => { fetchAll(buildParams()); }, []);
+
+  // Apply quick period pill — immediately fetches
+  const applyPeriod = (p) => {
+    setPeriod(p);
+    setStartDate('');
+    setEndDate('');
     setUseCustomDate(false);
-    fetchAll(def, true);
+    fetchAll({ period: p }, true);
+  };
+
+  // Apply custom date range
+  const applyCustomDate = () => {
+    if (!startDate || !endDate) { toast.error('Please select both start and end dates'); return; }
+    if (new Date(startDate) > new Date(endDate)) { toast.error('Start date must be before end date'); return; }
+    fetchAll({ startDate, endDate }, true);
+  };
+
+  // Reset everything
+  const resetFilters = () => {
+    setPeriod('30');
+    setStartDate('');
+    setEndDate('');
+    setUseCustomDate(false);
+    fetchAll({ period: '30' }, true);
   };
 
   const tOverview = overview.tickets || {};
@@ -297,7 +301,7 @@ const ReportsAndAnalytics = () => {
           <p className="text-xs text-slate-400 mt-0.5">Interactive operational metrics, performance trends, and custom report exports</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => fetchAll(appliedFilters, true)} className={`text-slate-400 hover:text-white ${refreshing ? 'animate-spin' : ''}`}>Refresh</Button>
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => fetchAll(buildParams(), true)} className={`text-slate-400 hover:text-white ${refreshing ? 'animate-spin' : ''}`}>Refresh</Button>
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
             {[{ key: 'analytics', label: 'Analytics Dashboard', icon: BarChart3 }, { key: 'reports', label: 'Report Generator', icon: FileText }].map((tab) => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -318,11 +322,11 @@ const ReportsAndAnalytics = () => {
                 <Filter className="w-4 h-4 text-cyan-400" /> Analytics Filters
               </div>
 
-              {/* Quick date pills */}
+              {/* Quick date pills — click to immediately apply */}
               <div className="flex flex-wrap gap-1.5">
                 {[{ label: 'Today', val: '1' }, { label: '7 Days', val: '7' }, { label: '30 Days', val: '30' }, { label: '90 Days', val: '90' }, { label: 'This Year', val: '365' }].map((d) => (
-                  <button key={d.val} onClick={() => { setFilters({ period: d.val, startDate: '', endDate: '' }); setUseCustomDate(false); }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${filters.period === d.val && !useCustomDate ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white border border-slate-800'}`}>
+                  <button key={d.val} onClick={() => applyPeriod(d.val)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${period === d.val && !useCustomDate ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white border border-slate-800'}`}>
                     {d.label}
                   </button>
                 ))}
@@ -334,17 +338,20 @@ const ReportsAndAnalytics = () => {
 
               {useCustomDate && (
                 <div className="flex items-center gap-2">
-                  <input type="date" value={filters.startDate} onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value, period: '' }))}
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
                     className="glass-input rounded-lg py-1 px-2 text-xs border-slate-700 bg-slate-900 text-white" />
                   <span className="text-slate-500 text-xs">to</span>
-                  <input type="date" value={filters.endDate} onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value, period: '' }))}
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                     className="glass-input rounded-lg py-1 px-2 text-xs border-slate-700 bg-slate-900 text-white" />
+                  <Button variant="primary" size="sm" onClick={applyCustomDate} className="text-xs">Apply</Button>
                 </div>
               )}
 
               <div className="flex items-center gap-2 ml-auto">
                 <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-slate-400 hover:text-rose-400">Reset</Button>
-                <Button variant="primary" size="sm" onClick={applyFilters} className="text-xs">Apply Filters</Button>
+                {!useCustomDate && (
+                  <span className="text-[10px] text-slate-500 italic">Click a period to apply instantly</span>
+                )}
               </div>
             </div>
           </Card>
@@ -375,8 +382,8 @@ const ReportsAndAnalytics = () => {
                 <h3 className="text-sm font-bold text-white font-display flex items-center gap-2"><TrendingUp className="w-4 h-4 text-cyan-400" /> Ticket Volume Trend</h3>
                 <div className="flex gap-1">
                   {[{ label: '7D', val: '7' }, { label: '30D', val: '30' }, { label: '90D', val: '90' }].map((p) => (
-                    <button key={p.val} onClick={() => setTrendPeriod(p.val)}
-                      className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${trendPeriod === p.val ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'}`}>{p.label}</button>
+                    <button key={p.val} onClick={() => applyPeriod(p.val)}
+                      className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${period === p.val && !useCustomDate ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'}`}>{p.label}</button>
                   ))}
                 </div>
               </div>
