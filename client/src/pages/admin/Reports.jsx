@@ -142,18 +142,67 @@ const ReportsAndAnalytics = () => {
     if (last > prev) insights.push({ icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10', text: `Ticket volume is trending up — ${last} tickets created on the latest recorded day vs ${prev} the day before.` });
   }
 
-  // ─── Chart: Ticket Volume Trend (Line) ───────────────────────────────────
+  // ─── Chart: Ticket Volume Trend (Line) — Dashboard style ─────────────────
   const lineData = {
-    labels: trend.map((t) => new Date(t.date).toLocaleDateString([], { month: 'short', day: 'numeric' })),
+    labels: trend.map((t) => new Date(t.date).toLocaleDateString([], { weekday: 'short' })),
     datasets: [
-      { label: 'Created', data: trend.map((t) => parseInt(t.created || 0)), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#2563eb', pointRadius: 4, pointHoverRadius: 6 },
-      { label: 'Resolved', data: trend.map((t) => parseInt(t.resolved || 0)), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#16a34a', pointRadius: 4, pointHoverRadius: 6 }
+      {
+        label: 'New Tickets',
+        data: trend.map((t) => parseInt(t.created || 0)),
+        borderColor: '#2563eb',
+        backgroundColor: 'transparent',
+        tension: 0.4,
+        fill: false,
+        pointBackgroundColor: '#2563eb',
+        pointBorderColor: '#2563eb',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
+      },
+      {
+        label: 'Resolved Tickets',
+        data: trend.map((t) => parseInt(t.resolved || 0)),
+        borderColor: '#16a34a',
+        backgroundColor: 'transparent',
+        tension: 0.4,
+        fill: false,
+        pointBackgroundColor: '#16a34a',
+        pointBorderColor: '#16a34a',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
+      }
     ]
   };
   const lineOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { ...LEGEND_STYLE, position: 'bottom' }, tooltip: CHART_TOOLTIP },
-    scales: { x: AXIS_STYLE, y: { ...AXIS_STYLE, beginAtZero: true, ticks: { ...AXIS_STYLE.ticks, stepSize: 1 } } }
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#94a3b8',
+          font: { size: 11, weight: '500' },
+          usePointStyle: true,
+          pointStyle: 'circle',
+          pointStyleWidth: 8,
+          padding: 16,
+        }
+      },
+      tooltip: CHART_TOOLTIP,
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(51,65,85,0)', display: false },
+        ticks: { color: '#94a3b8', font: { size: 10 } },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(51,65,85,0.3)', borderDash: [4, 4] },
+        ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 3 },
+        border: { dash: [4, 4] },
+      }
+    }
   };
 
   // ─── Chart: Ticket Status Breakdown (Donut) ───────────────────────────────
