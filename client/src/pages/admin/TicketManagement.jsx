@@ -453,19 +453,19 @@ const TicketManagement = () => {
 
       {/* Main Ticket Table */}
       <Card className="p-0 overflow-hidden border-slate-800 bg-slate-950/80">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto lg:overflow-x-visible">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-3.5">Ticket ID</th>
-                <th className="p-3.5">Customer</th>
-                <th className="p-3.5">Category</th>
-                <th className="p-3.5">Priority</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5">Assignee</th>
-                <th className="p-3.5">SLA Status</th>
-                <th className="p-3.5">Created Date</th>
-                <th className="p-3.5 text-right">Actions</th>
+                <th className="p-2.5 sm:p-3">Ticket ID</th>
+                <th className="p-2.5 sm:p-3">Customer</th>
+                <th className="p-2.5 sm:p-3">Category</th>
+                <th className="p-2.5 sm:p-3">Priority</th>
+                <th className="p-2.5 sm:p-3">Status</th>
+                <th className="p-2.5 sm:p-3">Assignee</th>
+                <th className="p-2.5 sm:p-3">SLA Status</th>
+                <th className="p-2.5 sm:p-3">Created Date</th>
+                <th className="p-2.5 sm:p-3 text-right">Actions</th>
               </tr>
             </thead>
 
@@ -493,32 +493,32 @@ const TicketManagement = () => {
                       className="hover:bg-slate-900/70 transition-colors"
                     >
                       {/* Ticket Number */}
-                      <td className="p-3.5 font-mono font-extrabold text-cyan-400">
+                      <td className="p-2.5 sm:p-3 font-mono font-extrabold text-cyan-400">
                         {row.ticket_number}
                       </td>
 
                       {/* Customer Details */}
-                      <td className="p-3.5">
-                        <p className="font-bold text-white truncate max-w-[150px]">{row.customer_name || 'Customer'}</p>
-                        <p className="text-[10px] text-slate-400 truncate max-w-[150px]">{row.customer_contact || row.subject}</p>
+                      <td className="p-2.5 sm:p-3">
+                        <p className="font-bold text-white truncate max-w-[130px]">{row.customer_name || 'Customer'}</p>
+                        <p className="text-[10px] text-slate-400 truncate max-w-[130px]">{row.customer_contact || row.subject}</p>
                       </td>
 
                       {/* Category */}
-                      <td className="p-3.5">
+                      <td className="p-2.5 sm:p-3">
                         <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium">
                           {row.category_name || 'General Support'}
                         </span>
                       </td>
 
                       {/* Priority */}
-                      <td className="p-3.5">
+                      <td className="p-2.5 sm:p-3">
                         <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : row.priority === 'medium' ? 'cyan' : 'default'}>
                           {row.priority}
                         </Badge>
                       </td>
 
                       {/* Status */}
-                      <td className="p-3.5">
+                      <td className="p-2.5 sm:p-3">
                         <Badge variant={
                           row.status === 'resolved' ? 'success' :
                           row.status === 'in_progress' ? 'info' :
@@ -530,9 +530,9 @@ const TicketManagement = () => {
                       </td>
 
                       {/* Assignee */}
-                      <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
+                      <td className="p-2.5 sm:p-3" onClick={(e) => e.stopPropagation()}>
                         {row.assignee_name ? (
-                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[150px]">
+                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[130px]">
                             <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
                             <span className="truncate font-semibold text-[11px]">{row.assignee_name}</span>
                           </div>
@@ -540,8 +540,9 @@ const TicketManagement = () => {
                           <select
                             value={row.assigned_to || ''}
                             onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
-                            className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[140px]"
+                            className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[130px]"
                           >
+                            <option value="">Select Tech...</option>
                             {technicians.map((t) => (
                               <option key={t.id} value={t.id}>{t.full_name}</option>
                             ))}
@@ -550,19 +551,19 @@ const TicketManagement = () => {
                       </td>
 
                       {/* SLA Status */}
-                      <td className="p-3.5">
+                      <td className="p-2.5 sm:p-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${slaInfo.bg} ${slaInfo.color} ${slaInfo.border}`}>
                           {slaInfo.text}
                         </span>
                       </td>
 
                       {/* Created Date */}
-                      <td className="p-3.5 text-slate-400 text-[11px]">
+                      <td className="p-2.5 sm:p-3 text-slate-400 text-[11px]">
                         {new Date(row.created_at).toLocaleDateString()}
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="p-2.5 sm:p-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => viewTicketDetail(row)}

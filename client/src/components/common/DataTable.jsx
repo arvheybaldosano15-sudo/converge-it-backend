@@ -22,12 +22,12 @@ const DataTable = ({
   }
 
   return (
-    <div className="w-full overflow-x-auto custom-scrollbar glass-panel rounded-2xl border border-slate-800">
-      <table className="w-full text-left text-sm text-slate-300 min-w-[600px] sm:min-w-full">
-        <thead className="bg-slate-900/80 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800 whitespace-nowrap">
+    <div className="w-full overflow-x-auto lg:overflow-x-visible glass-panel rounded-2xl border border-slate-800">
+      <table className="w-full text-left text-xs sm:text-sm text-slate-300">
+        <thead className="bg-slate-900/80 text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
           <tr>
             {columns.map((col, idx) => (
-              <th key={idx} className="px-4 sm:px-6 py-3.5 font-semibold">
+              <th key={idx} className="px-3 py-3 font-semibold">
                 {col.header}
               </th>
             ))}
@@ -43,7 +43,7 @@ const DataTable = ({
               }`}
             >
               {columns.map((col, colIdx) => (
-                <td key={colIdx} className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                <td key={colIdx} className="px-3 py-3">
                   {col.cell ? col.cell(row) : row[col.accessorKey]}
                 </td>
               ))}
