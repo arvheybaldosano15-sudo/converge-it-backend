@@ -98,11 +98,22 @@ const TicketManagement = () => {
   const fetchAuxiliaryData = async () => {
     try {
       const [techRes, catRes] = await Promise.all([
-        api.get('/technicians?status=active&limit=100'),
-        api.get('/categories'),
+        api.get('/technicians?status=active&limit=100').catch(() => null),
+        api.get('/categories').catch(() => null),
       ]);
-      if (techRes.success) setTechnicians(techRes.data || []);
-      if (catRes.success) setCategories(catRes.data || []);
+      if (techRes && techRes.success) setTechnicians(techRes.data || []);
+      if (catRes && catRes.success && catRes.data && catRes.data.length > 0) {
+        setCategories(catRes.data);
+      } else {
+        setCategories([
+          { id: 'starlink', name: 'Starlink Internet' },
+          { id: 'installation', name: 'Installation Request' },
+          { id: 'cctv', name: 'CCTV System' },
+          { id: 'smart_devices', name: 'Smart Devices' },
+          { id: 'network', name: 'Network Issues' },
+          { id: 'hardware', name: 'Hardware Support' }
+        ]);
+      }
     } catch (e) {
       console.warn('Auxiliary data fetch error:', e);
     }
