@@ -6,7 +6,7 @@ const { emitToAdmins } = require('../services/socketService');
 
 exports.getTechnicians = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, search, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 20, status, specialization, workload, search, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = ["u.role = 'technician'"];
     const params = [];
@@ -25,8 +25,13 @@ exports.getTechnicians = async (req, res, next) => {
       }
     }
 
+    if (specialization && specialization !== 'all') {
+      conditions.push(`u.specialization ILIKE $${idx++}`);
+      params.push(`%${specialization}%`);
+    }
+
     if (search && search.trim() !== '') {
-      conditions.push(`(u.full_name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.employee_id ILIKE $${idx})`);
+      conditions.push(`(u.full_name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.employee_id ILIKE $${idx} OR u.specialization ILIKE $${idx})`);
       params.push(`%${search.trim()}%`);
       idx++;
     }
@@ -34,24 +39,50 @@ exports.getTechnicians = async (req, res, next) => {
     const where = `WHERE ${conditions.join(' AND ')}`;
     const dataParams = [...params, parseInt(limit), offset];
 
-    const validSortColumns = ['created_at', 'full_name', 'email', 'employee_id', 'status'];
-    const safeSortBy = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
-    const safeSortOrder = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    let orderBy = 'u.created_at DESC';
+    if (sortBy === 'full_name' || sortBy === 'name') {
+      orderBy = `u.full_name ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
+    } else if (sortBy === 'active_tickets' || sortBy === 'workload') {
+      orderBy = `active_tickets ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}, u.full_name ASC`;
+    } else if (sortBy === 'completed_tickets') {
+      orderBy = `completed_tickets ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
+    } else if (sortBy === 'last_login_at' || sortBy === 'recently_active') {
+      orderBy = `u.last_login_at ${sortOrder === 'ASC' ? 'ASC' : 'DESC'} NULLS LAST`;
+    } else {
+      orderBy = `u.created_at ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
+    }
+
+    // Having clause for workload filtering
+    let havingClause = '';
+    if (workload === 'available') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) <= 1`;
+    } else if (workload === 'normal') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) BETWEEN 1 AND 2`;
+    } else if (workload === 'busy') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) = 3`;
+    } else if (workload === 'overloaded') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) > 3`;
+    }
 
     const [data, count] = await Promise.all([
       query(
         `SELECT u.id, u.employee_id, u.full_name, u.email, u.contact_number, u.status, u.profile_image_url, u.specialization, u.department, u.last_login_at, u.created_at,
-                (SELECT COUNT(*) FROM tickets t WHERE t.assigned_technician_id = u.id AND t.status NOT IN ('resolved','closed')) AS active_tickets,
-                (SELECT COUNT(*) FROM tickets t WHERE t.assigned_technician_id = u.id AND t.status IN ('resolved','closed')) AS completed_tickets,
-                (SELECT COUNT(*) FROM tickets t WHERE t.assigned_technician_id = u.id) AS total_tickets
+                COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tickets,
+                COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed')) AS completed_tickets,
+                COUNT(t.id) AS total_tickets
          FROM users u 
+         LEFT JOIN tickets t ON u.id = t.assigned_technician_id
          ${where} 
-         ORDER BY u.${safeSortBy} ${safeSortOrder}
+         GROUP BY u.id
+         ${havingClause}
+         ORDER BY ${orderBy}
          LIMIT $${idx++} OFFSET $${idx}`,
         dataParams
       ),
-      query(`SELECT COUNT(*) FROM users u ${where}`, params)
+      query(`SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN tickets t ON u.id = t.assigned_technician_id ${where} ${havingClause ? `GROUP BY u.id ${havingClause}` : ''}`, params)
     ]);
+
+    const totalCount = havingClause ? count.rows.length : parseInt(count.rows[0]?.count || 0);
 
     res.json({
       success: true,
@@ -59,8 +90,49 @@ exports.getTechnicians = async (req, res, next) => {
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: parseInt(count.rows[0].count),
-        totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit))
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / parseInt(limit)) || 1
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getTechnicianStats = async (req, res, next) => {
+  try {
+    const statsRes = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'technician') AS total_technicians,
+        (SELECT COUNT(*) FROM users WHERE role = 'technician' AND status = 'active') AS active_technicians,
+        (SELECT COUNT(DISTINCT u.id) 
+         FROM users u 
+         LEFT JOIN tickets t ON u.id = t.assigned_technician_id AND t.status NOT IN ('resolved','closed')
+         WHERE u.role = 'technician' AND u.status = 'active'
+         GROUP BY u.id HAVING COUNT(t.id) <= 1) AS available_technicians,
+        (SELECT COUNT(DISTINCT u.id) 
+         FROM users u 
+         JOIN tickets t ON u.id = t.assigned_technician_id AND t.status NOT IN ('resolved','closed')
+         WHERE u.role = 'technician' AND u.status = 'active') AS active_task_technicians,
+        (SELECT COUNT(DISTINCT u.id) 
+         FROM users u 
+         JOIN tickets t ON u.id = t.assigned_technician_id AND t.status NOT IN ('resolved','closed')
+         WHERE u.role = 'technician' AND u.status = 'active'
+         GROUP BY u.id HAVING COUNT(t.id) > 3) AS overloaded_technicians
+    `);
+
+    // Sum array length if group by returned rows
+    const total = parseInt(statsRes.rows[0]?.total_technicians || 0);
+    const active = parseInt(statsRes.rows[0]?.active_technicians || 0);
+
+    res.json({
+      success: true,
+      data: {
+        total_technicians: total,
+        active_technicians: active,
+        available_technicians: Math.min(active, parseInt(statsRes.rows[0]?.available_technicians || 0)),
+        active_task_technicians: parseInt(statsRes.rows[0]?.active_task_technicians || 0),
+        overloaded_technicians: parseInt(statsRes.rows[0]?.overloaded_technicians || 0),
       }
     });
   } catch (error) {
@@ -84,20 +156,91 @@ exports.getPendingTechnicians = async (req, res, next) => {
 
 exports.getTechnicianById = async (req, res, next) => {
   try {
+    const techId = req.params.id;
+
+    const [techRes, ticketsRes, timelineRes] = await Promise.all([
+      query(
+        `SELECT u.id, u.employee_id, u.full_name, u.email, u.contact_number, u.address, u.profile_image_url, u.specialization, u.department, u.status, u.last_login_at, u.created_at,
+                COUNT(t.id) AS total_tickets,
+                COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tickets,
+                COUNT(t.id) FILTER (WHERE t.status = 'open') AS open_tickets,
+                COUNT(t.id) FILTER (WHERE t.status = 'in_progress') AS in_progress_tickets,
+                COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed')) AS completed_tickets,
+                COUNT(t.id) FILTER (WHERE t.sla_deadline < NOW() AND t.status NOT IN ('resolved','closed')) AS sla_breaches,
+                ROUND(AVG(f.rating)::numeric, 2) AS avg_satisfaction
+         FROM users u 
+         LEFT JOIN tickets t ON u.id = t.assigned_technician_id 
+         LEFT JOIN feedback f ON t.id = f.ticket_id
+         WHERE u.id = $1 AND u.role = 'technician' 
+         GROUP BY u.id`,
+        [techId]
+      ),
+      query(`
+        SELECT t.id, t.ticket_number, t.subject, t.status, t.priority, t.created_at, t.resolved_at, t.sla_deadline,
+               cat.name AS category_name, cat.color_code AS category_color,
+               c.full_name AS customer_name
+        FROM tickets t
+        LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+        LEFT JOIN customers c ON t.customer_id = c.id
+        WHERE t.assigned_technician_id = $1
+        ORDER BY t.created_at DESC
+        LIMIT 10`, [techId]),
+      query(`
+        SELECT tu.id, tu.ticket_id, tu.status_changed_to, tu.notes, tu.created_at,
+               t.ticket_number, u.full_name AS user_name
+        FROM ticket_updates tu
+        JOIN tickets t ON tu.ticket_id = t.id
+        LEFT JOIN users u ON tu.updated_by = u.id
+        WHERE t.assigned_technician_id = $1 OR tu.updated_by = $1
+        ORDER BY tu.created_at DESC
+        LIMIT 15`, [techId])
+    ]);
+
+    if (!techRes.rows[0]) throw createError('Technician not found', 404);
+
+    const tech = techRes.rows[0];
+    const total = parseInt(tech.total_tickets) || 0;
+    const completed = parseInt(tech.completed_tickets) || 0;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+    res.json({
+      success: true,
+      data: {
+        ...tech,
+        completion_rate: completionRate,
+        assignedTickets: ticketsRes.rows || [],
+        activityTimeline: timelineRes.rows || []
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateTechnician = async (req, res, next) => {
+  try {
+    const { fullName, email, contactNumber, specialization, department, status } = req.body;
+    const updates = [];
+    const values = [];
+    let i = 1;
+
+    if (fullName !== undefined) { updates.push(`full_name = $${i++}`); values.push(fullName); }
+    if (email !== undefined) { updates.push(`email = $${i++}`); values.push(email); }
+    if (contactNumber !== undefined) { updates.push(`contact_number = $${i++}`); values.push(contactNumber); }
+    if (specialization !== undefined) { updates.push(`specialization = $${i++}`); values.push(specialization); }
+    if (department !== undefined) { updates.push(`department = $${i++}`); values.push(department); }
+    if (status !== undefined) { updates.push(`status = $${i++}`); values.push(status); }
+
+    if (updates.length === 0) throw createError('No fields to update', 400);
+
+    values.push(req.params.id);
     const result = await query(
-      `SELECT u.id, u.employee_id, u.full_name, u.email, u.contact_number, u.address, u.profile_image_url, u.specialization, u.department, u.status, u.last_login_at, u.created_at,
-              COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tickets,
-              COUNT(t.id) FILTER (WHERE t.status IN ('resolved','closed')) AS completed_tickets,
-              ROUND(AVG(f.rating)::numeric, 2) AS avg_satisfaction
-       FROM users u 
-       LEFT JOIN tickets t ON u.id = t.assigned_technician_id 
-       LEFT JOIN feedback f ON t.id = f.ticket_id
-       WHERE u.id = $1 AND u.role = 'technician' 
-       GROUP BY u.id`,
-      [req.params.id]
+      `UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i} AND role = 'technician' RETURNING *`,
+      values
     );
+
     if (!result.rows[0]) throw createError('Technician not found', 404);
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: result.rows[0], message: 'Technician updated successfully' });
   } catch (error) {
     next(error);
   }
@@ -209,7 +352,6 @@ exports.updateTechnicianStatus = async (req, res, next) => {
   try {
     let { status } = req.body;
     if (status === 'approved') status = 'active';
-    // 'rejected' is now a valid enum value — no need to remap
     const allowed = ['pending', 'active', 'inactive', 'rejected'];
     if (!allowed.includes(status)) throw createError('Invalid status', 400);
 
