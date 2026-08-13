@@ -542,7 +542,6 @@ const TicketManagement = () => {
                             onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
                             className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[140px]"
                           >
-                            <option value="">+ Assign Tech</option>
                             {technicians.map((t) => (
                               <option key={t.id} value={t.id}>{t.full_name}</option>
                             ))}
