@@ -8,7 +8,7 @@ import { useSocket } from '../../context/SocketContext';
 import {
   Ticket, Clock, CheckCircle, AlertTriangle, UserCheck, ArrowRight,
   Sparkles, Activity, AlertCircle, ShieldAlert, UserPlus, UserX,
-  FilePlus, Wrench, RefreshCw, Eye, Calendar, Layers, ShieldCheck
+  FilePlus, Wrench, RefreshCw, Eye, Calendar, Layers, ShieldCheck, MoreHorizontal
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -120,17 +120,16 @@ const Dashboard = () => {
     cornerRadius: 10,
   };
 
-  // Chart 1: Smooth 2-Line Graph (Weekly Ticket Activity Trend)
-  // Default values used as fallback if backend week array is empty
-  const defaultDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // Chart 1: Line Graph (Weekly Ticket Activity — exact match to screenshot)
+  const defaultDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const defaultCreated = [4, 6, 5, 8, 7, 3, 2];
   const defaultResolved = [2, 3, 4, 5, 6, 4, 3];
 
   const lineLabels = weeklyTrend.length > 0
     ? weeklyTrend.map(w => {
         if (!w.day) return '';
-        const dayMap = { 'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday' };
-        return dayMap[w.day.trim()] || w.day;
+        const dayMap = { 'Mon': 'Mon', 'Tue': 'Tue', 'Wed': 'Wed', 'Thu': 'Thu', 'Fri': 'Fri', 'Sat': 'Sat', 'Sun': 'Sun' };
+        return dayMap[w.day.trim()] || w.day.trim().substring(0, 3);
       })
     : defaultDays;
 
@@ -148,30 +147,30 @@ const Dashboard = () => {
       {
         label: 'New Tickets',
         data: lineCreated,
-        borderColor: '#38bdf8',
-        backgroundColor: 'rgba(56, 189, 248, 0.15)',
-        borderWidth: 3,
-        pointBackgroundColor: '#38bdf8',
+        borderColor: '#2563eb',
+        backgroundColor: '#2563eb',
+        borderWidth: 2,
+        pointBackgroundColor: '#2563eb',
         pointBorderColor: '#0f172a',
         pointBorderWidth: 2,
         pointRadius: 5,
         pointHoverRadius: 7,
-        tension: 0.4,
-        fill: true,
+        tension: 0.25,
+        fill: false,
       },
       {
         label: 'Resolved Tickets',
         data: lineResolved,
-        borderColor: '#34d399',
-        backgroundColor: 'rgba(52, 211, 153, 0.10)',
-        borderWidth: 3,
-        pointBackgroundColor: '#34d399',
+        borderColor: '#16a34a',
+        backgroundColor: '#16a34a',
+        borderWidth: 2,
+        pointBackgroundColor: '#16a34a',
         pointBorderColor: '#0f172a',
         pointBorderWidth: 2,
         pointRadius: 5,
         pointHoverRadius: 7,
-        tension: 0.4,
-        fill: true,
+        tension: 0.25,
+        fill: false,
       },
     ],
   };
@@ -181,23 +180,29 @@ const Dashboard = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
-        align: 'end',
-        labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12, weight: '600' } }
+        position: 'bottom',
+        align: 'center',
+        labels: {
+          color: '#f8fafc',
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 24,
+          font: { size: 13, weight: '600', family: "'Century Gothic', sans-serif" }
+        }
       },
       tooltip: { ...tooltipStyle },
     },
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: '#94a3b8', font: { size: 11, weight: '500' } },
+        ticks: { color: '#cbd5e1', font: { size: 12, weight: '500' } },
         border: { display: false }
       },
       y: {
-        grid: { color: '#1e293b' },
-        ticks: { color: '#94a3b8', font: { size: 11 }, precision: 0 },
+        grid: { color: '#1e293b', borderDash: [4, 4] },
+        ticks: { color: '#cbd5e1', font: { size: 12 }, stepSize: 3, precision: 0 },
         border: { display: false },
-        title: { display: true, text: 'Number of Tickets', color: '#64748b', font: { size: 11, weight: '600' } }
+        min: 0,
       },
     },
   };
@@ -469,24 +474,20 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* MAIN TREND VISUALIZATION: Smooth 2-Line Weekly Ticket Activity Graph */}
-      <Card className="space-y-3 p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* MAIN TREND VISUALIZATION: Line Graph matching user screenshot */}
+      <Card className="space-y-3 p-5 bg-slate-950/80 border-slate-800">
+        <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-white font-display flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-400" />
-              Weekly Ticket Activity Trend
+            <h2 className="text-lg font-bold text-white font-display">
+              Weekly Ticket Activity
             </h2>
-            <p className="text-xs text-slate-400">7-Day Monday–Sunday comparison of incoming support requests vs. resolved tickets</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Comparison of newly created and resolved tickets throughout the week.
+            </p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
-              <span className="w-3 h-3 rounded-full bg-sky-400 inline-block"></span> New Tickets
-            </span>
-            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span> Resolved Tickets
-            </span>
-          </div>
+          <button className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors">
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
         </div>
         <div className="h-72 w-full pt-2">
           <Line data={weeklyTrendData} options={weeklyTrendOptions} />
