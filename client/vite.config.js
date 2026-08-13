@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: true, // Automatically opens default browser (Microsoft Edge) on dev launch
+    strictPort: false,
+    open: true, // Automatically opens default browser on dev launch
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5000',
