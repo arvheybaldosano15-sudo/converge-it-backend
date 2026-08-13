@@ -6,14 +6,24 @@ const { createNotification } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, priority, category, assignedTo, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
+    const { page = 1, limit = 20, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;
     if (req.user.role === 'technician') { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(req.user.id); }
     if (status) { conditions.push(`t.status = $${idx++}`); params.push(status); }
     if (priority) { conditions.push(`t.priority = $${idx++}`); params.push(priority); }
     if (category) { conditions.push(`t.service_category_id = $${idx++}`); params.push(category); }
-    if (assignedTo) { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(assignedTo); }
+    if (assignedTo === 'unassigned') { conditions.push(`t.assigned_technician_id IS NULL`); }
+    else if (assignedTo) { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(assignedTo); }
+    
+    if (slaStatus === 'breached') {
+      conditions.push(`(t.sla_deadline < NOW() AND t.status NOT IN ('resolved','closed'))`);
+    } else if (slaStatus === 'at_risk') {
+      conditions.push(`(t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '4 hours' AND t.status NOT IN ('resolved','closed'))`);
+    } else if (slaStatus === 'within') {
+      conditions.push(`((t.sla_deadline IS NULL OR t.sla_deadline > NOW() + INTERVAL '4 hours') AND t.status NOT IN ('resolved','closed'))`);
+    }
+
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     if (search) { conditions.push(`(t.ticket_number ILIKE $${idx} OR t.subject ILIKE $${idx} OR c.full_name ILIKE $${idx})`); params.push(`%${search}%`); idx++; }
@@ -151,9 +161,11 @@ exports.getTicketStats = async (req, res, next) => {
              COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress_count,
              COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_count,
              COUNT(*) FILTER (WHERE status = 'closed') AS closed_count,
+             COUNT(*) FILTER (WHERE assigned_technician_id IS NULL AND status NOT IN ('resolved','closed')) AS unassigned_count,
              COUNT(*) FILTER (WHERE priority = 'critical') AS critical_count,
              COUNT(*) FILTER (WHERE priority = 'high') AS high_count,
              COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS sla_breached,
+             COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '4 hours' AND status NOT IN ('resolved','closed')) AS sla_at_risk,
              COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') AS created_today,
              COUNT(*) FILTER (WHERE resolved_at >= NOW() - INTERVAL '24 hours') AS resolved_today,
              COUNT(*) AS total
