@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '../../utils/axios';
+import { getUploadUrl } from '../../utils/urlHelper';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -748,8 +749,8 @@ const TicketManagement = () => {
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                       {selectedTicket.serviceReport.images_urls.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="rounded-xl overflow-hidden border border-slate-800 aspect-video block">
-                          <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                        <a key={i} href={getUploadUrl(url)} target="_blank" rel="noopener noreferrer" className="rounded-xl overflow-hidden border border-slate-800 aspect-video block">
+                          <img src={getUploadUrl(url)} alt={`Photo ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
                         </a>
                       ))}
                     </div>

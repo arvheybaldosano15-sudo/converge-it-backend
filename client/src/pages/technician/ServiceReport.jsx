@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
+import { getUploadUrl } from '../../utils/urlHelper';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -610,13 +611,13 @@ const ServiceReport = () => {
                   {selectedReport.images_urls.map((url, i) => (
                     <a
                       key={i}
-                      href={url}
+                      href={getUploadUrl(url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video block"
                     >
                       <img
-                        src={url}
+                        src={getUploadUrl(url)}
                         alt={`Service Photo ${i + 1}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
