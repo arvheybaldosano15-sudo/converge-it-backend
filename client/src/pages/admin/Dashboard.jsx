@@ -30,7 +30,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const socket = useSocket();
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
 
   const fetchDashboard = async () => {
     try {
@@ -55,7 +56,7 @@ const Dashboard = () => {
 
   // Listen for socket events to auto-update dashboard charts in real-time
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || typeof socket.on !== 'function') return;
 
     const handleUpdate = () => {
       fetchDashboard();
@@ -67,10 +68,12 @@ const Dashboard = () => {
     socket.on('ticket_updated', handleUpdate);
 
     return () => {
-      socket.off('ticket:created', handleUpdate);
-      socket.off('ticket_created', handleUpdate);
-      socket.off('ticket:updated', handleUpdate);
-      socket.off('ticket_updated', handleUpdate);
+      if (typeof socket.off === 'function') {
+        socket.off('ticket:created', handleUpdate);
+        socket.off('ticket_created', handleUpdate);
+        socket.off('ticket:updated', handleUpdate);
+        socket.off('ticket_updated', handleUpdate);
+      }
     };
   }, [socket]);
 
