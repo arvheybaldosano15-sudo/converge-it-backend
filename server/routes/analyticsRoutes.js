@@ -8,6 +8,7 @@ router.get('/tickets-trend', authenticate, authorize('admin'), analyticsControll
 router.get('/category-breakdown', authenticate, authorize('admin'), analyticsController.getCategoryBreakdown);
 router.get('/technician-performance', authenticate, authorize('admin'), analyticsController.getTechnicianPerformance);
 router.get('/response-times', authenticate, authorize('admin'), analyticsController.getResponseTimes);
+router.get('/sla-performance', authenticate, authorize('admin'), analyticsController.getSlaPerformance);
 router.get('/satisfaction-scores', authenticate, authorize('admin'), analyticsController.getSatisfactionScores);
 
 module.exports = router;
