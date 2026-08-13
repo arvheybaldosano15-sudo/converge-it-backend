@@ -711,63 +711,7 @@ const TicketManagement = () => {
               </div>
             </div>
 
-            {/* WORKFLOW ACTION BAR */}
-            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-              <span className="text-xs font-bold text-white font-display block">Workflow Actions</span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Change Assignee */}
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Assign Technician</label>
-                  <select
-                    value={modalAssignee}
-                    onChange={(e) => {
-                      setModalAssignee(e.target.value);
-                      handleAssignTechnician(selectedTicket.id, e.target.value);
-                    }}
-                    className="glass-input w-full text-xs rounded-xl py-2 px-3 border-slate-700 bg-slate-950 text-white"
-                  >
-                    <option value="">Select Technician...</option>
-                    {technicians.map((t) => (
-                      <option key={t.id} value={t.id}>{t.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Change Status */}
-                <div>
-                  <label className="text-[10px] text-slate-400 block mb-1 font-semibold">Update Status</label>
-                  <select
-                    value={modalStatus}
-                    onChange={(e) => {
-                      setModalStatus(e.target.value);
-                      handleStatusChange(selectedTicket.id, e.target.value);
-                    }}
-                    className="glass-input w-full text-xs rounded-xl py-2 px-3 border-slate-700 bg-slate-950 text-white"
-                  >
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-
-                {/* Quick Close Button */}
-                <div className="flex items-end">
-                  <Button
-                    variant={selectedTicket.status === 'closed' ? 'secondary' : 'success'}
-                    size="sm"
-                    disabled={selectedTicket.status === 'closed'}
-                    onClick={() => handleStatusChange(selectedTicket.id, 'closed')}
-                    className="w-full justify-center text-xs py-2"
-                  >
-                    {selectedTicket.status === 'closed' ? 'Ticket Closed' : 'Close Ticket'}
-                  </Button>
-                </div>
-              </div>
-            </div>
 
             {/* Field Service Report (if available) */}
             {selectedTicket.serviceReport && (
