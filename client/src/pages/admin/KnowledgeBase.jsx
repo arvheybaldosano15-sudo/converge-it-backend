@@ -51,10 +51,11 @@ const KnowledgeBase = () => {
       if (res.success) {
         toast.success('Knowledge Base article published!');
         setIsCreateModalOpen(false);
+        setFormData({ title: '', content: '', excerpt: '', categoryId: '', isPublished: true, isFeatured: false });
         fetchArticles();
       }
     } catch (e) {
-      toast.error('Failed to create article');
+      toast.error(e.message || e.response?.data?.message || 'Failed to create article');
     }
   };
 
