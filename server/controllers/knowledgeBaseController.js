@@ -33,6 +33,7 @@ exports.getArticles = async (req, res, next) => {
     const hasCreatedBy = cols.includes('created_by');
 
     const viewCol = hasViews ? 'COALESCE(kb.views, 0)' : hasViewCount ? 'COALESCE(kb.view_count, 0)' : '0';
+    const viewColPlain = hasViews ? 'COALESCE(views, 0)' : hasViewCount ? 'COALESCE(view_count, 0)' : '0';
     const authorJoin = hasAuthorId
       ? `LEFT JOIN users u ON kb.author_id = u.id`
       : hasCreatedBy
@@ -49,7 +50,7 @@ exports.getArticles = async (req, res, next) => {
       params.push(published === 'true');
     }
     if (category) {
-      conditions.push(`(cat.name ILIKE $${idx} OR cat.slug ILIKE $${idx})`);
+      conditions.push(`cat.name ILIKE $${idx}`);
       params.push(`%${category}%`);
       idx++;
     }
@@ -88,11 +89,11 @@ exports.getArticles = async (req, res, next) => {
                ${where}`, params)
       ]);
     } catch (e) {
-      // Safest fallback: no joins, minimal columns
+      // Safest fallback: no joins, minimal columns, no table alias
       [data, count] = await Promise.all([
         query(`
           SELECT id, title, content, tags, is_published,
-                 ${viewCol} AS views,
+                 ${viewColPlain} AS views,
                  COALESCE(helpful_count, 0) AS helpful_count,
                  created_at, updated_at,
                  'General' AS category_name, 'Admin' AS author_name,
