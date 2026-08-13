@@ -14,7 +14,8 @@ async function getKbColumns() {
     `);
     _kbColumns = result.rows.map((r) => r.column_name);
   } catch (e) {
-    _kbColumns = ['id', 'title', 'content', 'tags', 'is_published', 'view_count', 'created_at', 'updated_at', 'category_id', 'created_by'];
+    // Safest minimal fallback — only guaranteed base columns
+    _kbColumns = ['id', 'title', 'content', 'tags', 'is_published', 'created_at', 'updated_at', 'category_id'];
   }
   return _kbColumns;
 }
@@ -31,9 +32,12 @@ exports.getArticles = async (req, res, next) => {
     const hasViews = cols.includes('views');
     const hasViewCount = cols.includes('view_count');
     const hasCreatedBy = cols.includes('created_by');
+    const hasHelpfulCount = cols.includes('helpful_count');
 
     const viewCol = hasViews ? 'COALESCE(kb.views, 0)' : hasViewCount ? 'COALESCE(kb.view_count, 0)' : '0';
     const viewColPlain = hasViews ? 'COALESCE(views, 0)' : hasViewCount ? 'COALESCE(view_count, 0)' : '0';
+    const helpfulCol = hasHelpfulCount ? 'COALESCE(kb.helpful_count, 0)' : '0';
+    const helpfulColPlain = hasHelpfulCount ? 'COALESCE(helpful_count, 0)' : '0';
     const authorJoin = hasAuthorId
       ? `LEFT JOIN users u ON kb.author_id = u.id`
       : hasCreatedBy
@@ -74,7 +78,7 @@ exports.getArticles = async (req, res, next) => {
                  ${hasIsFeatured ? 'kb.is_featured,' : 'false AS is_featured,'}
                  kb.tags, kb.is_published,
                  ${viewCol} AS views,
-                 COALESCE(kb.helpful_count, 0) AS helpful_count,
+                 ${helpfulCol} AS helpful_count,
                  kb.created_at, kb.updated_at,
                  COALESCE(cat.name, 'General') AS category_name,
                  ${authorSelect}
@@ -94,7 +98,7 @@ exports.getArticles = async (req, res, next) => {
         query(`
           SELECT id, title, content, tags, is_published,
                  ${viewColPlain} AS views,
-                 COALESCE(helpful_count, 0) AS helpful_count,
+                 ${helpfulColPlain} AS helpful_count,
                  created_at, updated_at,
                  'General' AS category_name, 'Admin' AS author_name,
                  '' AS excerpt, false AS is_featured
