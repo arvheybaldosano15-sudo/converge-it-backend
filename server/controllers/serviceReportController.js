@@ -46,18 +46,28 @@ exports.createServiceReport = async (req, res, next) => {
 
 exports.updateServiceReport = async (req, res, next) => {
   try {
-    const { workPerformed, materialsUsed, completionNotes, isComplete, customerNameSigned } = req.body;
+    const { title, workPerformed, materialsUsed, completionNotes, isComplete, customerNameSigned } = req.body;
     const updates = []; const values = []; let i = 1;
+    if (title !== undefined) { updates.push(`title = $${i++}`); values.push(title); }
     if (workPerformed !== undefined) { updates.push(`work_performed = $${i++}`); values.push(workPerformed); }
     if (materialsUsed !== undefined) { updates.push(`materials_used = $${i++}`); values.push(materialsUsed); }
     if (completionNotes !== undefined) { updates.push(`completion_notes = $${i++}`); values.push(completionNotes); }
     if (isComplete !== undefined) { updates.push(`is_complete = $${i++}`); values.push(isComplete); }
     if (customerNameSigned !== undefined) { updates.push(`customer_name_signed = $${i++}`); values.push(customerNameSigned); }
+    
+    // Optional new image attachments via multer
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(f => fileToDataUri(f)).filter(Boolean);
+      // Append to existing images or replace
+      updates.push(`images_urls = images_urls || $${i++}::text[]`);
+      values.push(newImages);
+    }
+
     if (updates.length === 0) throw createError('No fields to update', 400);
     values.push(req.params.id);
     const result = await query(`UPDATE service_reports SET ${updates.join(', ')} WHERE id = $${i} RETURNING *`, values);
     if (!result.rows[0]) throw createError('Service report not found', 404);
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: result.rows[0], message: 'Service report updated successfully' });
   } catch (error) { next(error); }
 };
 
@@ -70,4 +80,20 @@ exports.uploadSignature = async (req, res, next) => {
     res.json({ success: true, data: result.rows[0], message: 'Signature uploaded' });
   } catch (error) { next(error); }
 };
+
+exports.deleteServiceReport = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const check = await query('SELECT * FROM service_reports WHERE id = $1', [id]);
+    if (!check.rows[0]) throw createError('Service report not found', 404);
+
+    if (req.user.role === 'technician' && check.rows[0].technician_id !== req.user.id) {
+      throw createError('Forbidden: You can only delete your own service reports', 403);
+    }
+
+    await query('DELETE FROM service_reports WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Service report deleted successfully' });
+  } catch (error) { next(error); }
+};
+
 

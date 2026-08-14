@@ -22,7 +22,10 @@ import {
   Calendar,
   User,
   Wrench,
-  X
+  X,
+  Edit,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -69,6 +72,83 @@ const ServiceReport = () => {
   // Image files & submission
   const [files, setFiles] = useState([]);
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  // Edit & Delete States
+  const [editingReport, setEditingReport] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editWorkPerformed, setEditWorkPerformed] = useState('');
+  const [editMaterialsUsed, setEditMaterialsUsed] = useState('');
+  const [editCompletionNotes, setEditCompletionNotes] = useState('');
+  const [editCustomerNameSigned, setEditCustomerNameSigned] = useState('');
+  const [editIsComplete, setEditIsComplete] = useState(false);
+  const [editSubmitLoading, setEditSubmitLoading] = useState(false);
+
+  const [deletingReport, setDeletingReport] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleOpenEdit = (report, e) => {
+    if (e) e.stopPropagation();
+    setEditingReport(report);
+    setEditTitle(report.title || '');
+    setEditWorkPerformed(report.work_performed || '');
+    setEditMaterialsUsed(report.materials_used || '');
+    setEditCompletionNotes(report.completion_notes || '');
+    setEditCustomerNameSigned(report.customer_name_signed || '');
+    setEditIsComplete(!!report.is_complete);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingReport) return;
+    setEditSubmitLoading(true);
+    try {
+      const res = await api.put(`/service-reports/${editingReport.id}`, {
+        title: editTitle,
+        workPerformed: editWorkPerformed,
+        materialsUsed: editMaterialsUsed,
+        completionNotes: editCompletionNotes,
+        customerNameSigned: editCustomerNameSigned,
+        isComplete: editIsComplete
+      });
+      if (res.success) {
+        toast.success('Service report updated successfully!');
+        setEditingReport(null);
+        if (selectedReport && selectedReport.id === editingReport.id) {
+          setSelectedReport({ ...selectedReport, ...res.data });
+        }
+        fetchReports();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update service report');
+    } finally {
+      setEditSubmitLoading(false);
+    }
+  };
+
+  const handleOpenDelete = (report, e) => {
+    if (e) e.stopPropagation();
+    setDeletingReport(report);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingReport) return;
+    setDeleteLoading(true);
+    try {
+      const res = await api.delete(`/service-reports/${deletingReport.id}`);
+      if (res.success) {
+        toast.success('Service report deleted successfully');
+        if (selectedReport && selectedReport.id === deletingReport.id) {
+          setSelectedReport(null);
+        }
+        setDeletingReport(null);
+        fetchReports();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete service report');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   // Fetch submitted service reports
   const fetchReports = async () => {
@@ -390,10 +470,28 @@ const ServiceReport = () => {
                     <span className="flex items-center gap-1">
                       <User className="w-3.5 h-3.5 text-blue-400" /> {r.customer_name_signed || 'Signed'}
                     </span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <span className="flex items-center gap-1 text-slate-500 mr-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {new Date(r.created_at).toLocaleDateString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenEdit(r, e)}
+                        title="Edit Service Report"
+                        className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-all active:scale-95"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenDelete(r, e)}
+                        title="Delete Service Report"
+                        className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all active:scale-95"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -451,8 +549,6 @@ const ServiceReport = () => {
               />
             </div>
 
-
-
             {/* Photo Capture Section */}
             <div className="flex flex-col space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -471,51 +567,48 @@ const ServiceReport = () => {
 
               {/* 3 buttons: Rear, Front, Gallery */}
               <div className="grid grid-cols-3 gap-2">
-                {/* Rear Camera */}
                 <button
                   type="button"
                   onClick={() => openCamera('environment')}
                   className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-[11px] font-semibold transition-all active:scale-95"
                 >
                   <Camera className="w-5 h-5" />
-                  Rear Cam
+                  <span>📷 Rear Cam</span>
                 </button>
-
-                {/* Front Camera */}
                 <button
                   type="button"
                   onClick={() => openCamera('user')}
-                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold transition-all active:scale-95"
+                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[11px] font-semibold transition-all active:scale-95"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 7h-3a2 2 0 0 1-2-2l-1-2H10L9 5a2 2 0 0 1-2 2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                    <circle cx="12" cy="13" r="3"/>
-                  </svg>
-                  Front Cam
+                  <Camera className="w-5 h-5" />
+                  <span>🤳 Front Cam</span>
                 </button>
-
-                {/* Gallery */}
                 <button
                   type="button"
-                  onClick={() => document.getElementById('photo-gallery').click()}
-                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-xl border border-slate-600/40 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 text-[11px] font-semibold transition-all active:scale-95"
+                  onClick={() => document.getElementById('photo-gallery')?.click()}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold transition-all active:scale-95"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  Gallery
+                  <Plus className="w-5 h-5" />
+                  <span>🖼️ Gallery</span>
                 </button>
               </div>
 
-              {/* Previews */}
+              {/* Photo Previews */}
               {files.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <p className="text-xs text-blue-300 font-semibold flex items-center gap-1">
-                    <Camera className="w-3.5 h-3.5" /> {files.length} photo(s) selected:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-blue-400">
+                      {files.length} Photo{files.length !== 1 ? 's' : ''} Attached
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFiles([])}
+                      className="text-[10px] text-red-400 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
                     {files.map((file, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-blue-500/40 bg-slate-900 shrink-0 group">
                         <img
@@ -582,22 +675,22 @@ const ServiceReport = () => {
           <div className="space-y-4">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Report Title</span>
-              <h3 className="text-base font-bold text-white">{selectedReport.title}</h3>
+              <h3 className="text-base font-bold text-white mt-0.5">{selectedReport.title}</h3>
             </div>
 
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Work Performed</span>
-              <p className="text-xs text-slate-300 whitespace-pre-wrap bg-slate-900/60 p-3 rounded-xl border border-slate-800 mt-1">
+              <div className="mt-1 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
                 {selectedReport.work_performed}
-              </p>
+              </div>
             </div>
 
             {selectedReport.materials_used && (
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Materials / Equipment</span>
-                <p className="text-xs text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800 mt-1">
+                <div className="mt-1 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 whitespace-pre-wrap">
                   {selectedReport.materials_used}
-                </p>
+                </div>
               </div>
             )}
 
@@ -635,6 +728,139 @@ const ServiceReport = () => {
             <div className="flex justify-between items-center pt-2 border-t border-slate-800 text-xs text-slate-400">
               <span>Customer Signed: <strong className="text-white">{selectedReport.customer_name_signed || 'Yes'}</strong></span>
               <span>Submitted: <strong className="text-white">{new Date(selectedReport.created_at).toLocaleDateString()}</strong></span>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 gap-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={Edit}
+                  onClick={() => {
+                    const r = selectedReport;
+                    setSelectedReport(null);
+                    handleOpenEdit(r);
+                  }}
+                >
+                  Edit Report
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={Trash2}
+                  onClick={() => {
+                    const r = selectedReport;
+                    setSelectedReport(null);
+                    handleOpenDelete(r);
+                  }}
+                >
+                  Delete Report
+                </Button>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedReport(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* EDIT REPORT MODAL */}
+      {editingReport && (
+        <Modal
+          isOpen={!!editingReport}
+          onClose={() => setEditingReport(null)}
+          title={`Edit Service Report — ${editingReport.ticket_number || 'Report'}`}
+        >
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <Input
+              label="Report Title"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              required
+            />
+
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Work Performed
+              </label>
+              <textarea
+                rows={3}
+                value={editWorkPerformed}
+                onChange={(e) => setEditWorkPerformed(e.target.value)}
+                className="glass-input w-full rounded-xl p-3 text-sm"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Materials / Equipment Used
+              </label>
+              <textarea
+                rows={2}
+                value={editMaterialsUsed}
+                onChange={(e) => setEditMaterialsUsed(e.target.value)}
+                className="glass-input w-full rounded-xl p-3 text-sm"
+              />
+            </div>
+
+            <Input
+              label="Customer Full Name (Signed)"
+              value={editCustomerNameSigned}
+              onChange={(e) => setEditCustomerNameSigned(e.target.value)}
+              required
+            />
+
+            <div className="flex items-center space-x-2 pt-1">
+              <input
+                type="checkbox"
+                id="editIsComplete"
+                checked={editIsComplete}
+                onChange={(e) => setEditIsComplete(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+              />
+              <label htmlFor="editIsComplete" className="text-xs text-slate-200 font-semibold cursor-pointer">
+                Ticket Completed / Resolved
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditingReport(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" isLoading={editSubmitLoading} icon={Send}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deletingReport && (
+        <Modal
+          isOpen={!!deletingReport}
+          onClose={() => setDeletingReport(null)}
+          title="Delete Service Report"
+        >
+          <div className="space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Are you sure you want to delete this report?</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Report <strong className="text-slate-200">{deletingReport.title}</strong> will be permanently removed.
+              </p>
+            </div>
+            <div className="flex justify-center gap-3 pt-3 border-t border-slate-800">
+              <Button variant="ghost" size="sm" onClick={() => setDeletingReport(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" size="sm" isLoading={deleteLoading} icon={Trash2} onClick={handleDeleteConfirm}>
+                Delete Report
+              </Button>
             </div>
           </div>
         </Modal>

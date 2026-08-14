@@ -7,7 +7,8 @@ const { uploadServiceReportImages, uploadSignature } = require('../middleware/up
 router.get('/', authenticate, serviceReportController.getServiceReports);
 router.get('/:id', authenticate, serviceReportController.getServiceReportById);
 router.post('/', authenticate, authorize('technician', 'admin'), uploadServiceReportImages, serviceReportController.createServiceReport);
-router.put('/:id', authenticate, authorize('technician', 'admin'), serviceReportController.updateServiceReport);
+router.put('/:id', authenticate, authorize('technician', 'admin'), uploadServiceReportImages, serviceReportController.updateServiceReport);
 router.post('/:id/signature', authenticate, uploadSignature, serviceReportController.uploadSignature);
+router.delete('/:id', authenticate, authorize('technician', 'admin'), serviceReportController.deleteServiceReport);
 
 module.exports = router;
