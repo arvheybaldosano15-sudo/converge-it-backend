@@ -798,30 +798,14 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
               </div>
             )}
 
-            {/* Uploaded Service Photos Gallery */}
+            {/* Uploaded Service Photos Gallery - VIEW ONLY */}
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({parseImageUrls(selectedReport.images_urls).length})
-                </span>
-
-                {/* Direct Upload Button */}
-                <label className={`cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30 transition-all active:scale-95 ${modalUploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <Plus className="w-3.5 h-3.5" />
-                  {modalUploadLoading ? 'Uploading...' : 'Add Photos'}
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleModalPhotoUpload}
-                    className="hidden"
-                    disabled={modalUploadLoading}
-                  />
-                </label>
-              </div>
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1 mb-1.5">
+                <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({parseImageUrls(selectedReport.images_urls).length})
+              </span>
 
               {parseImageUrls(selectedReport.images_urls).length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {parseImageUrls(selectedReport.images_urls).map((url, i) => (
                     <a
                       key={i}
@@ -838,25 +822,18 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
                           e.target.onerror = null;
                           e.target.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Unavailable%3C/text%3E%3C/svg%3E";
                         }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <span className="text-white text-[10px] font-semibold bg-black/50 px-2 py-0.5 rounded-full">View full size</span>
+                      </div>
                     </a>
                   ))}
                 </div>
               ) : (
-                <label className="mt-1.5 p-4 rounded-xl bg-slate-900/60 border border-dashed border-slate-700/80 hover:border-blue-500/50 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group">
-                  <Camera className="w-8 h-8 text-blue-400/80 group-hover:scale-110 transition-transform mb-1.5" />
-                  <p className="font-bold text-xs text-white">No installation photos attached yet</p>
-                  <p className="text-[11px] text-blue-400 font-semibold mt-0.5">+ Tap here to upload installation photos</p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleModalPhotoUpload}
-                    className="hidden"
-                    disabled={modalUploadLoading}
-                  />
-                </label>
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-500">
+                  No photos attached to this report.
+                </div>
               )}
             </div>
 
