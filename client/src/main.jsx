@@ -10,20 +10,21 @@ import { SocketProvider } from './context/SocketContext';
 import App from './App';
 import './index.css';
 
-// Configure TanStack Query Client with optimal caching defaults
+// Configure TanStack Query Client for ZERO-LOADING Instant Caching UI
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours persistence retention
+      staleTime: 1000 * 60 * 15, // 15 minutes fresh cache — zero loading spinners!
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours persistent local storage retention
       refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
+      refetchOnMount: false, // Serve cached data immediately without blocking UI
+      placeholderData: (previousData) => previousData, // Instant smooth transitions between pages & filters
       retry: 1,
     },
   },
 });
 
-// Persist query cache to localStorage for instant offline access and fast mobile app reloads
+// Persist query cache to localStorage for instant offline access and zero-loading reloads
 const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   key: 'CONVERGE_TANSTACK_QUERY_CACHE',

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../utils/axios';
 
-// ─── Query: Fetch Analytics Overview with Cache Validation ──────────────────
+// ─── Query: Fetch Analytics Overview with Zero-Loading Caching ──────────────
 export const useAnalyticsOverview = (params = {}) => {
   return useQuery({
     queryKey: ['analytics', 'overview', params],
@@ -9,7 +9,9 @@ export const useAnalyticsOverview = (params = {}) => {
       const res = await api.get('/analytics/overview', { params });
       return res.data || {};
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
+    staleTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -21,7 +23,9 @@ export const useTicketTrend = (params = {}) => {
       const res = await api.get('/analytics/tickets-trend', { params });
       return res.data || [];
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -33,6 +37,8 @@ export const useSlaPerformance = (params = {}) => {
       const res = await api.get('/analytics/sla-performance', { params });
       return res.data || {};
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    placeholderData: (previousData) => previousData,
   });
 };

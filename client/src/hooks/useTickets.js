@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 import toast from 'react-hot-toast';
 
-// ─── Query: Fetch Tickets List with Cache Validation ────────────────────────
+// ─── Query: Fetch Tickets List with Zero-Loading Caching ──────────────────────
 export const useTickets = (filters = {}) => {
   return useQuery({
     queryKey: ['tickets', filters],
@@ -10,7 +10,9 @@ export const useTickets = (filters = {}) => {
       const res = await api.get('/tickets', { params: filters });
       return res.data || [];
     },
-    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+    staleTime: 1000 * 60 * 10, // 10 minutes fresh cache — zero loading!
+    refetchOnMount: false,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -24,6 +26,8 @@ export const useTicket = (ticketId) => {
       return res.data || null;
     },
     enabled: !!ticketId,
+    staleTime: 1000 * 60 * 10,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -35,7 +39,7 @@ export const useCreateTicket = () => {
       const res = await api.post('/tickets', ticketData);
       return res.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Ticket created successfully!');
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
