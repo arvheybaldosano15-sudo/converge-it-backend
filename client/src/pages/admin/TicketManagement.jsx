@@ -13,7 +13,8 @@ import {
   Ticket, Filter, UserCheck, Clock, CheckCircle, AlertTriangle,
   Eye, Trash2, Edit3, MessageSquare, FileText, Camera,
   RefreshCw, Search, ShieldAlert, AlertCircle, ArrowUpDown, MoreVertical,
-  UserX, ShieldCheck, CheckSquare, Layers, Send, ChevronDown
+  UserX, ShieldCheck, CheckSquare, Layers, Send, ChevronDown,
+  Maximize2, ExternalLink, X
 } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
@@ -28,6 +29,7 @@ const TicketManagement = () => {
   const [ticketStats, setTicketStats] = useState({});
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Filters & Search
@@ -749,7 +751,12 @@ const TicketManagement = () => {
                   {parseImageUrls(selectedTicket.serviceReport.images_urls).length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                       {parseImageUrls(selectedTicket.serviceReport.images_urls).map((url, i) => (
-                        <a key={i} href={getUploadUrl(url)} target="_blank" rel="noopener noreferrer" className="rounded-xl overflow-hidden border border-slate-800 aspect-video block group">
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setFullscreenImage(getUploadUrl(url))}
+                          className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video block w-full text-left cursor-pointer transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
+                        >
                           <img
                             src={getUploadUrl(url)}
                             alt={`Photo ${i + 1}`}
@@ -758,9 +765,14 @@ const TicketManagement = () => {
                               e.target.onerror = null;
                               e.target.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Unavailable%3C/text%3E%3C/svg%3E";
                             }}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
-                        </a>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <span className="text-white text-xs font-semibold bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
+                              <Maximize2 className="w-3.5 h-3.5 text-blue-400" /> Full Size
+                            </span>
+                          </div>
+                        </button>
                       ))}
                     </div>
                   ) : (
@@ -834,6 +846,44 @@ const TicketManagement = () => {
         title="Delete Support Ticket"
         message={`Are you sure you want to permanently delete ticket ${ticketToDelete?.ticket_number}? This action cannot be undone.`}
       />
+
+      {/* Fullscreen Image Lightbox Modal */}
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenImage(null)}
+        >
+          {/* Header controls */}
+          <div className="absolute top-4 right-4 flex items-center gap-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <a
+              href={fullscreenImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white transition-colors border border-slate-700 shadow-lg flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Open Original Image"
+            >
+              <ExternalLink className="w-4 h-4 text-blue-400" /> Open Original
+            </a>
+            <button
+              type="button"
+              onClick={() => setFullscreenImage(null)}
+              className="p-2.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-colors shadow-lg active:scale-95"
+              title="Close Viewer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Image Container */}
+          <div className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={fullscreenImage}
+              alt="Full Size Installation Photo"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-slate-800 shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

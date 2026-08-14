@@ -25,7 +25,9 @@ import {
   X,
   Edit,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Maximize2,
+  ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -87,6 +89,7 @@ const ServiceReport = () => {
   const [modalUploadLoading, setModalUploadLoading] = useState(false);
   const [deletingReport, setDeletingReport] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   const handleOpenEdit = (report, e) => {
     if (e) e.stopPropagation();
@@ -810,12 +813,11 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
               {parseImageUrls(selectedReport.images_urls).length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {parseImageUrls(selectedReport.images_urls).map((url, i) => (
-                    <a
+                    <button
                       key={i}
-                      href={getUploadUrl(url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video block"
+                      type="button"
+                      onClick={() => setFullscreenImage(getUploadUrl(url))}
+                      className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video block w-full text-left cursor-pointer transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
                     >
                       <img
                         src={getUploadUrl(url)}
@@ -827,10 +829,12 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
                         }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <span className="text-white text-[10px] font-semibold bg-black/50 px-2 py-0.5 rounded-full">View full size</span>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <span className="text-white text-xs font-semibold bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          <Maximize2 className="w-3.5 h-3.5 text-blue-400" /> Full Size
+                        </span>
                       </div>
-                    </a>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -1169,6 +1173,42 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>,
         document.body
+      {/* Fullscreen Image Lightbox Modal */}
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenImage(null)}
+        >
+          {/* Header controls */}
+          <div className="absolute top-4 right-4 flex items-center gap-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <a
+              href={fullscreenImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white transition-colors border border-slate-700 shadow-lg flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Open Original Image"
+            >
+              <ExternalLink className="w-4 h-4 text-blue-400" /> Open Original
+            </a>
+            <button
+              type="button"
+              onClick={() => setFullscreenImage(null)}
+              className="p-2.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-colors shadow-lg active:scale-95"
+              title="Close Viewer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Image Container */}
+          <div className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={fullscreenImage}
+              alt="Full Size Installation Photo"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-slate-800 shadow-2xl"
+            />
+          </div>
+        </div>
       )}
     </>
   );
