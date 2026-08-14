@@ -30,15 +30,32 @@ exports.getServiceReportById = async (req, res, next) => {
 exports.createServiceReport = async (req, res, next) => {
   try {
     const { ticketId, title, workPerformed, materialsUsed, completionNotes, gpsLatitude, gpsLongitude, gpsAddress, customerNameSigned, workStartTime, workEndTime, isComplete } = req.body;
+
+    if (!ticketId) throw createError('Ticket ID or Ticket Number is required', 400);
+
+    // Resolve the real ticket UUID if ticketId is passed as a ticket_number (e.g. 'TKT-58651664') or UUID
+    let resolvedTicketId = ticketId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId.trim());
+
+    if (!isUuid) {
+      const tRes = await query('SELECT id FROM tickets WHERE ticket_number = $1 OR id::text = $1', [ticketId.trim()]);
+      if (!tRes.rows[0]) {
+        throw createError(`Ticket '${ticketId}' not found`, 404);
+      }
+      resolvedTicketId = tRes.rows[0].id;
+    }
+
     // Convert uploaded files to persistent Base64 Data URIs so photos persist across Render redeploys!
     const imagesUrls = req.files ? req.files.map(f => fileToDataUri(f)).filter(Boolean) : [];
+
     const result = await query(
       `INSERT INTO service_reports (ticket_id, technician_id, title, work_performed, materials_used, completion_notes, gps_latitude, gps_longitude, gps_address, images_urls, customer_name_signed, work_start_time, work_end_time, is_complete)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
-      [ticketId, req.user.id, title, workPerformed, materialsUsed, completionNotes, gpsLatitude || null, gpsLongitude || null, gpsAddress, imagesUrls, customerNameSigned, workStartTime || null, workEndTime || null, isComplete || false]
+      [resolvedTicketId, req.user.id, title, workPerformed, materialsUsed, completionNotes, gpsLatitude || null, gpsLongitude || null, gpsAddress, imagesUrls, customerNameSigned, workStartTime || null, workEndTime || null, isComplete || false]
     );
+
     if (isComplete) {
-      await query(`UPDATE tickets SET status = 'resolved' WHERE id = $1 AND status NOT IN ('resolved','closed')`, [ticketId]);
+      await query(`UPDATE tickets SET status = 'resolved' WHERE id = $1 AND status NOT IN ('resolved','closed')`, [resolvedTicketId]);
     }
     res.status(201).json({ success: true, data: result.rows[0], message: 'Service report created' });
   } catch (error) { next(error); }
