@@ -160,6 +160,27 @@ const ServiceReport = () => {
     }
   };
 
+  const uploadFileToReport = async (file, report) => {
+    if (!file || !report) return;
+    setModalUploadLoading(true);
+    try {
+      const compressed = await compressImage(file);
+      const formData = new FormData();
+      formData.append('images', compressed);
+      const res = await api.put(`/service-reports/${report.id}`, formData);
+      if (res.success) {
+        toast.success('Photo captured and uploaded!');
+        setSelectedReport(res.data);
+        fetchReports();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to upload photo');
+    } finally {
+      setModalUploadLoading(false);
+    }
+  };
+
   const handleOpenDelete = (report, e) => {
     if (e) e.stopPropagation();
     setDeletingReport(report);
@@ -295,13 +316,17 @@ const ServiceReport = () => {
         if (!blob) return;
         const filename = `photo-${cameraFacing}-${Date.now()}.jpg`;
         const file = new File([blob], filename, { type: 'image/jpeg' });
-        setFiles((prev) => [...prev, file]);
-        toast.success('Photo captured!');
+        if (selectedReport) {
+          uploadFileToReport(file, selectedReport);
+        } else {
+          setFiles((prev) => [...prev, file]);
+          toast.success('Photo captured!');
+        }
       },
       'image/jpeg',
       0.92
     );
-  }, [cameraFacing]);
+  }, [cameraFacing, selectedReport]);
 
   // Cleanup on unmount
   useEffect(() => {
