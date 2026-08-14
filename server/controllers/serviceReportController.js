@@ -75,8 +75,8 @@ exports.updateServiceReport = async (req, res, next) => {
     // Optional new image attachments via multer
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(f => fileToDataUri(f)).filter(Boolean);
-      // Append to existing images or replace
-      updates.push(`images_urls = images_urls || $${i++}::text[]`);
+      // Append to existing images cleanly (COALESCE handles NULL array columns in PostgreSQL)
+      updates.push(`images_urls = COALESCE(images_urls, ARRAY[]::text[]) || $${i++}::text[]`);
       values.push(newImages);
     }
 
