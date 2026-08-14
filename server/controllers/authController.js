@@ -13,7 +13,7 @@ const getPinIndex = (pin) => {
 
 const generateTokens = (user) => {
   const payload = { id: user.id, email: user.email, role: user.role };
-  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
   const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
   return { accessToken, refreshToken };
 };
@@ -197,13 +197,34 @@ exports.refreshToken = async (req, res, next) => {
     const { refreshToken } = req.body;
     if (!refreshToken) throw createError('Refresh token required', 401);
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const result = await query('SELECT id, email, role, status, refresh_token FROM users WHERE id = $1', [decoded.id]);
+    const result = await query(
+      `SELECT id, employee_id, email, full_name, role, status, profile_image_url, is_first_login, contact_number, refresh_token
+       FROM users WHERE id = $1`,
+      [decoded.id]
+    );
     const user = result.rows[0];
     if (!user || user.refresh_token !== refreshToken) throw createError('Invalid refresh token', 401);
     if (user.status !== 'active') throw createError('Account not active', 403);
     const tokens = generateTokens(user);
     await query('UPDATE users SET refresh_token = $1 WHERE id = $2', [tokens.refreshToken, user.id]);
-    res.json({ success: true, data: tokens });
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          employeeId: user.employee_id,
+          fullName: user.full_name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          profileImageUrl: user.profile_image_url,
+          isFirstLogin: user.is_first_login,
+          contactNumber: user.contact_number
+        },
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken
+      }
+    });
   } catch (error) { next(error); }
 };
 
