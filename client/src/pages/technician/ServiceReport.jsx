@@ -314,6 +314,50 @@ const ServiceReport = () => {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
+// Compress image before upload to prevent payload timeout & 502 gateway errors
+const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) => {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return resolve(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return resolve(file);
+          const compressed = new File([blob], file.name || 'photo.jpg', {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+  });
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formTicketId) return toast.error('Ticket ID is required');
@@ -332,29 +376,29 @@ const ServiceReport = () => {
       if (gpsLongitude) formData.append('gpsLongitude', gpsLongitude);
       if (gpsAddress) formData.append('gpsAddress', gpsAddress);
 
-      files.forEach((file) => {
-        formData.append('images', file);
-      });
+      // Compress photos before sending to guarantee fast upload and prevent 502 payload timeouts
+      for (const file of files) {
+        const compressed = await compressImage(file);
+        formData.append('images', compressed);
+      }
 
-      const res = await api.post('/service-reports', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Let Axios automatically set Content-Type with boundary for FormData
+      const res = await api.post('/service-reports', formData);
 
       if (res.success) {
-        toast.success('Service Report uploaded successfully!');
-        // Reset form & reload list
+        toast.success('Service report submitted successfully!');
         setTitle('');
         setWorkPerformed('');
         setMaterialsUsed('');
         setCompletionNotes('');
         setCustomerNameSigned('');
         setFiles([]);
-        setGpsAddress('');
         fetchReports();
         setActiveTab('list');
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to upload service report');
+      console.error(err);
+      toast.error(err.message || 'Failed to submit service report');
     } finally {
       setSubmitLoading(false);
     }
