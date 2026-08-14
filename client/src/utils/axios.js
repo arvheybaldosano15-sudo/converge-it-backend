@@ -32,17 +32,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const originalRequest = error.config || {};
+    
+    // Don't intercept 401 if it's already a retry or if URL is login/refresh-token
+    const isAuthUrl = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthUrl) {
       originalRequest._retry = true;
       const refreshToken = getRefreshToken();
+      
       if (refreshToken) {
         try {
           const res = await axios.post(`${getApiUrl()}/auth/refresh-token`, { refreshToken });
           if (res.data?.success) {
             const { user: userData, accessToken, refreshToken: newRefresh } = res.data.data;
             setAuthSession(userData, accessToken, newRefresh);
+            
             api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+            if (originalRequest.headers) {
+              originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+            }
             return api(originalRequest);
           }
         } catch (refreshErr) {
