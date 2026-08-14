@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
+import { useReportsData } from '../../hooks/useReports';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import {
@@ -33,19 +34,8 @@ const Skeleton = ({ h = 'h-6', w = 'w-full', rounded = 'rounded-lg' }) => (
 const ReportsAndAnalytics = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('analytics');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // ── Data states ──
-  const [overview, setOverview] = useState({});
-  const [trend, setTrend] = useState([]);
-  const [categoryData, setCategoryData] = useState([]);
-  const [techPerformance, setTechPerformance] = useState([]);
-  const [responseTimes, setResponseTimes] = useState([]);
-  const [slaData, setSlaData] = useState({});
 
   // ── Filter state (single source of truth) ──
-  // period: quick date in days. startDate/endDate: custom range.
   const [period, setPeriod] = useState('30');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -56,54 +46,35 @@ const ReportsAndAnalytics = () => {
   const [reportStart, setReportStart] = useState('');
   const [reportEnd, setReportEnd] = useState('');
 
-  // ─── Core fetch function — takes explicit params, no stale closure ────────
-  const fetchAll = async (params, showRefresh = false) => {
-    if (showRefresh) setRefreshing(true); else setLoading(true);
-    try {
-      const [overRes, trendRes, catRes, techRes, resTimeRes, slaRes] = await Promise.all([
-        api.get('/analytics/overview', { params }),
-        api.get('/analytics/tickets-trend', { params }),
-        api.get('/analytics/category-breakdown', { params }),
-        api.get('/analytics/technician-performance', { params }),
-        api.get('/analytics/response-times', { params }),
-        api.get('/analytics/sla-performance', { params }),
-      ]);
-      if (overRes.success) setOverview(overRes.data || {});
-      if (trendRes.success) setTrend(trendRes.data || []);
-      if (catRes.success) setCategoryData(catRes.data || []);
-      if (techRes.success) setTechPerformance(techRes.data || []);
-      if (resTimeRes.success) setResponseTimes(resTimeRes.data || []);
-      if (slaRes.success) setSlaData(slaRes.data || {});
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to load analytics data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Build current query params
+  const queryParams = useMemo(() => {
+    return startDate && endDate ? { startDate, endDate } : { period };
+  }, [period, startDate, endDate]);
 
-  // Build params from current filter state
-  const buildParams = (p = period, sd = startDate, ed = endDate) =>
-    sd && ed ? { startDate: sd, endDate: ed } : { period: p };
+  // Use TanStack Query with 15-minute staleTime & persistent zero-loading cache
+  const { data: reportsData = {}, isLoading: loading, isFetching: refreshing, refetch } = useReportsData(queryParams);
 
-  // Initial load
-  useEffect(() => { fetchAll(buildParams()); }, []);
+  const overview = reportsData.overview || {};
+  const trend = reportsData.trend || [];
+  const categoryData = reportsData.categoryData || [];
+  const techPerformance = reportsData.techPerformance || [];
+  const responseTimes = reportsData.responseTimes || [];
+  const slaData = reportsData.slaData || {};
 
-  // Apply quick period pill — immediately fetches
+  const fetchAll = () => refetch();
+
+  // Apply quick period pill
   const applyPeriod = (p) => {
     setPeriod(p);
     setStartDate('');
     setEndDate('');
     setUseCustomDate(false);
-    fetchAll({ period: p }, true);
   };
 
   // Apply custom date range
   const applyCustomDate = () => {
     if (!startDate || !endDate) { toast.error('Please select both start and end dates'); return; }
     if (new Date(startDate) > new Date(endDate)) { toast.error('Start date must be before end date'); return; }
-    fetchAll({ startDate, endDate }, true);
   };
 
   // Reset everything
@@ -112,7 +83,6 @@ const ReportsAndAnalytics = () => {
     setStartDate('');
     setEndDate('');
     setUseCustomDate(false);
-    fetchAll({ period: '30' }, true);
   };
 
   const tOverview = overview.tickets || {};

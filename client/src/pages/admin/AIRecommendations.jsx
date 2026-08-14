@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import api from '../../utils/axios';
+import { useAiRecommendations, useApplyAiRecommendation } from '../../hooks/useAiRecommendations';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -66,26 +67,13 @@ const ConfidenceBar = ({ confidence }) => {
 };
 
 const AIRecommendations = () => {
-  const [recommendations, setRecommendations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [applying, setApplying] = useState(null);
 
-  const fetchRecs = async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-    try {
-      const res = await api.get('/ai/recommendations');
-      if (res.success) setRecommendations(res.data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Use TanStack Query with 30-minute staleTime for expensive AI recommendations
+  const { data: recommendations = [], isLoading: loading, isFetching: refreshing, refetch } = useAiRecommendations();
+  const applyMutation = useApplyAiRecommendation();
 
-  useEffect(() => { fetchRecs(); }, []);
+  const fetchRecs = () => refetch();
 
   const handleApply = async (rec) => {
     const result = await Swal.fire({
@@ -105,13 +93,9 @@ const AIRecommendations = () => {
 
     setApplying(rec.id);
     try {
-      const res = await api.put(`/ai/recommendations/${rec.id}/apply`);
-      if (res.success) {
-        toast.success('AI recommendation applied successfully!');
-        fetchRecs(true);
-      }
+      await applyMutation.mutateAsync(rec.id);
     } catch (e) {
-      toast.error('Failed to apply recommendation');
+      // toast notification handled by mutation hook
     } finally {
       setApplying(null);
     }
