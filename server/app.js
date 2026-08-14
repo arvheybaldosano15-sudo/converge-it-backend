@@ -29,6 +29,10 @@ const botcakeRoutes = require('./routes/botcakeRoutes');
 
 const app = express();
 
+// Trust Render's single reverse-proxy hop so rate limiters read real client IPs
+// from X-Forwarded-For instead of treating all users as the same IP
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 app.use(cors({

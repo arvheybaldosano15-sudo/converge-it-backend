@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/rateLimiter');
 const { query } = require('../config/database');
 const aiService = require('../services/aiService');
 
-router.get('/recommendations', authenticate, authorize('admin'), async (req, res, next) => {
+router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, async (req, res, next) => {
   try {
     // 1. Fetch active tickets
     const ticketsRes = await query(`
