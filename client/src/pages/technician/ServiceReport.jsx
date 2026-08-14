@@ -1173,6 +1173,8 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>,
         document.body
+      )}
+
       {/* Fullscreen Image Lightbox Modal */}
       {fullscreenImage && (
         <div
