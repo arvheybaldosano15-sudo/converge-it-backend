@@ -5,30 +5,13 @@ import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import { ShieldCheck } from 'lucide-react';
 
+import { useAuditLogs } from '../../hooks/useAuditLogs';
+
 const AuditLogs = () => {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchLogs = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/audit-logs', { params: { page, limit: 15 } });
-      if (res.success) {
-        setLogs(res.data);
-        setTotalPages(res.pagination.totalPages);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLogs();
-  }, [page]);
+  const { data: resData, isLoading: loading } = useAuditLogs({ page, limit: 15 });
+  const logs = resData?.data || [];
+  const totalPages = resData?.pagination?.totalPages || 1;
 
   const columns = [
     {

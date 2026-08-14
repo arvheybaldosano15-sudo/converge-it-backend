@@ -7,26 +7,11 @@ import Loader from '../../components/common/Loader';
 import { Ticket, Clock, CheckCircle, AlertTriangle, ArrowRight, Wrench, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const TechnicianDashboard = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+import { useTechDashboard } from '../../hooks/useDashboard';
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await api.get('/dashboard/technician');
-        if (res.success) {
-          setData(res.data);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDashboard();
-  }, []);
+const TechnicianDashboard = () => {
+  const navigate = useNavigate();
+  const { data = null, isLoading: loading } = useTechDashboard();
 
   if (loading) return <Loader text="Loading technician task queue..." />;
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
+import { useAdminDashboard } from '../../hooks/useDashboard';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -26,40 +28,21 @@ ChartJS.register(
 ChartJS.defaults.font.family = "'Century Gothic', CenturyGothic, AppleGothic, sans-serif";
 
 const Dashboard = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const socketContext = useSocket();
   const socket = socketContext?.socket;
+  const queryClient = useQueryClient();
 
-  const fetchDashboard = async () => {
-    try {
-      setError(null);
-      const res = await api.get('/dashboard/admin');
-      if (res.success) {
-        setData(res.data);
-      } else {
-        setError(res.message || 'Failed to load dashboard data');
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard:', err);
-      setError(err.message || 'Error connecting to server');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  // Use TanStack Query with persistent caching & background revalidation
+  const { data = null, isLoading: loading, error: queryError, refetch: fetchDashboard } = useAdminDashboard();
+  const error = queryError?.message || null;
 
   // Listen for socket events to auto-update dashboard charts in real-time
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
     const handleUpdate = () => {
-      fetchDashboard();
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
     };
 
     socket.on('ticket:created', handleUpdate);
@@ -75,7 +58,7 @@ const Dashboard = () => {
         socket.off('ticket_updated', handleUpdate);
       }
     };
-  }, [socket]);
+  }, [socket, queryClient]);
 
   // Derived statistics with fallback values
   const stats = data?.ticketStats || {};
