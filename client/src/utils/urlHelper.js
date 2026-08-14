@@ -3,6 +3,21 @@
  * Supports Desktop, Mobile over LAN (e.g. 192.168.x.x), and Production deployment.
  */
 
+export const parseImageUrls = (images) => {
+  if (!images) return [];
+  if (Array.isArray(images)) return images.filter(Boolean);
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch (e) {
+      if (images.includes(',')) return images.split(',').map(s => s.trim()).filter(Boolean);
+      if (images.trim()) return [images.trim()];
+    }
+  }
+  return [];
+};
+
 export const getUploadUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
 

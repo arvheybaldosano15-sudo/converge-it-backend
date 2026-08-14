@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
-import { getUploadUrl } from '../../utils/urlHelper';
+import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -739,13 +739,13 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
             )}
 
             {/* Uploaded Service Photos Gallery */}
-            {selectedReport.images_urls && selectedReport.images_urls.length > 0 && (
+            {parseImageUrls(selectedReport.images_urls).length > 0 && (
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({selectedReport.images_urls.length})
+                  <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({parseImageUrls(selectedReport.images_urls).length})
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
-                  {selectedReport.images_urls.map((url, i) => (
+                  {parseImageUrls(selectedReport.images_urls).map((url, i) => (
                     <a
                       key={i}
                       href={getUploadUrl(url)}
