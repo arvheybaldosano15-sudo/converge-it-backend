@@ -81,8 +81,10 @@ const ServiceReport = () => {
   const [editCompletionNotes, setEditCompletionNotes] = useState('');
   const [editCustomerNameSigned, setEditCustomerNameSigned] = useState('');
   const [editIsComplete, setEditIsComplete] = useState(false);
+  const [editFiles, setEditFiles] = useState([]);
   const [editSubmitLoading, setEditSubmitLoading] = useState(false);
 
+  const [modalUploadLoading, setModalUploadLoading] = useState(false);
   const [deletingReport, setDeletingReport] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -95,6 +97,7 @@ const ServiceReport = () => {
     setEditCompletionNotes(report.completion_notes || '');
     setEditCustomerNameSigned(report.customer_name_signed || '');
     setEditIsComplete(!!report.is_complete);
+    setEditFiles([]);
   };
 
   const handleEditSubmit = async (e) => {
@@ -102,19 +105,25 @@ const ServiceReport = () => {
     if (!editingReport) return;
     setEditSubmitLoading(true);
     try {
-      const res = await api.put(`/service-reports/${editingReport.id}`, {
-        title: editTitle,
-        workPerformed: editWorkPerformed,
-        materialsUsed: editMaterialsUsed,
-        completionNotes: editCompletionNotes,
-        customerNameSigned: editCustomerNameSigned,
-        isComplete: editIsComplete
-      });
+      const formData = new FormData();
+      formData.append('title', editTitle);
+      formData.append('workPerformed', editWorkPerformed);
+      formData.append('materialsUsed', editMaterialsUsed);
+      formData.append('completionNotes', editCompletionNotes);
+      formData.append('customerNameSigned', editCustomerNameSigned);
+      formData.append('isComplete', editIsComplete);
+
+      for (const file of editFiles) {
+        const compressed = await compressImage(file);
+        formData.append('images', compressed);
+      }
+
+      const res = await api.put(`/service-reports/${editingReport.id}`, formData);
       if (res.success) {
         toast.success('Service report updated successfully!');
         setEditingReport(null);
         if (selectedReport && selectedReport.id === editingReport.id) {
-          setSelectedReport({ ...selectedReport, ...res.data });
+          setSelectedReport(res.data);
         }
         fetchReports();
       }
@@ -122,6 +131,32 @@ const ServiceReport = () => {
       toast.error(err.message || 'Failed to update service report');
     } finally {
       setEditSubmitLoading(false);
+    }
+  };
+
+  const handleModalPhotoUpload = async (e) => {
+    if (!e.target.files || e.target.files.length === 0 || !selectedReport) return;
+    setModalUploadLoading(true);
+    try {
+      const selectedFiles = Array.from(e.target.files);
+      const formData = new FormData();
+      for (const file of selectedFiles) {
+        const compressed = await compressImage(file);
+        formData.append('images', compressed);
+      }
+
+      const res = await api.put(`/service-reports/${selectedReport.id}`, formData);
+
+      if (res.success) {
+        toast.success('Photos uploaded successfully!');
+        setSelectedReport(res.data);
+        fetchReports();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to upload photos');
+    } finally {
+      setModalUploadLoading(false);
     }
   };
 
@@ -740,9 +775,26 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
 
             {/* Uploaded Service Photos Gallery */}
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1 mb-1">
-                <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({parseImageUrls(selectedReport.images_urls).length})
-              </span>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1">
+                  <Camera className="w-3.5 h-3.5 text-blue-400" /> Service & Installation Photos ({parseImageUrls(selectedReport.images_urls).length})
+                </span>
+
+                {/* Direct Upload Button */}
+                <label className={`cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30 transition-all active:scale-95 ${modalUploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <Plus className="w-3.5 h-3.5" />
+                  {modalUploadLoading ? 'Uploading...' : 'Add Photos'}
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleModalPhotoUpload}
+                    className="hidden"
+                    disabled={modalUploadLoading}
+                  />
+                </label>
+              </div>
+
               {parseImageUrls(selectedReport.images_urls).length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                   {parseImageUrls(selectedReport.images_urls).map((url, i) => (
@@ -767,10 +819,19 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
                   ))}
                 </div>
               ) : (
-                <div className="mt-1.5 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
-                  <p className="font-semibold text-slate-300">No installation photos attached yet</p>
-                  <p className="text-[11px] text-slate-500">Click Edit Report below to upload photos.</p>
-                </div>
+                <label className="mt-1.5 p-4 rounded-xl bg-slate-900/60 border border-dashed border-slate-700/80 hover:border-blue-500/50 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group">
+                  <Camera className="w-8 h-8 text-blue-400/80 group-hover:scale-110 transition-transform mb-1.5" />
+                  <p className="font-bold text-xs text-white">No installation photos attached yet</p>
+                  <p className="text-[11px] text-blue-400 font-semibold mt-0.5">+ Tap here to upload installation photos</p>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleModalPhotoUpload}
+                    className="hidden"
+                    disabled={modalUploadLoading}
+                  />
+                </label>
               )}
             </div>
 
@@ -852,6 +913,29 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
                 onChange={(e) => setEditMaterialsUsed(e.target.value)}
                 className="glass-input w-full rounded-xl p-3 text-sm"
               />
+            </div>
+
+            {/* Add New Photos in Edit Modal */}
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1">
+                <Camera className="w-3.5 h-3.5 text-blue-400" /> Add New Installation Photos
+              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setEditFiles(Array.from(e.target.files));
+                  }
+                }}
+                className="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-500/10 file:text-blue-400 hover:file:bg-blue-500/20 cursor-pointer"
+              />
+              {editFiles.length > 0 && (
+                <p className="text-[11px] text-blue-400 font-semibold mt-1">
+                  {editFiles.length} new photo(s) selected to append.
+                </p>
+              )}
             </div>
 
             <Input
