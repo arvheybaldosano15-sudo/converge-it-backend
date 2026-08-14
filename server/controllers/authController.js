@@ -240,10 +240,13 @@ exports.changePassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const { getBackendOrigin } = require('../utils/urlHelper');
+
 exports.updateProfile = async (req, res, next) => {
   try {
     const { fullName, contactNumber, address, specialization, department } = req.body;
-    const profileImageUrl = req.file ? `/uploads/profile-images/${req.file.filename}` : undefined;
+    const origin = getBackendOrigin();
+    const profileImageUrl = req.file ? `${origin}/uploads/profile-images/${req.file.filename}` : undefined;
     const updates = []; const values = []; let i = 1;
     if (fullName) { updates.push(`full_name = $${i++}`); values.push(fullName); }
     if (contactNumber) { updates.push(`contact_number = $${i++}`); values.push(contactNumber); }
