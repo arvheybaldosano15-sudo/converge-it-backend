@@ -316,7 +316,10 @@ const ServiceReport = () => {
         if (!blob) return;
         const filename = `photo-${cameraFacing}-${Date.now()}.jpg`;
         const file = new File([blob], filename, { type: 'image/jpeg' });
-        if (selectedReport) {
+        if (editingReport) {
+          setEditFiles((prev) => [...prev, file]);
+          toast.success('Photo captured!');
+        } else if (selectedReport) {
           uploadFileToReport(file, selectedReport);
         } else {
           setFiles((prev) => [...prev, file]);
@@ -326,7 +329,7 @@ const ServiceReport = () => {
       'image/jpeg',
       0.92
     );
-  }, [cameraFacing, selectedReport]);
+  }, [cameraFacing, editingReport, selectedReport]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -917,26 +920,89 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
               />
             </div>
 
-            {/* Add New Photos in Edit Modal */}
-            <div className="flex flex-col space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1">
-                <Camera className="w-3.5 h-3.5 text-blue-400" /> Add New Installation Photos
+            {/* Add New Photos in Edit Modal (Camera + Gallery) */}
+            <div className="flex flex-col space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-blue-400" /> Add Installation / Service Photos
               </label>
+
+              {/* Hidden edit gallery input */}
               <input
+                id="edit-photo-gallery"
                 type="file"
                 multiple
                 accept="image/*"
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
-                    setEditFiles(Array.from(e.target.files));
+                    const newFiles = Array.from(e.target.files);
+                    setEditFiles((prev) => [...prev, ...newFiles]);
                   }
                 }}
-                className="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-500/10 file:text-blue-400 hover:file:bg-blue-500/20 cursor-pointer"
+                className="hidden"
               />
+
+              {/* 3 buttons: Rear, Front, Gallery */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openCamera('environment')}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-[11px] font-semibold transition-all active:scale-95"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>📷 Rear Cam</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openCamera('user')}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[11px] font-semibold transition-all active:scale-95"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>🤳 Front Cam</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('edit-photo-gallery')?.click()}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold transition-all active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>🖼️ Gallery</span>
+                </button>
+              </div>
+
+              {/* New Photos Previews */}
               {editFiles.length > 0 && (
-                <p className="text-[11px] text-blue-400 font-semibold mt-1">
-                  {editFiles.length} new photo(s) selected to append.
-                </p>
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-blue-400">
+                      {editFiles.length} New Photo{editFiles.length !== 1 ? 's' : ''} Selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditFiles([])}
+                      className="text-[10px] text-red-400 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {editFiles.map((file, idx) => (
+                      <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-blue-500/40 bg-slate-900 shrink-0 group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Edit Preview ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600/90 text-white text-[9px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
