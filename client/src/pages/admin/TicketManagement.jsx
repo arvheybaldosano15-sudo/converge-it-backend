@@ -756,7 +756,7 @@ const TicketManagement = () => {
                             crossOrigin="anonymous"
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = 'https://placehold.co/600x400/0f172a/38bdf8?text=Photo+Unavailable';
+                              e.target.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Expired (Pre-Deploy)%3C/text%3E%3C/svg%3E";
                             }}
                             className="w-full h-full object-cover hover:scale-105 transition-transform"
                           />
