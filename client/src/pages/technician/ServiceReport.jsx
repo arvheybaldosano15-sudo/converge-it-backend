@@ -619,6 +619,11 @@ const ServiceReport = () => {
                       <img
                         src={getUploadUrl(url)}
                         alt={`Service Photo ${i + 1}`}
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://placehold.co/600x400/0f172a/38bdf8?text=Photo+Unavailable';
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     </a>

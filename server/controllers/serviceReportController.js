@@ -30,8 +30,7 @@ exports.getServiceReportById = async (req, res, next) => {
 exports.createServiceReport = async (req, res, next) => {
   try {
     const { ticketId, title, workPerformed, materialsUsed, completionNotes, gpsLatitude, gpsLongitude, gpsAddress, customerNameSigned, workStartTime, workEndTime, isComplete } = req.body;
-    const origin = getBackendOrigin();
-    const imagesUrls = req.files ? req.files.map(f => `${origin}/uploads/service-reports/${f.filename}`) : [];
+    const imagesUrls = req.files ? req.files.map(f => `/uploads/service-reports/${f.filename}`) : [];
     const result = await query(
       `INSERT INTO service_reports (ticket_id, technician_id, title, work_performed, materials_used, completion_notes, gps_latitude, gps_longitude, gps_address, images_urls, customer_name_signed, work_start_time, work_end_time, is_complete)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
@@ -64,8 +63,7 @@ exports.updateServiceReport = async (req, res, next) => {
 exports.uploadSignature = async (req, res, next) => {
   try {
     if (!req.file) throw createError('No signature file provided', 400);
-    const origin = getBackendOrigin();
-    const signatureUrl = `${origin}/uploads/service-reports/${req.file.filename}`;
+    const signatureUrl = `/uploads/service-reports/${req.file.filename}`;
     const result = await query('UPDATE service_reports SET signature_url = $1 WHERE id = $2 RETURNING *', [signatureUrl, req.params.id]);
     if (!result.rows[0]) throw createError('Service report not found', 404);
     res.json({ success: true, data: result.rows[0], message: 'Signature uploaded' });

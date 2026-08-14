@@ -1,49 +1,69 @@
 /**
  * Helper to resolve absolute backend URLs for uploaded images & attachments.
- *
- * Priority order for the backend origin:
- *   1. VITE_API_URL  — e.g. "https://my-backend.onrender.com/api" (strips /api suffix)
- *   2. VITE_SOCKET_URL — e.g. "http://127.0.0.1:5000" (already the raw origin)
- *   3. Relative path  — works in production where frontend & backend share an origin,
- *                        and in dev via the Vite proxy for /uploads (local files only).
- *
- * In development, uploaded files are stored on Render so a relative path would
- * hit localhost:5173 -> Vite proxy -> localhost:5000, but the file only exists on
- * the Render server.  Using VITE_SOCKET_URL as the fallback gives us the correct
- * absolute URL to the deployed backend even while running locally.
+ * Supports Desktop, Mobile over LAN (e.g. 192.168.x.x), and Production deployment.
  */
 
-export const getBackendOrigin = () => {
-  // 1. VITE_API_URL  (e.g. "https://api.example.com/api" or "https://api.example.com")
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) {
-    return apiUrl.trim().replace(/\/+$/, '').replace(/\/api\/?$/, '');
-  }
-
-  // 2. VITE_SOCKET_URL  (e.g. "http://127.0.0.1:5000")
-  const socketUrl = import.meta.env.VITE_SOCKET_URL;
-  if (socketUrl) {
-    return socketUrl.trim().replace(/\/+$/, '');
-  }
-
-  // 3. Fallback: relative (same-origin — only reliable in production)
-  return '';
-};
-
 export const getUploadUrl = (url) => {
-  if (!url) return '';
-  if (typeof url !== 'string') return '';
+  if (!url || typeof url !== 'string') return '';
 
-  // Data URIs, blob URLs, or already-absolute HTTP/HTTPS URLs are returned as-is
-  if (
-    url.startsWith('data:') ||
-    url.startsWith('blob:') ||
-    url.startsWith('http://') ||
-    url.startsWith('https://')
-  ) {
+  // 1. Data URIs or blob URLs return as-is
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
     return url;
   }
 
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${getBackendOrigin()}${cleanPath}`;
+  // 2. Extract relative path if URL contains '/uploads/'
+  // This cleans up old DB records that stored "http://localhost:5000/uploads/..."
+  let cleanPath = url;
+  const uploadsIndex = url.indexOf('/uploads/');
+  if (uploadsIndex !== -1) {
+    cleanPath = url.substring(uploadsIndex); // e.g. "/uploads/service-reports/img.jpg"
+  } else if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Non-uploads external HTTP/HTTPS URL
+    return url;
+  }
+
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+
+  // 3. Production check: VITE_API_URL
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  if (envApiUrl) {
+    const origin = envApiUrl.trim().replace(/\/+$/, '').replace(/\/api\/?$/, '');
+    return `${origin}${cleanPath}`;
+  }
+
+  // 4. Mobile / LAN / Dev check:
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol, port } = window.location;
+
+    // If accessing via LAN IP on Mobile (e.g. http://192.168.10.77:5173) or custom host
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const rawSocket = import.meta.env.VITE_SOCKET_URL;
+      let backendPort = '5000';
+      if (rawSocket) {
+        try {
+          const parsed = new URL(rawSocket, window.location.href);
+          if (parsed.port) backendPort = parsed.port;
+        } catch (e) {
+          // ignore
+        }
+      }
+      // If frontend is on same origin/port in production or proxied
+      if (!port || port === '80' || port === '443') {
+        return cleanPath;
+      }
+      // Point mobile to backend running on server IP on port 5000
+      return `${protocol}//${hostname}:${backendPort}${cleanPath}`;
+    }
+  }
+
+  // 5. Desktop Localhost fallback:
+  const rawSocket = import.meta.env.VITE_SOCKET_URL;
+  if (rawSocket) {
+    const cleanSocket = rawSocket.trim().replace(/\/+$/, '');
+    return `${cleanSocket}${cleanPath}`;
+  }
+
+  return cleanPath;
 };

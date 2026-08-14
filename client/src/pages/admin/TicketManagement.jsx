@@ -750,7 +750,16 @@ const TicketManagement = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                       {selectedTicket.serviceReport.images_urls.map((url, i) => (
                         <a key={i} href={getUploadUrl(url)} target="_blank" rel="noopener noreferrer" className="rounded-xl overflow-hidden border border-slate-800 aspect-video block">
-                          <img src={getUploadUrl(url)} alt={`Photo ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                          <img
+                            src={getUploadUrl(url)}
+                            alt={`Photo ${i + 1}`}
+                            crossOrigin="anonymous"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://placehold.co/600x400/0f172a/38bdf8?text=Photo+Unavailable';
+                            }}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform"
+                          />
                         </a>
                       ))}
                     </div>
