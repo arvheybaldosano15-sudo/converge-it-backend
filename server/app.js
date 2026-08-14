@@ -67,8 +67,15 @@ app.use(cors({
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(morgan('combined', { stream: { write: (msg) => logger.http(msg.trim()) } }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Fallback handler for missing uploaded static files (e.g., legacy files cleared on container restarts)
+app.use('/uploads', (req, res) => {
+  const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#0f172a"/><g fill="none" stroke="#38bdf8" stroke-width="2"><rect x="130" y="90" width="140" height="100" rx="10"/><circle cx="200" cy="140" r="25"/></g><text x="200" y="220" fill="#94a3b8" font-family="sans-serif" font-size="14" text-anchor="middle">Photo Expired or Unavailable</text></svg>`;
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(svgPlaceholder);
+});
+
 app.use('/api/', generalLimiter);
 
 app.get('/health', (req, res) => res.json({
