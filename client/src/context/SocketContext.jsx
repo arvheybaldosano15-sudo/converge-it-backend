@@ -23,9 +23,16 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    const newSocket = io(window.location.origin, {
+    // In dev: connect to backend (localhost:5000) via VITE_SOCKET_URL
+    // In production: backend and frontend share the same origin so window.location.origin works
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+
+    const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
     });
 
     newSocket.on('connect', () => {
