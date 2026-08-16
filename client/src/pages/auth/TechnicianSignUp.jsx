@@ -71,116 +71,147 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Employee ID"
-            icon={BadgeCheck}
-            placeholder="TECH-001"
-            error={errors.employeeId?.message}
-            {...register('employeeId')}
-          />
-          <Input
-            label="Full Name"
-            icon={User}
-            placeholder="Juan Dela Cruz"
-            error={errors.fullName?.message}
-            {...register('fullName')}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Email Address"
-            type="email"
-            icon={Mail}
-            placeholder="tech@convergeit.com"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <Input
-            label="Contact Number"
-            icon={Phone}
-            placeholder="09171234567"
-            error={errors.contactNumber?.message}
-            {...register('contactNumber')}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Password"
-            type="password"
-            icon={Lock}
-            placeholder="••••••••"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            icon={Lock}
-            placeholder="••••••••"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="4-6 Digit Portal PIN"
-            type="password"
-            icon={KeyRound}
-            placeholder="••••"
-            maxLength={6}
-            inputMode="numeric"
-            error={errors.pin?.message}
-            {...register('pin')}
-          />
-          <Input
-            label="Confirm PIN"
-            type="password"
-            icon={KeyRound}
-            placeholder="••••"
-            maxLength={6}
-            inputMode="numeric"
-            error={errors.confirmPin?.message}
-            {...register('confirmPin')}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Specialization</label>
-            <select
-              className="glass-input w-full rounded-xl py-2.5 px-3 text-sm"
-              {...register('specialization')}
-            >
-              <option value="Starlink Internet" className="bg-slate-900">Starlink Internet</option>
-              <option value="CCTV Systems" className="bg-slate-900">CCTV Systems</option>
-              <option value="Smart Devices" className="bg-slate-900">Smart Devices</option>
-              <option value="General Installation" className="bg-slate-900">General Installation</option>
-            </select>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Section 1: Personal Info */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+            <User className="w-4 h-4 text-blue-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Personal & Contact Info</span>
           </div>
 
-          <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Department</label>
-            <select
-              className="glass-input w-full rounded-xl py-2.5 px-3 text-sm"
-              {...register('department')}
-            >
-              <option value="Field Services" className="bg-slate-900">Field Services</option>
-              <option value="Technical Support" className="bg-slate-900">Technical Support</option>
-              <option value="Network Infrastructure" className="bg-slate-900">Network Infrastructure</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <Input
+              label="Employee ID"
+              icon={BadgeCheck}
+              placeholder="TECH-001"
+              autoCapitalize="characters"
+              error={errors.employeeId?.message}
+              {...register('employeeId')}
+            />
+            <Input
+              label="Full Name"
+              icon={User}
+              placeholder="Juan Dela Cruz"
+              autoCapitalize="words"
+              error={errors.fullName?.message}
+              {...register('fullName')}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <Input
+              label="Email Address"
+              type="email"
+              icon={Mail}
+              placeholder="tech@convergeit.com"
+              autoComplete="email"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+            <Input
+              label="Contact Number"
+              icon={Phone}
+              placeholder="09171234567"
+              inputMode="numeric"
+              type="tel"
+              error={errors.contactNumber?.message}
+              {...register('contactNumber')}
+            />
           </div>
         </div>
 
-        <div className="pt-2">
+        {/* Section 2: Security & PIN */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+            <KeyRound className="w-4 h-4 text-purple-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Security & Portal PIN</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <Input
+              label="Password"
+              type="password"
+              icon={Lock}
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              icon={Lock}
+              placeholder="••••••••"
+              error={errors.confirmPassword?.message}
+              {...register('confirmPassword')}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <Input
+              label="4-6 Digit Portal PIN"
+              type="password"
+              icon={KeyRound}
+              placeholder="••••"
+              maxLength={6}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              error={errors.pin?.message}
+              {...register('pin')}
+            />
+            <Input
+              label="Confirm PIN"
+              type="password"
+              icon={KeyRound}
+              placeholder="••••"
+              maxLength={6}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              error={errors.confirmPin?.message}
+              {...register('confirmPin')}
+            />
+          </div>
+        </div>
+
+        {/* Section 3: Assignment */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+            <Wrench className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Field Specialization</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Specialization</label>
+              <select
+                className="glass-input w-full rounded-xl py-2.5 px-3 text-base sm:text-sm text-slate-200"
+                {...register('specialization')}
+              >
+                <option value="Starlink Internet" className="bg-slate-900 text-slate-200">Starlink Internet</option>
+                <option value="CCTV Systems" className="bg-slate-900 text-slate-200">CCTV Systems</option>
+                <option value="Smart Devices" className="bg-slate-900 text-slate-200">Smart Devices</option>
+                <option value="General Installation" className="bg-slate-900 text-slate-200">General Installation</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Department</label>
+              <select
+                className="glass-input w-full rounded-xl py-2.5 px-3 text-base sm:text-sm text-slate-200"
+                {...register('department')}
+              >
+                <option value="Field Services" className="bg-slate-900 text-slate-200">Field Services</option>
+                <option value="Technical Support" className="bg-slate-900 text-slate-200">Technical Support</option>
+                <option value="Network Infrastructure" className="bg-slate-900 text-slate-200">Network Infrastructure</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3">
           <Button
             type="submit"
             variant="primary"
-            className="w-full py-3 font-semibold text-sm"
+            className="w-full py-3.5 text-sm font-bold active:scale-[0.98] transition-all shadow-lg shadow-blue-600/20"
             isLoading={isLoading}
           >
             Submit Application for Approval

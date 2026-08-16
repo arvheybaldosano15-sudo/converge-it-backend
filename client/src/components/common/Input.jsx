@@ -29,7 +29,7 @@ const Input = React.forwardRef(({
           ref={ref}
           id={inputId}
           type={type}
-          className={`glass-input w-full rounded-xl py-2.5 text-sm transition-all duration-200 placeholder:text-slate-500 ${
+          className={`glass-input w-full rounded-xl py-2.5 sm:py-2.5 text-base sm:text-sm transition-all duration-200 placeholder:text-slate-500 ${
             Icon ? 'pl-10 pr-4' : 'px-4'
           } ${error ? 'border-rose-500/80 focus:border-rose-500 focus:ring-rose-500/30' : ''} ${className}`}
           {...props}

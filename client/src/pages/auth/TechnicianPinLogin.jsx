@@ -30,9 +30,10 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
     setErrorMessage('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, customPin) => {
     if (e) e.preventDefault();
-    if (pin.length < 4 || pin.length > 6) {
+    const pinToSubmit = customPin || pin;
+    if (pinToSubmit.length < 4 || pinToSubmit.length > 6) {
       setErrorMessage('PIN must be 4 to 6 digits');
       return;
     }
@@ -40,7 +41,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      await pinLogin(pin);
+      await pinLogin(pinToSubmit);
       if (onClose) onClose();
       navigate('/technician/dashboard');
     } catch (err) {
@@ -81,17 +82,41 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         <p className="text-xs text-blue-400 mt-1">Enter your 4–6 digit Security PIN to access dashboard</p>
       </div>
 
-      {/* PIN Dots Display */}
-      <div className="flex justify-center items-center gap-2.5 sm:gap-3 my-5 sm:my-6">
+      {/* Hidden input for native mobile numpad support */}
+      <input
+        id="native-pin-input"
+        type="password"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={6}
+        value={pin}
+        onChange={(e) => {
+          const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+          setPin(val);
+          setErrorMessage('');
+          if (val.length === 6) {
+            handleSubmit(null, val);
+          }
+        }}
+        className="sr-only opacity-0 w-0 h-0 pointer-events-none"
+        disabled={isLoading}
+      />
+
+      {/* PIN Dots Display — Tapping focuses native keyboard on mobile */}
+      <div
+        onClick={() => document.getElementById('native-pin-input')?.focus()}
+        className="flex justify-center items-center gap-3 sm:gap-3.5 my-5 sm:my-6 cursor-pointer py-1"
+        title="Tap to type on keyboard"
+      >
         {[0, 1, 2, 3, 4, 5].map((index) => {
           const filled = index < pin.length;
           return (
             <div
               key={index}
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-all duration-300 border ${
+              className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full transition-all duration-200 border ${
                 filled
-                  ? 'bg-blue-500 border-blue-400 shadow-md shadow-blue-500/50 scale-110'
-                  : 'bg-slate-800/80 border-slate-700'
+                  ? 'bg-gradient-to-tr from-blue-600 to-cyan-400 border-blue-300 shadow-lg shadow-blue-500/60 scale-115 animate-pulse'
+                  : 'bg-slate-800/80 border-slate-700/80 scale-100'
               }`}
             />
           );
@@ -106,15 +131,24 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         </div>
       )}
 
-      {/* On-Screen Keypad — Touch optimized */}
+      {/* On-Screen Keypad — Mobile Touch-Optimized */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-5 sm:mb-6 select-none touch-manipulation">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
           <button
             key={num}
             type="button"
-            onClick={() => handleKeyPress(String(num))}
+            onClick={() => {
+              if (pin.length < 6) {
+                const nextPin = pin + String(num);
+                setPin(nextPin);
+                setErrorMessage('');
+                if (nextPin.length === 6) {
+                  handleSubmit(null, nextPin);
+                }
+              }
+            }}
             disabled={isLoading || pin.length >= 6}
-            className="h-11 sm:h-12 rounded-2xl glass-panel hover:bg-slate-800 text-white font-bold text-base sm:text-lg flex items-center justify-center border border-slate-800 hover:border-blue-500/40 active:scale-95 transition-all duration-150 disabled:opacity-50 touch-manipulation cursor-pointer"
+            className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
           >
             {num}
           </button>
@@ -124,16 +158,25 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           type="button"
           onClick={handleClear}
           disabled={isLoading || !pin}
-          className="h-11 sm:h-12 rounded-2xl glass-panel hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold flex items-center justify-center border border-slate-800 active:scale-95 transition-all duration-150 disabled:opacity-30 touch-manipulation cursor-pointer"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold flex items-center justify-center border border-slate-800 active:scale-90 active:bg-slate-700 transition-all duration-100 disabled:opacity-30 touch-manipulation cursor-pointer"
         >
           Clear
         </button>
 
         <button
           type="button"
-          onClick={() => handleKeyPress('0')}
+          onClick={() => {
+            if (pin.length < 6) {
+              const nextPin = pin + '0';
+              setPin(nextPin);
+              setErrorMessage('');
+              if (nextPin.length === 6) {
+                handleSubmit(null, nextPin);
+              }
+            }
+          }}
           disabled={isLoading || pin.length >= 6}
-          className="h-11 sm:h-12 rounded-2xl glass-panel hover:bg-slate-800 text-white font-bold text-base sm:text-lg flex items-center justify-center border border-slate-800 hover:border-blue-500/40 active:scale-95 transition-all duration-150 disabled:opacity-50 touch-manipulation cursor-pointer"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
         >
           0
         </button>
@@ -142,7 +185,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           type="button"
           onClick={handleDelete}
           disabled={isLoading || !pin}
-          className="h-11 sm:h-12 rounded-2xl glass-panel hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 active:scale-95 transition-all duration-150 disabled:opacity-30 touch-manipulation cursor-pointer"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 active:scale-90 active:bg-slate-700 transition-all duration-100 disabled:opacity-30 touch-manipulation cursor-pointer"
         >
           <Delete className="w-5 h-5" />
         </button>
@@ -152,8 +195,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
       <Button
         type="button"
         variant="primary"
-        className="w-full py-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
-        onClick={handleSubmit}
+        className="w-full py-3 text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-blue-600/25"
+        onClick={() => handleSubmit()}
         disabled={isLoading || pin.length < 4}
         isLoading={isLoading}
       >

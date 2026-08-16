@@ -20,7 +20,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -30,18 +30,21 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
           />
 
-          {/* Modal Box */}
+          {/* Modal Box (Mobile bottom sheet / Desktop centered dialog) */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', duration: 0.4 }}
-            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-2xl shadow-2xl border border-cyan-500/20 z-10 my-auto max-h-[90vh] flex flex-col overflow-hidden`}
+            initial={{ opacity: 0, y: 80, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 80, scale: 0.98 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-blue-500/20 z-10 my-0 sm:my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden`}
           >
+            {/* Mobile Grab Bar */}
+            <div className="w-12 h-1.5 bg-slate-700/60 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
+
             {/* Top Right Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 z-20 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-20 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 active:scale-95 transition-all"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -49,13 +52,13 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
 
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-800/80 pr-12">
-                <h3 className="text-base sm:text-lg font-semibold text-slate-100 font-display">{title}</h3>
+              <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800/80 pr-12 shrink-0">
+                <h3 className="text-base sm:text-lg font-bold text-slate-100 font-display">{title}</h3>
               </div>
             )}
 
             {/* Body (Scrollable on mobile) */}
-            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1">{children}</div>
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
           </motion.div>
         </div>
       )}
