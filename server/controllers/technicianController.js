@@ -367,23 +367,68 @@ exports.updateTechnicianStatus = async (req, res, next) => {
 };
 
 exports.deleteTechnician = async (req, res, next) => {
+  const { id } = req.params;
   try {
-    const result = await query(
-      "DELETE FROM users WHERE id = $1 AND role = 'technician' RETURNING full_name",
-      [req.params.id]
-    );
-    if (!result.rows[0]) throw createError('Technician not found', 404);
+    // Verify the user exists and is a technician first
+    const check = await query("SELECT id, full_name FROM users WHERE id = $1 AND role = 'technician'", [id]);
+    if (!check.rows[0]) throw createError('Technician not found', 404);
+    const techName = check.rows[0].full_name;
+
+    // 1. Unassign tickets (set assigned_technician_id to NULL)
+    await query('UPDATE tickets SET assigned_technician_id = NULL WHERE assigned_technician_id = $1', [id]);
+
+    // 2. Delete service reports authored by this technician
+    await query('DELETE FROM service_reports WHERE technician_id = $1', [id]);
+
+    // 3. Nullify ticket_updates authored by this technician
+    await query('UPDATE ticket_updates SET updated_by = NULL WHERE updated_by = $1', [id]);
+
+    // 4. Nullify ticket_attachments uploaded by this technician
+    await query('UPDATE ticket_attachments SET uploaded_by = NULL WHERE uploaded_by = $1', [id]);
+
+    // 5. Delete notifications for this technician
+    await query('DELETE FROM notifications WHERE user_id = $1', [id]);
+
+    // 6. Delete refresh tokens
+    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
+
+    // 7. Nullify audit_logs performed_by
+    await query('UPDATE audit_logs SET performed_by = NULL WHERE performed_by = $1', [id]);
+
+    // 8. Nullify customers created_by
+    await query('UPDATE customers SET created_by = NULL WHERE created_by = $1', [id]);
+
+    // 9. Nullify knowledge_base created_by
+    await query('UPDATE knowledge_base SET created_by = NULL WHERE created_by = $1', [id]);
+
+    // 10. Nullify settings updated_by
+    await query('UPDATE settings SET updated_by = NULL WHERE updated_by = $1', [id]);
+
+    // 11. Nullify ai_recommendations applied_by
+    await query('UPDATE ai_recommendations SET applied_by = NULL WHERE applied_by = $1', [id]);
+
+    // 12. Nullify technicians approved_by
+    await query('UPDATE technicians SET approved_by = NULL WHERE approved_by = $1', [id]);
+
+    // 13. Delete the technicians table record (FK: user_id)
+    await query('DELETE FROM technicians WHERE user_id = $1', [id]);
+
+    // 14. Now delete the user
+    await query("DELETE FROM users WHERE id = $1 AND role = 'technician'", [id]);
+
     await logAudit({
       actorId: req.user.id,
       actorName: req.user.full_name,
       actorRole: req.user.role,
       action: 'delete',
       targetType: 'user',
-      targetId: req.params.id,
-      targetDescription: result.rows[0].full_name
+      targetId: id,
+      targetDescription: techName
     });
-    res.json({ success: true, message: 'Technician deleted successfully' });
+
+    res.json({ success: true, message: `Technician "${techName}" deleted successfully` });
   } catch (error) {
     next(error);
   }
 };
+
