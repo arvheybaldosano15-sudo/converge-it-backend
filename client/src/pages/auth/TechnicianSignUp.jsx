@@ -78,8 +78,8 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
   };
 
   const content = (
-    <div className="w-full flex flex-col justify-between select-none">
-      {/* Header & Step Indicator */}
+    <div className="w-full select-none">
+      {/* Header */}
       <div className="mb-4">
         {!isModal && (
           <Link to="/login" className="inline-flex items-center text-xs text-slate-400 hover:text-blue-400 transition-colors mb-3">
@@ -92,21 +92,22 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
             <h2 className="text-lg sm:text-xl font-extrabold text-white font-display">Technician Registration</h2>
             <p className="text-xs text-blue-400 mt-0.5">Join Converge IT Solutions Field Support Team</p>
           </div>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          {/* Mobile step badge */}
+          <span className="sm:hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
             Step {currentStep} of 3
           </span>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-800/80 h-1.5 rounded-full mt-3 overflow-hidden">
+        {/* Mobile-only Progress Bar */}
+        <div className="sm:hidden w-full bg-slate-800/80 h-1.5 rounded-full mt-3 overflow-hidden">
           <div
             className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-300 rounded-full"
             style={{ width: `${(currentStep / 3) * 100}%` }}
           />
         </div>
 
-        {/* Step Badges */}
-        <div className="grid grid-cols-3 gap-1.5 mt-2.5 text-[10px] sm:text-xs font-semibold text-center">
+        {/* Mobile-only Step Badges */}
+        <div className="sm:hidden grid grid-cols-3 gap-1.5 mt-2 text-[10px] font-semibold text-center">
           <button
             type="button"
             onClick={() => currentStep > 1 && setCurrentStep(1)}
@@ -138,18 +139,19 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <AnimatePresence mode="wait">
-          {/* STEP 1: Personal & Contact Info */}
-          {currentStep === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-3"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* ==================== MOBILE VIEW (3-Step Wizard) ==================== */}
+        <div className="sm:hidden">
+          <AnimatePresence mode="wait">
+            {/* STEP 1: Personal & Contact Info */}
+            {currentStep === 1 && (
+              <motion.div
+                key="step1-mobile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-3"
+              >
                 <Input
                   label="Employee ID"
                   icon={BadgeCheck}
@@ -166,9 +168,6 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   error={errors.fullName?.message}
                   {...register('fullName')}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Email Address"
                   type="email"
@@ -187,21 +186,19 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   error={errors.contactNumber?.message}
                   {...register('contactNumber')}
                 />
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* STEP 2: Password & PIN */}
-          {currentStep === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-3"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* STEP 2: Password & PIN */}
+            {currentStep === 2 && (
+              <motion.div
+                key="step2-mobile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-3"
+              >
                 <Input
                   label="Password"
                   type="password"
@@ -218,9 +215,6 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   error={errors.confirmPassword?.message}
                   {...register('confirmPassword')}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="4-6 Digit Portal PIN"
                   type="password"
@@ -243,25 +237,23 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   error={errors.confirmPin?.message}
                   {...register('confirmPin')}
                 />
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* STEP 3: Specialization & Department */}
-          {currentStep === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* STEP 3: Specialization & Department */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3-mobile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-3.5"
+              >
                 <div className="flex flex-col space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Specialization</label>
                   <select
-                    className="glass-input w-full rounded-xl py-3 px-3 text-base sm:text-sm text-slate-200"
+                    className="glass-input w-full rounded-xl py-3 px-3 text-base text-slate-200"
                     {...register('specialization')}
                   >
                     <option value="Starlink Internet" className="bg-slate-900 text-slate-200">Starlink Internet</option>
@@ -274,7 +266,7 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                 <div className="flex flex-col space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Department</label>
                   <select
-                    className="glass-input w-full rounded-xl py-3 px-3 text-base sm:text-sm text-slate-200"
+                    className="glass-input w-full rounded-xl py-3 px-3 text-base text-slate-200"
                     {...register('department')}
                   >
                     <option value="Field Services" className="bg-slate-900 text-slate-200">Field Services</option>
@@ -282,50 +274,199 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                     <option value="Network Infrastructure" className="bg-slate-900 text-slate-200">Network Infrastructure</option>
                   </select>
                 </div>
+
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
+                  <span>Sent for admin approval upon submission.</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Mobile Wizard Buttons */}
+          <div className="pt-2 flex items-center justify-between gap-3">
+            {currentStep > 1 ? (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="ml-auto px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-blue-600/25"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full py-3.5 text-xs font-bold active:scale-[0.98] transition-all shadow-lg shadow-blue-600/20"
+                isLoading={isLoading}
+              >
+                Submit Application
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ==================== DESKTOP VIEW (Full Single-Page Form) ==================== */}
+        <div className="hidden sm:block space-y-4">
+          {/* Section 1: Personal Info */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+              <User className="w-4 h-4 text-blue-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Personal & Contact Info</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Employee ID"
+                icon={BadgeCheck}
+                placeholder="TECH-001"
+                autoCapitalize="characters"
+                error={errors.employeeId?.message}
+                {...register('employeeId')}
+              />
+              <Input
+                label="Full Name"
+                icon={User}
+                placeholder="Juan Dela Cruz"
+                autoCapitalize="words"
+                error={errors.fullName?.message}
+                {...register('fullName')}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Email Address"
+                type="email"
+                icon={Mail}
+                placeholder="tech@convergeit.com"
+                autoComplete="email"
+                error={errors.email?.message}
+                {...register('email')}
+              />
+              <Input
+                label="Contact Number"
+                icon={Phone}
+                placeholder="09171234567"
+                inputMode="numeric"
+                type="tel"
+                error={errors.contactNumber?.message}
+                {...register('contactNumber')}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Security & PIN */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+              <KeyRound className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Security & Portal PIN</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Password"
+                type="password"
+                icon={Lock}
+                placeholder="••••••••"
+                error={errors.password?.message}
+                {...register('password')}
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                icon={Lock}
+                placeholder="••••••••"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="4-6 Digit Portal PIN"
+                type="password"
+                icon={KeyRound}
+                placeholder="••••"
+                maxLength={6}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                error={errors.pin?.message}
+                {...register('pin')}
+              />
+              <Input
+                label="Confirm PIN"
+                type="password"
+                icon={KeyRound}
+                placeholder="••••"
+                maxLength={6}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                error={errors.confirmPin?.message}
+                {...register('confirmPin')}
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Assignment */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2 pb-1 border-b border-slate-800/80">
+              <Wrench className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Field Specialization</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Specialization</label>
+                <select
+                  className="glass-input w-full rounded-xl py-2.5 px-3 text-sm text-slate-200"
+                  {...register('specialization')}
+                >
+                  <option value="Starlink Internet" className="bg-slate-900 text-slate-200">Starlink Internet</option>
+                  <option value="CCTV Systems" className="bg-slate-900 text-slate-200">CCTV Systems</option>
+                  <option value="Smart Devices" className="bg-slate-900 text-slate-200">Smart Devices</option>
+                  <option value="General Installation" className="bg-slate-900 text-slate-200">General Installation</option>
+                </select>
               </div>
 
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
-                <span>Your application will be sent for administrator approval upon submission.</span>
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Department</label>
+                <select
+                  className="glass-input w-full rounded-xl py-2.5 px-3 text-sm text-slate-200"
+                  {...register('department')}
+                >
+                  <option value="Field Services" className="bg-slate-900 text-slate-200">Field Services</option>
+                  <option value="Technical Support" className="bg-slate-900 text-slate-200">Technical Support</option>
+                  <option value="Network Infrastructure" className="bg-slate-900 text-slate-200">Network Infrastructure</option>
+                </select>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
 
-        {/* Wizard Controls */}
-        <div className="pt-2 flex items-center justify-between gap-3">
-          {currentStep > 1 ? (
-            <button
-              type="button"
-              onClick={prevStep}
-              className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </button>
-          ) : (
-            <div />
-          )}
-
-          {currentStep < 3 ? (
-            <button
-              type="button"
-              onClick={nextStep}
-              className="ml-auto px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-blue-600/25"
-            >
-              <span>Next</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
+          <div className="pt-3">
             <Button
               type="submit"
               variant="primary"
-              className="w-full py-3.5 text-xs sm:text-sm font-bold active:scale-[0.98] transition-all shadow-lg shadow-blue-600/20"
+              className="w-full py-3.5 text-sm font-bold active:scale-[0.98] transition-all shadow-lg shadow-blue-600/20"
               isLoading={isLoading}
             >
-              Submit Application
+              Submit Application for Approval
             </Button>
-          )}
+          </div>
         </div>
       </form>
     </div>
@@ -335,10 +476,10 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
     return content;
   }
 
-  // Standalone route (/register-technician) wrapped in a full modal overlay for zero scrolling!
+  // Standalone route (/register-technician) wrapped in a full modal overlay
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-hidden">
-      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/95 p-5 sm:p-7 max-w-md w-full mx-auto" glow>
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/95 p-5 sm:p-7 max-w-lg w-full mx-auto" glow>
         {content}
       </Card>
     </div>
