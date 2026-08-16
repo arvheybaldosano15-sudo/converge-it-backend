@@ -10,9 +10,8 @@ export const useTickets = (filters = {}) => {
       const res = await api.get('/tickets', { params: filters });
       return res.data || [];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes fresh cache — zero loading!
-    refetchOnMount: false,
-    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 5, // 5 seconds
+    refetchOnMount: 'always',
   });
 };
 

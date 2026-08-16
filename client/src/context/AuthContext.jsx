@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 import { getAuthToken, getCachedUser, setAuthSession, clearAuthSession } from '../utils/authStorage';
 import toast from 'react-hot-toast';
@@ -6,6 +7,7 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(() => {
     // Immediately restore role-scoped cached user
     return getCachedUser();
@@ -29,6 +31,7 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         // Only clear session on confirmed 401 (invalid/expired token)
         if (err?.status === 401 || err?.statusCode === 401) {
+          queryClient.clear();
           clearAuthSession();
           setUser(null);
         }
@@ -38,9 +41,10 @@ export const AuthProvider = ({ children }) => {
       }
     };
     fetchMe();
-  }, []);
+  }, [queryClient]);
 
   const login = async (email, password) => {
+    queryClient.clear();
     const res = await api.post('/auth/login', { email, password });
     if (res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
@@ -52,6 +56,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const pinLogin = async (pin) => {
+    queryClient.clear();
     const res = await api.post('/auth/pin-login', { pin });
     if (res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
@@ -76,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // ignore
     } finally {
+      queryClient.clear();
       clearAuthSession(user?.role);
       setUser(null);
       toast.success('Logged out successfully');
