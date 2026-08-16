@@ -19,8 +19,8 @@ const schema = z.object({
   contactNumber: z.string().min(10, 'Contact number is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Please confirm your password'),
-  pin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4 to 6 digits'),
-  confirmPin: z.string().min(4, 'Please confirm your PIN'),
+  pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits'),
+  confirmPin: z.string().length(6, 'Please confirm your 6-digit PIN'),
   specialization: z.string().optional(),
   department: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -216,10 +216,10 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   {...register('confirmPassword')}
                 />
                 <Input
-                  label="4-6 Digit Portal PIN"
+                  label="6-Digit Portal PIN"
                   type="password"
                   icon={KeyRound}
-                  placeholder="••••"
+                  placeholder="••••••"
                   maxLength={6}
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -227,10 +227,10 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                   {...register('pin')}
                 />
                 <Input
-                  label="Confirm PIN"
+                  label="Confirm 6-Digit PIN"
                   type="password"
                   icon={KeyRound}
-                  placeholder="••••"
+                  placeholder="••••••"
                   maxLength={6}
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -398,10 +398,10 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="4-6 Digit Portal PIN"
+                label="6-Digit Portal PIN"
                 type="password"
                 icon={KeyRound}
-                placeholder="••••"
+                placeholder="••••••"
                 maxLength={6}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -409,10 +409,10 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
                 {...register('pin')}
               />
               <Input
-                label="Confirm PIN"
+                label="Confirm 6-Digit PIN"
                 type="password"
                 icon={KeyRound}
-                placeholder="••••"
+                placeholder="••••••"
                 maxLength={6}
                 inputMode="numeric"
                 pattern="[0-9]*"

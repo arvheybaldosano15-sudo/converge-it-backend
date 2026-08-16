@@ -59,8 +59,8 @@ exports.registerTechnician = async (req, res, next) => {
   try {
     const { employeeId, fullName, email, password, pin, contactNumber, address, specialization, department } = req.body;
 
-    if (!pin || !/^\d{4,6}$/.test(String(pin))) {
-      throw createError('PIN must be 4 to 6 digits', 400);
+    if (!pin || !/^\d{6}$/.test(String(pin))) {
+      throw createError('PIN must be exactly 6 digits', 400);
     }
 
     const existing = await query('SELECT id FROM users WHERE email = $1 OR employee_id = $2', [email.toLowerCase(), employeeId]);
@@ -105,8 +105,8 @@ exports.registerTechnician = async (req, res, next) => {
 exports.pinLogin = async (req, res, next) => {
   try {
     const { pin } = req.body;
-    if (!pin || !/^\d{4,6}$/.test(String(pin))) {
-      throw createError('Please enter a valid 4-6 digit PIN', 400);
+    if (!pin || !/^\d{6}$/.test(String(pin))) {
+      throw createError('Please enter a valid 6-digit PIN', 400);
     }
 
     const pinIndex = getPinIndex(pin);
