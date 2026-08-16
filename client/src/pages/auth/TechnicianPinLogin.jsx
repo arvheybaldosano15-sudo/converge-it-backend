@@ -13,10 +13,16 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   const { pinLogin } = useAuth();
   const navigate = useNavigate();
 
+  const maxPinLength = 4;
+
   const handleKeyPress = (num) => {
-    if (pin.length < 6) {
-      setPin((prev) => prev + num);
+    if (pin.length < maxPinLength) {
+      const nextPin = pin + String(num);
+      setPin(nextPin);
       setErrorMessage('');
+      if (nextPin.length === maxPinLength) {
+        handleSubmit(null, nextPin);
+      }
     }
   };
 
@@ -33,8 +39,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   const handleSubmit = async (e, customPin) => {
     if (e) e.preventDefault();
     const pinToSubmit = customPin || pin;
-    if (pinToSubmit.length < 4 || pinToSubmit.length > 6) {
-      setErrorMessage('PIN must be 4 to 6 digits');
+    if (pinToSubmit.length < 4) {
+      setErrorMessage('Please enter your 4-digit PIN');
       return;
     }
 
@@ -48,6 +54,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
       const msg = err.response?.data?.message || err.message || 'Invalid PIN code';
       setErrorMessage(msg);
       toast.error(msg);
+      setPin(''); // Reset PIN on error
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +86,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           <KeyRound className="w-6 h-6" />
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-white font-display">Technician PIN Portal</h2>
-        <p className="text-xs text-blue-400 mt-1">Enter your 4–6 digit Security PIN to access dashboard</p>
+        <p className="text-xs text-blue-400 mt-1">Enter your 4-digit Security PIN to access dashboard</p>
       </div>
 
       {/* Hidden input for native mobile numpad support */}
@@ -88,13 +95,13 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         type="password"
         inputMode="numeric"
         pattern="[0-9]*"
-        maxLength={6}
+        maxLength={4}
         value={pin}
         onChange={(e) => {
-          const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+          const val = e.target.value.replace(/\D/g, '').slice(0, 4);
           setPin(val);
           setErrorMessage('');
-          if (val.length === 6) {
+          if (val.length === 4) {
             handleSubmit(null, val);
           }
         }}
@@ -102,18 +109,18 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         disabled={isLoading}
       />
 
-      {/* PIN Dots Display — Tapping focuses native keyboard on mobile */}
+      {/* 4 PIN Dots Display — Tapping focuses native keyboard on mobile */}
       <div
         onClick={() => document.getElementById('native-pin-input')?.focus()}
-        className="flex justify-center items-center gap-3 sm:gap-3.5 my-5 sm:my-6 cursor-pointer py-1"
+        className="flex justify-center items-center gap-3.5 sm:gap-4 my-5 sm:my-6 cursor-pointer py-1"
         title="Tap to type on keyboard"
       >
-        {[0, 1, 2, 3, 4, 5].map((index) => {
+        {[0, 1, 2, 3].map((index) => {
           const filled = index < pin.length;
           return (
             <div
               key={index}
-              className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full transition-all duration-200 border ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all duration-200 border ${
                 filled
                   ? 'bg-gradient-to-tr from-blue-600 to-cyan-400 border-blue-300 shadow-lg shadow-blue-500/60 scale-115 animate-pulse'
                   : 'bg-slate-800/80 border-slate-700/80 scale-100'
@@ -137,17 +144,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           <button
             key={num}
             type="button"
-            onClick={() => {
-              if (pin.length < 6) {
-                const nextPin = pin + String(num);
-                setPin(nextPin);
-                setErrorMessage('');
-                if (nextPin.length === 6) {
-                  handleSubmit(null, nextPin);
-                }
-              }
-            }}
-            disabled={isLoading || pin.length >= 6}
+            onClick={() => handleKeyPress(String(num))}
+            disabled={isLoading || pin.length >= 4}
             className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
           >
             {num}
@@ -165,17 +163,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
 
         <button
           type="button"
-          onClick={() => {
-            if (pin.length < 6) {
-              const nextPin = pin + '0';
-              setPin(nextPin);
-              setErrorMessage('');
-              if (nextPin.length === 6) {
-                handleSubmit(null, nextPin);
-              }
-            }
-          }}
-          disabled={isLoading || pin.length >= 6}
+          onClick={() => handleKeyPress('0')}
+          disabled={isLoading || pin.length >= 4}
           className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
         >
           0
