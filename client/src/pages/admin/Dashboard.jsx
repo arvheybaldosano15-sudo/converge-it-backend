@@ -43,6 +43,7 @@ const Dashboard = () => {
 
     const handleUpdate = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     };
 
     socket.on('ticket:created', handleUpdate);

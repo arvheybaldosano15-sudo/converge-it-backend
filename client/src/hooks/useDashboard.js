@@ -9,8 +9,8 @@ export const useAdminDashboard = () => {
       const res = await api.get('/dashboard/admin');
       return res.data || {};
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
-    refetchOnMount: false,
+    staleTime: 1000 * 5, // 5 seconds
+    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 };
@@ -23,8 +23,8 @@ export const useTechDashboard = () => {
       const res = await api.get('/dashboard/technician');
       return res.data || {};
     },
-    staleTime: 1000 * 60 * 5,
-    refetchOnMount: false,
+    staleTime: 1000 * 5, // 5 seconds
+    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 };

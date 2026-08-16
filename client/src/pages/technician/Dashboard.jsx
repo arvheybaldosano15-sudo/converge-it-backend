@@ -7,11 +7,42 @@ import Loader from '../../components/common/Loader';
 import { Ticket, Clock, CheckCircle, AlertTriangle, ArrowRight, Wrench, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '../../context/SocketContext';
 import { useTechDashboard } from '../../hooks/useDashboard';
 
 const TechnicianDashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
   const { data = null, isLoading: loading } = useTechDashboard();
+
+  // Listen for socket events to auto-update technician task queue in real-time
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    };
+
+    socket.on('ticket:created', handleUpdate);
+    socket.on('ticket_created', handleUpdate);
+    socket.on('ticket:updated', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
+    socket.on('notification:new', handleUpdate);
+
+    return () => {
+      if (typeof socket.off === 'function') {
+        socket.off('ticket:created', handleUpdate);
+        socket.off('ticket_created', handleUpdate);
+        socket.off('ticket:updated', handleUpdate);
+        socket.off('ticket_updated', handleUpdate);
+        socket.off('notification:new', handleUpdate);
+      }
+    };
+  }, [socket, queryClient]);
 
   if (loading) return <Loader text="Loading technician task queue..." />;
 
