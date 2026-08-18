@@ -63,7 +63,7 @@ const TechnicianDashboard = () => {
             <Ticket className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium">Open Assigned</p>
+            <p className="text-xs text-slate-400 font-medium">Pending Assigned</p>
             <h3 className="text-2xl font-extrabold text-white font-display">{stats.open_tickets || 0}</h3>
           </div>
         </Card>

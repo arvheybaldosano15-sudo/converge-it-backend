@@ -42,7 +42,7 @@ const AssignedTickets = () => {
     },
     {
       header: 'Status',
-      cell: (row) => <Badge variant={row.status === 'resolved' ? 'success' : 'primary'}>{row.status}</Badge>,
+      cell: (row) => <Badge variant={row.status === 'resolved' ? 'success' : 'primary'} className="capitalize">{row.status === 'open' ? 'pending' : row.status}</Badge>,
     },
     {
       header: 'Actions',
