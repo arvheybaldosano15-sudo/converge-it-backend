@@ -570,44 +570,21 @@ const TicketManagement = () => {
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => viewTicketDetail(row)}
-                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300"
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 transition-colors"
                             title="View Ticket Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-
-                          <div className="relative">
-                            <button
-                              onClick={() => setActiveActionMenu(activeActionMenu === row.id ? null : row.id)}
-                              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
-
-                            {activeActionMenu === row.id && (
-                              <div className="absolute right-0 mt-1 w-36 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-20 py-1 text-xs">
-                                <button
-                                  onClick={() => {
-                                    setActiveActionMenu(null);
-                                    viewTicketDetail(row);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 hover:bg-slate-800 text-slate-300 flex items-center gap-2"
-                                >
-                                  <Eye className="w-3.5 h-3.5 text-cyan-400" /> View Details
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveActionMenu(null);
-                                    setTicketToDelete(row);
-                                    setIsDeleteConfirmOpen(true);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 hover:bg-rose-500/20 text-rose-400 flex items-center gap-2 border-t border-slate-800 mt-1"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Delete Ticket
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => {
+                              setTicketToDelete(row);
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-500/20 border border-slate-800 hover:border-rose-500/30 text-rose-400 hover:text-rose-300 transition-colors"
+                            title="Delete Ticket"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
