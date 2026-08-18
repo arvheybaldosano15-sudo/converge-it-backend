@@ -24,9 +24,16 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const getSlaInfo = (deadlineStr, status) => {
+const getSlaInfo = (deadlineStr, status, resolvedAtStr) => {
   if (status === 'resolved' || status === 'closed') {
-    return { text: 'Resolved', colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+    if (deadlineStr) {
+      const resolvedDate = resolvedAtStr ? new Date(resolvedAtStr) : new Date();
+      const isMet = resolvedDate <= new Date(deadlineStr);
+      return isMet
+        ? { text: 'Completed Within SLA', colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' }
+        : { text: 'Completed (SLA Breached)', colorClass: 'text-rose-400 bg-rose-500/10 border-rose-500/30' };
+    }
+    return { text: 'Completed', colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
   }
   if (!deadlineStr) {
     return { text: 'No SLA Set', colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50' };
@@ -79,7 +86,7 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
   const ticket = ticketData;
   const updates = ticketData?.updates || [];
   const report = ticketData?.serviceReport || null;
-  const slaInfo = ticket ? getSlaInfo(ticket.sla_deadline, ticket.status) : {};
+  const slaInfo = ticket ? getSlaInfo(ticket.sla_deadline, ticket.status, ticket.resolved_at || ticket.updated_at) : {};
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={ticket ? `Ticket Details: ${ticket.ticket_number}` : 'Ticket Details'} maxWidth="max-w-2xl">
