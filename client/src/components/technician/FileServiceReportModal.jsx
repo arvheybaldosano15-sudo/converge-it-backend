@@ -304,22 +304,7 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
               />
             </div>
 
-            {/* GPS Location Capture */}
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300 flex items-center gap-1">
-                  <Navigation className="w-3.5 h-3.5 text-cyan-400" /> GPS Tagging
-                </span>
-                <Button type="button" variant="ghost" size="sm" onClick={captureLocation} isLoading={locating}>
-                  {gpsLatitude ? 'Recapture Location' : 'Capture GPS'}
-                </Button>
-              </div>
-              {gpsAddress && (
-                <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> {gpsAddress}
-                </p>
-              )}
-            </div>
+
 
             {/* Installation Photos & Camera Capture */}
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
