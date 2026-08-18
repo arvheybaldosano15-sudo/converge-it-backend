@@ -145,7 +145,8 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
            COUNT(*) AS total_assigned
          FROM tickets WHERE assigned_technician_id = $1`,
         [techId]
-      ),
+      ).catch(() => ({ rows: [{}] })),
+
       // 2. Completed Today
       query(
         `SELECT COUNT(*) AS count FROM tickets 
@@ -153,7 +154,8 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
          AND status IN ('resolved','closed')
          AND (resolved_at >= CURRENT_DATE OR updated_at >= CURRENT_DATE)`,
         [techId]
-      ),
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+
       // 3. Requires Attention (High/Critical OR SLA Breached/Approaching <= 4h)
       query(
         `SELECT t.id, t.ticket_number, t.subject AS title, t.description, t.status, t.priority, t.sla_deadline, t.created_at,
@@ -168,7 +170,8 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
          ORDER BY CASE t.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 ELSE 3 END, t.sla_deadline ASC NULLS LAST
          LIMIT 6`,
         [techId]
-      ),
+      ).catch(() => ({ rows: [] })),
+
       // 4. Full Assigned Queue (Priority order)
       query(
         `SELECT t.id, t.ticket_number, t.subject AS title, t.description, t.status, t.priority, t.sla_deadline, t.created_at,
@@ -183,20 +186,21 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
                   t.sla_deadline ASC NULLS LAST
          LIMIT 12`,
         [techId]
-      ),
+      ).catch(() => ({ rows: [] })),
+
       // 5. Weekly Activity (Monday - Sunday for current week)
       query(
         `SELECT EXTRACT(ISODOW FROM COALESCE(t.resolved_at, t.updated_at)) AS day_num,
-                TO_CHAR(COALESCE(t.resolved_at, t.updated_at), 'Dy') AS day_name,
                 COUNT(*) AS completed
          FROM tickets t
          WHERE t.assigned_technician_id = $1
            AND t.status IN ('resolved','closed')
            AND COALESCE(t.resolved_at, t.updated_at) >= DATE_TRUNC('week', CURRENT_DATE)
-         GROUP BY day_num, day_name
+         GROUP BY EXTRACT(ISODOW FROM COALESCE(t.resolved_at, t.updated_at))
          ORDER BY day_num ASC`,
         [techId]
-      ),
+      ).catch(() => ({ rows: [] })),
+
       // 6. Recent Activity Log for this technician
       query(
         `SELECT tu.id, tu.ticket_id, tu.status_changed_to, tu.notes, tu.created_at,
@@ -208,7 +212,7 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
          ORDER BY tu.created_at DESC
          LIMIT 8`,
         [techId]
-      )
+      ).catch(() => ({ rows: [] }))
     ]);
 
     const stats = statsRes.rows[0] || {};
@@ -217,7 +221,7 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
     // Map weekly activity to all 7 days Mon-Sun
     const daysMap = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
     const weeklyDataMap = {};
-    weeklyActivityRes.rows.forEach(r => {
+    (weeklyActivityRes.rows || []).forEach(r => {
       weeklyDataMap[parseInt(r.day_num)] = parseInt(r.completed);
     });
     const weeklyActivity = [1, 2, 3, 4, 5, 6, 7].map(dayNum => ({
@@ -237,10 +241,10 @@ router.get('/technician', authenticate, authorize('technician'), async (req, res
           total_assigned: parseInt(stats.total_assigned || 0)
         },
         completedToday: completedTodayCount,
-        requiresAttention: requiresAttentionRes.rows,
-        assignedQueue: assignedQueueRes.rows,
+        requiresAttention: requiresAttentionRes.rows || [],
+        assignedQueue: assignedQueueRes.rows || [],
         weeklyActivity,
-        recentActivity: recentActivityRes.rows
+        recentActivity: recentActivityRes.rows || []
       }
     });
   } catch (error) { next(error); }
