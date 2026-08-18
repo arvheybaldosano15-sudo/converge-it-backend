@@ -115,7 +115,7 @@ const TechnicianDashboard = () => {
             recentTickets.map((t) => (
               <div
                 key={t.id}
-                onClick={() => navigate(`/technician/update/${t.id}`)}
+                onClick={() => navigate('/technician/assigned')}
                 className="p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 transition-colors cursor-pointer space-y-2"
               >
                 <div className="flex justify-between items-start">
