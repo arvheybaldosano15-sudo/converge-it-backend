@@ -3,7 +3,6 @@ import api from '../../utils/axios';
 import DataTable from '../../components/common/DataTable';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
-import { Clock } from 'lucide-react';
 
 const TicketHistory = () => {
   const [tickets, setTickets] = useState([]);
@@ -14,10 +13,10 @@ const TicketHistory = () => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/tickets', { params: { page, limit: 10, status: 'resolved' } });
+      const res = await api.get('/tickets', { params: { page, limit: 10, status: 'history' } });
       if (res.success) {
         setTickets(res.data);
-        setTotalPages(res.pagination.totalPages);
+        setTotalPages(res.pagination?.totalPages || 1);
       }
     } catch (e) {
       console.error(e);
@@ -36,7 +35,7 @@ const TicketHistory = () => {
       cell: (row) => <span className="font-mono text-xs font-bold text-cyan-400">{row.ticket_number}</span>,
     },
     {
-      header: 'Completed Task',
+      header: 'Completed / Closed Task',
       cell: (row) => (
         <div>
           <p className="font-bold text-white text-sm line-clamp-1">{row.title}</p>
@@ -50,15 +49,25 @@ const TicketHistory = () => {
     },
     {
       header: 'Status',
-      cell: (row) => <Badge variant="success">Resolved</Badge>,
+      align: 'center',
+      cell: (row) => {
+        if (row.status === 'closed') {
+          return <Badge variant="default">Closed</Badge>;
+        }
+        return <Badge variant="success">Resolved</Badge>;
+      },
     },
     {
-      header: 'Resolved Date',
-      cell: (row) => (
-        <span className="text-xs text-slate-400">
-          {row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : '-'}
-        </span>
-      ),
+      header: 'Completed Date',
+      align: 'center',
+      cell: (row) => {
+        const dateVal = row.resolved_at || row.updated_at || row.created_at;
+        return (
+          <span className="text-xs text-slate-400">
+            {dateVal ? new Date(dateVal).toLocaleDateString() : '-'}
+          </span>
+        );
+      },
     },
   ];
 
@@ -66,10 +75,10 @@ const TicketHistory = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white font-display">Service Work Order History</h1>
-        <p className="text-xs text-slate-400">Archive of resolved and completed service calls</p>
+        <p className="text-xs text-slate-400">Archive of resolved and closed service calls</p>
       </div>
 
-      <DataTable columns={columns} data={tickets} isLoading={loading} emptyMessage="No completed tickets in history." />
+      <DataTable columns={columns} data={tickets} isLoading={loading} emptyMessage="No completed or closed tickets in history." />
 
       <Pagination currentPage={page} totalPages={totalPages} itemsPerPage={10} onPageChange={setPage} />
     </div>

@@ -10,7 +10,18 @@ exports.getTickets = async (req, res, next) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;
     if (req.user.role === 'technician') { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(req.user.id); }
-    if (status) { conditions.push(`t.status = $${idx++}`); params.push(status); }
+    if (status) {
+      if (status === 'history') {
+        conditions.push(`t.status IN ('resolved', 'closed')`);
+      } else if (status.includes(',')) {
+        const statuses = status.split(',').map(s => s.trim());
+        conditions.push(`t.status = ANY($${idx++})`);
+        params.push(statuses);
+      } else {
+        conditions.push(`t.status = $${idx++}`);
+        params.push(status);
+      }
+    }
     if (priority) { conditions.push(`t.priority = $${idx++}`); params.push(priority); }
     if (category) { conditions.push(`t.service_category_id = $${idx++}`); params.push(category); }
     if (assignedTo === 'unassigned') { conditions.push(`t.assigned_technician_id IS NULL`); }
