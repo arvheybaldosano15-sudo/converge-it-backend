@@ -272,7 +272,7 @@ const AssignedTickets = () => {
       cell: (row) => {
         const slaInfo = getSlaInfo(row.sla_deadline, row.status);
         return (
-          <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border ${slaInfo.colorClass}`}>
+          <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
             ⏰ {slaInfo.text}
           </span>
         );

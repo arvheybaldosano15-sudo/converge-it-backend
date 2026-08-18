@@ -289,7 +289,7 @@ const TechnicianDashboard = () => {
                   </div>
 
                   <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
-                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border ${slaInfo.colorClass}`}>
+                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
                       ⏰ {slaInfo.text}
                     </span>
                     <Button variant="ghost" size="sm" onClick={(e) => handleOpenUpdate(t, e)} icon={Eye}>
@@ -439,7 +439,7 @@ const TechnicianDashboard = () => {
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border ${slaInfo.colorClass}`}>
+                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
                       ⏰ {slaInfo.text}
                     </span>
                     <Button

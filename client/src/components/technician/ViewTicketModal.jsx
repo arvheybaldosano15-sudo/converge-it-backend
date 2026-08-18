@@ -110,7 +110,7 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
               <span className="text-slate-400 font-medium flex items-center gap-1">
                 <Tag className="w-3.5 h-3.5 text-cyan-400" /> {ticket.category_name}
               </span>
-              <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border ${slaInfo.colorClass}`}>
+              <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
                 ⏰ {slaInfo.text}
               </span>
             </div>
