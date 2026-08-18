@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import api from '../../utils/axios';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
-import { FileText, MapPin, Camera, Navigation, Send, X } from 'lucide-react';
+import { FileText, Camera, Send, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) => {
@@ -57,12 +57,6 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
   const [customerNameSigned, setCustomerNameSigned] = useState('');
   const [isComplete, setIsComplete] = useState(true);
 
-  // GPS state
-  const [gpsLatitude, setGpsLatitude] = useState(null);
-  const [gpsLongitude, setGpsLongitude] = useState(null);
-  const [gpsAddress, setGpsAddress] = useState('');
-  const [locating, setLocating] = useState(false);
-
   // Camera state
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraFacing, setCameraFacing] = useState('environment');
@@ -81,26 +75,6 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
     }
   }, [ticket]);
 
-  const captureLocation = () => {
-    if (!navigator.geolocation) {
-      return toast.error('Geolocation is not supported by your browser');
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setGpsLatitude(position.coords.latitude);
-        setGpsLongitude(position.coords.longitude);
-        setGpsAddress(`GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
-        setLocating(false);
-        toast.success('GPS coordinates captured!');
-      },
-      () => {
-        setLocating(false);
-        toast.error('Failed to capture GPS coordinates');
-      }
-    );
-  };
-
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
@@ -115,7 +89,7 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const openCamera = useCallback(async (facing) => {
+  const openCamera = useCallback(async (facing = 'environment') => {
     setCameraOpen(true);
     setCameraFacing(facing);
     setCameraReady(false);
@@ -152,11 +126,11 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
       }
     } catch (err) {
       console.error('Camera access failed:', err);
-      setCameraError('Unable to access camera. Please check camera permissions.');
+      setCameraError('Unable to access camera. Please check camera permissions in your browser.');
     }
   }, []);
 
-  const closeCamera = useCallback(() => {
+  const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -165,6 +139,11 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
     setCameraReady(false);
     setCameraError('');
   }, []);
+
+  const switchCamera = () => {
+    const next = cameraFacing === 'environment' ? 'user' : 'environment';
+    openCamera(next);
+  };
 
   const capturePhoto = useCallback(() => {
     const video = videoRef.current;
@@ -191,6 +170,14 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
     );
   }, [cameraFacing]);
 
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!ticket) return toast.error('No ticket selected');
@@ -206,10 +193,6 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
       formData.append('completionNotes', completionNotes);
       formData.append('customerNameSigned', customerNameSigned);
       formData.append('isComplete', isComplete);
-
-      if (gpsLatitude) formData.append('gpsLatitude', gpsLatitude);
-      if (gpsLongitude) formData.append('gpsLongitude', gpsLongitude);
-      if (gpsAddress) formData.append('gpsAddress', gpsAddress);
 
       for (const file of files) {
         const compressed = await compressImage(file);
@@ -304,8 +287,6 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
               />
             </div>
 
-
-
             {/* Installation Photos & Camera Capture */}
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
@@ -355,35 +336,100 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
         )}
       </Modal>
 
-      {/* Camera Fullscreen Overlay */}
+      {/* Fullscreen Camera Portal — exact matching original implementation */}
       {cameraOpen &&
         ReactDOM.createPortal(
-          <div className="fixed inset-0 z-[99999] bg-black flex flex-col justify-between">
-            <div className="p-4 flex justify-between items-center bg-slate-950/80 z-10">
-              <span className="text-xs font-bold text-white font-mono">
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000', display: 'flex', flexDirection: 'column' }}>
+            {/* Top bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(0,0,0,0.85)' }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Camera style={{ width: 16, height: 16, color: '#60a5fa' }} />
                 {cameraFacing === 'environment' ? '📷 Rear Camera' : '🤳 Front Camera'}
               </span>
-              <button type="button" onClick={closeCamera} className="p-2 text-white bg-slate-800 rounded-full">
-                <X className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={stopCamera}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
 
-            <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+            {/* Video feed */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000' }}>
               {cameraError ? (
-                <p className="text-red-400 text-xs text-center p-4">{cameraError}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32, textAlign: 'center' }}>
+                  <Camera style={{ width: 48, height: 48, color: '#f87171', opacity: 0.6, marginBottom: 12 }} />
+                  <p style={{ color: '#fca5a5', fontWeight: 700, marginBottom: 4 }}>Camera Error</p>
+                  <p style={{ color: '#94a3b8', fontSize: 13 }}>{cameraError}</p>
+                </div>
               ) : (
-                <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transform: cameraFacing === 'user' ? 'scaleX(-1)' : 'none' }}
+                />
+              )}
+
+              {/* Loading spinner */}
+              {!cameraReady && !cameraError && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, border: '3px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <p style={{ color: '#fff', fontSize: 13 }}>Starting camera…</p>
+                </div>
+              )}
+
+              {/* Corner framing guides */}
+              {cameraReady && (
+                <>
+                  <div style={{ position: 'absolute', top: 24, left: 24, width: 32, height: 32, borderTop: '2px solid rgba(255,255,255,0.5)', borderLeft: '2px solid rgba(255,255,255,0.5)', borderRadius: '4px 0 0 0', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', top: 24, right: 24, width: 32, height: 32, borderTop: '2px solid rgba(255,255,255,0.5)', borderRight: '2px solid rgba(255,255,255,0.5)', borderRadius: '0 4px 0 0', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: 24, left: 24, width: 32, height: 32, borderBottom: '2px solid rgba(255,255,255,0.5)', borderLeft: '2px solid rgba(255,255,255,0.5)', borderRadius: '0 0 0 4px', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: 24, right: 24, width: 32, height: 32, borderBottom: '2px solid rgba(255,255,255,0.5)', borderRight: '2px solid rgba(255,255,255,0.5)', borderRadius: '0 0 4px 0', pointerEvents: 'none' }} />
+                </>
               )}
             </div>
 
-            <div className="p-6 bg-slate-950/90 flex justify-center items-center z-10">
+            {/* Controls */}
+            <div style={{ background: 'rgba(0,0,0,0.85)', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ width: 60, textAlign: 'center' }}>
+                {files.length > 0 && (
+                  <span style={{ color: '#93c5fd', fontSize: 12, fontWeight: 700 }}>{files.length} taken</span>
+                )}
+              </div>
+
+              {/* Shutter */}
               <button
                 type="button"
                 onClick={capturePhoto}
-                disabled={!cameraReady}
-                className="w-16 h-16 rounded-full bg-white border-4 border-cyan-500 shadow-xl active:scale-95 transition-transform"
-              />
+                disabled={!cameraReady || !!cameraError}
+                style={{ width: 72, height: 72, borderRadius: '50%', background: (!cameraReady || !!cameraError) ? '#555' : '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(255,255,255,0.2)', transition: 'transform 0.1s' }}
+              >
+                <div style={{ width: 56, height: 56, borderRadius: '50%', border: '4px solid #9ca3af' }} />
+              </button>
+
+              {/* Switch camera button */}
+              <button
+                type="button"
+                onClick={switchCamera}
+                disabled={!cameraReady || !!cameraError}
+                title="Switch camera"
+                style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: (!cameraReady || !!cameraError) ? 0.4 : 1 }}
+              >
+                <RefreshCw style={{ width: 20, height: 20 }} />
+              </button>
             </div>
+
+            {/* Done button */}
+            <button
+              type="button"
+              onClick={stopCamera}
+              style={{ margin: '0 auto 20px', padding: '8px 36px', borderRadius: 999, background: '#2563eb', border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Done — Use {files.length} Photo{files.length !== 1 ? 's' : ''}
+            </button>
           </div>,
           document.body
         )}
