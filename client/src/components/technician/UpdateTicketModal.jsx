@@ -93,8 +93,8 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
           </p>
           <div className="pt-2 border-t border-slate-800">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Description</span>
-            <p className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 leading-relaxed max-h-24 overflow-y-auto">
-              {ticket.description}
+            <p className="text-xs text-slate-200 bg-slate-950/80 p-3 rounded-lg border border-slate-700/60 leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap font-sans">
+              {ticket.description || ticket.subject || ticket.title || 'No detailed description provided.'}
             </p>
           </div>
         </div>

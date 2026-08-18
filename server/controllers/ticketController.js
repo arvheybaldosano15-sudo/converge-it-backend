@@ -44,7 +44,7 @@ exports.getTickets = async (req, res, next) => {
     const ord = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     const dataParams = [...params, parseInt(limit), offset];
     const [data, count] = await Promise.all([
-      query(`SELECT t.id, t.ticket_number, t.subject, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
+      query(`SELECT t.id, t.ticket_number, t.subject, t.description, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
              t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
              c.full_name AS customer_name, c.contact_number AS customer_contact, c.messenger_psid,
              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color,
