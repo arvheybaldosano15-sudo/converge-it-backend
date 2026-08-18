@@ -110,7 +110,6 @@ const UpdateTicket = () => {
               className="glass-input w-full rounded-xl py-2.5 px-3 text-sm"
             >
               <option value="in_progress" className="bg-slate-900">In Progress</option>
-              <option value="on_hold" className="bg-slate-900">On Hold</option>
               <option value="resolved" className="bg-slate-900">Resolve</option>
             </select>
           </div>
