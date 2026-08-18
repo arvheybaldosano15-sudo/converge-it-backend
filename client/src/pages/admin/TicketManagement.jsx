@@ -646,9 +646,9 @@ const TicketManagement = () => {
         {selectedTicket && (
           <div className="space-y-6">
             {/* Ticket Header & Status Badges */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div>
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-lg font-extrabold text-cyan-400">{selectedTicket.ticket_number}</span>
                   <Badge variant={selectedTicket.priority === 'critical' ? 'danger' : selectedTicket.priority === 'high' ? 'warning' : 'cyan'}>
                     {selectedTicket.priority} Priority
@@ -656,33 +656,34 @@ const TicketManagement = () => {
                   <Badge variant={selectedTicket.status === 'resolved' ? 'success' : selectedTicket.status === 'in_progress' ? 'info' : 'warning'}>
                     {selectedTicket.status ? (selectedTicket.status === 'open' ? 'pending' : selectedTicket.status.replace('_', ' ')) : 'pending'}
                   </Badge>
+                  {selectedTicket.status !== 'closed' ? (
+                    <button
+                      onClick={() => handleStatusChange(selectedTicket.id, 'closed')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 hover:text-rose-300 border border-rose-500/40 hover:border-rose-400/60 transition-all active:scale-95"
+                    >
+                      <X className="w-3 h-3" /> Close Ticket
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700/40 text-slate-500 border border-slate-700/50 italic">
+                      Ticket Closed
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-bold text-white mt-1 font-display">{selectedTicket.subject || selectedTicket.title}</h3>
               </div>
 
-              {/* SLA Target Badge + Close Ticket */}
-              <div className="shrink-0 text-right flex flex-col items-end gap-2">
+              {/* SLA Target Badge */}
+              <div className="shrink-0 text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SLA Compliance Target</span>
                 {(() => {
                   const sla = getSlaStatus(selectedTicket.sla_deadline, selectedTicket.status);
                   return (
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${sla.bg} ${sla.color} ${sla.border}`}>
+                    <div className={`mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${sla.bg} ${sla.color} ${sla.border}`}>
                       <Clock className="w-3.5 h-3.5" />
                       <span>{sla.text} ({sla.desc || 'Active Target'})</span>
                     </div>
                   );
                 })()}
-                {selectedTicket.status !== 'closed' && (
-                  <button
-                    onClick={() => handleStatusChange(selectedTicket.id, 'closed')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700/60 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-600 hover:border-rose-500/50 transition-all active:scale-95"
-                  >
-                    <X className="w-3.5 h-3.5" /> Close Ticket
-                  </button>
-                )}
-                {selectedTicket.status === 'closed' && (
-                  <span className="text-xs text-slate-500 italic">Ticket Closed</span>
-                )}
               </div>
             </div>
 
