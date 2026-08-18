@@ -182,7 +182,7 @@ const ReportsAndAnalytics = () => {
   // ─── Chart: Ticket Status Breakdown (Donut) ───────────────────────────────
   const statusTotal = parseInt(tOverview.open || 0) + parseInt(tOverview.in_progress || 0) + parseInt(tOverview.resolved || 0) + parseInt(tOverview.closed || 0);
   const donutData = {
-    labels: ['Open', 'In Progress', 'Resolved', 'Closed'],
+    labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
     datasets: [{ data: [tOverview.open || 0, tOverview.in_progress || 0, tOverview.resolved || 0, tOverview.closed || 0], backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#64748b'], borderWidth: 2, borderColor: '#070b1e', hoverOffset: 6 }]
   };
   const donutOptions = {
@@ -377,7 +377,7 @@ const ReportsAndAnalytics = () => {
                 )}
               {!loading && statusTotal > 0 && (
                 <div className="grid grid-cols-2 gap-1 pt-1 border-t border-slate-800">
-                  {[{ label: 'Open', val: tOverview.open, color: 'text-amber-400', status: 'open' }, { label: 'In Progress', val: tOverview.in_progress, color: 'text-blue-400', status: 'in_progress' }, { label: 'Resolved', val: tOverview.resolved, color: 'text-emerald-400', status: 'resolved' }, { label: 'Closed', val: tOverview.closed, color: 'text-slate-400', status: 'closed' }].map((s) => (
+                  {[{ label: 'Pending', val: tOverview.open, color: 'text-amber-400', status: 'open' }, { label: 'In Progress', val: tOverview.in_progress, color: 'text-blue-400', status: 'in_progress' }, { label: 'Resolved', val: tOverview.resolved, color: 'text-emerald-400', status: 'resolved' }, { label: 'Closed', val: tOverview.closed, color: 'text-slate-400', status: 'closed' }].map((s) => (
                     <button key={s.status} onClick={() => drillTo('status', s.status)}
                       className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
                       <span className="text-[10px] text-slate-400">{s.label}</span>

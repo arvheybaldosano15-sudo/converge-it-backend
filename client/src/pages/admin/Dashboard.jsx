@@ -75,7 +75,7 @@ const Dashboard = () => {
   // 1. KPI Statistic Cards (8 Total)
   const kpis = [
     { label: 'Total Tickets', value: parseInt(stats.total) || 0, subtext: 'All-time system tickets', icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/20', borderColor: 'border-cyan-500', action: () => navigate('/admin/tickets') },
-    { label: 'Open Tickets', value: parseInt(stats.open_tickets) || 0, subtext: 'Awaiting progress', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', borderColor: 'border-amber-500', action: () => navigate('/admin/tickets?status=open') },
+    { label: 'Pending Tickets', value: parseInt(stats.open_tickets) || 0, subtext: 'Awaiting progress', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', borderColor: 'border-amber-500', action: () => navigate('/admin/tickets?status=open') },
     { label: 'In Progress', value: parseInt(stats.in_progress_tickets) || 0, subtext: 'Technicians assigned', icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/20', borderColor: 'border-blue-500', action: () => navigate('/admin/tickets?status=in_progress') },
     { label: 'Resolved', value: parseInt(stats.resolved_tickets) || 0, subtext: 'Successfully completed', icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', borderColor: 'border-emerald-500', action: () => navigate('/admin/tickets?status=resolved') },
     { label: 'Unassigned', value: parseInt(stats.unassigned_tickets) || 0, subtext: 'Needs technician assignment', icon: UserX, color: 'text-purple-400', bg: 'bg-purple-500/20', borderColor: 'border-purple-500', action: () => navigate('/admin/tickets?assignedTo=unassigned') },
@@ -227,7 +227,7 @@ const Dashboard = () => {
   // Chart 3: Ticket Status Breakdown (Donut Chart with Center Text Total)
   const totalTicketCount = parseInt(stats.total) || 0;
   const doughnutData = {
-    labels: ['Open', 'In Progress', 'Resolved', 'Closed'],
+    labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
     datasets: [{
       data: [
         parseInt(stats.open_tickets) || 0,
@@ -685,7 +685,7 @@ const Dashboard = () => {
                       </td>
                       <td className="p-3">
                         <Badge variant={t.status === 'resolved' ? 'success' : t.status === 'in_progress' ? 'info' : t.status === 'open' ? 'warning' : 'default'}>
-                          {t.status}
+                          {t.status === 'open' ? 'pending' : t.status}
                         </Badge>
                       </td>
                       <td className="p-3 text-slate-400">{new Date(t.created_at).toLocaleDateString()}</td>
