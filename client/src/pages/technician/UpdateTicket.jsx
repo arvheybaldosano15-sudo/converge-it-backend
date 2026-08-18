@@ -60,10 +60,32 @@ const UpdateTicket = () => {
   if (loading) return <Loader text="Loading task details..." />;
   if (!ticket) return <div className="text-slate-400">Ticket not found</div>;
 
+  const isClosed = ticket?.status === 'closed';
+
+  const getAvailableStatusOptions = (currentStatus) => {
+    if (currentStatus === 'closed') {
+      return [{ value: 'closed', label: 'Closed' }];
+    }
+    if (currentStatus === 'resolved') {
+      return [{ value: 'resolved', label: 'Resolved' }];
+    }
+    if (currentStatus === 'in_progress') {
+      return [
+        { value: 'in_progress', label: 'In Progress' },
+        { value: 'resolved', label: 'Resolve' }
+      ];
+    }
+    return [
+      { value: 'open', label: 'Pending' },
+      { value: 'in_progress', label: 'In Progress' },
+      { value: 'resolved', label: 'Resolve' }
+    ];
+  };
+
+  const statusOptions = getAvailableStatusOptions(ticket?.status);
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-
-
       {/* Ticket Header Card */}
       <Card glow className="space-y-4">
         <div className="flex justify-between items-start">
@@ -101,49 +123,59 @@ const UpdateTicket = () => {
           </Button>
         </div>
 
-        <form onSubmit={handleUpdate} className="space-y-4">
-          <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="glass-input w-full rounded-xl py-2.5 px-3 text-sm"
-            >
-              <option value="open" className="bg-slate-900">Pending</option>
-              <option value="in_progress" className="bg-slate-900">In Progress</option>
-              <option value="resolved" className="bg-slate-900">Resolve</option>
-            </select>
+        {isClosed ? (
+          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 text-xs text-center space-y-1">
+            <p className="font-bold text-slate-300 text-sm">🔒 Ticket Closed</p>
+            <p>This ticket has been closed by the administrator. Status updates are locked.</p>
           </div>
-
-          <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Work Note / Progress Log</label>
-            <textarea
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Arrived on site. Testing Starlink dish alignment..."
-              className="glass-input w-full rounded-xl p-3 text-sm"
-            />
-          </div>
-
-          {status === 'resolved' && (
+        ) : (
+          <form onSubmit={handleUpdate} className="space-y-4">
             <div className="flex flex-col space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Final Resolution Summary</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                disabled={statusOptions.length <= 1}
+                className="glass-input w-full rounded-xl py-2.5 px-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-slate-900">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Work Note / Progress Log</label>
               <textarea
                 rows={3}
-                value={resolutionSummary}
-                onChange={(e) => setResolutionSummary(e.target.value)}
-                placeholder="Explain what was done to fix the concern..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Arrived on site. Testing Starlink dish alignment..."
                 className="glass-input w-full rounded-xl p-3 text-sm"
-                required
               />
             </div>
-          )}
 
-          <Button type="submit" variant="primary" className="w-full py-3" isLoading={updating} icon={Send}>
-            Save Status & Progress
-          </Button>
-        </form>
+            {status === 'resolved' && (
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Final Resolution Summary</label>
+                <textarea
+                  rows={3}
+                  value={resolutionSummary}
+                  onChange={(e) => setResolutionSummary(e.target.value)}
+                  placeholder="Explain what was done to fix the concern..."
+                  className="glass-input w-full rounded-xl p-3 text-sm"
+                  required
+                />
+              </div>
+            )}
+
+            <Button type="submit" variant="primary" className="w-full py-3" isLoading={updating} icon={Send}>
+              Save Status & Progress
+            </Button>
+          </form>
+        )}
       </Card>
     </div>
   );

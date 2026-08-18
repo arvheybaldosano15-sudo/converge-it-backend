@@ -111,7 +111,16 @@ exports.updateTicket = async (req, res, next) => {
     const oldRes = await client.query('SELECT * FROM tickets WHERE id = $1', [id]);
     if (!oldRes.rows[0]) throw createError('Ticket not found', 404);
     const old = oldRes.rows[0];
-    if (req.user.role === 'technician' && old.assigned_technician_id !== req.user.id) throw createError('Access denied', 403);
+    if (req.user.role === 'technician') {
+      if (old.assigned_technician_id !== req.user.id) throw createError('Access denied', 403);
+      if (old.status === 'closed') throw createError('This ticket has been closed by an administrator and cannot be modified', 403);
+      if (old.status === 'in_progress' && status === 'open') {
+        throw createError('Tickets in progress cannot revert to pending', 400);
+      }
+      if (old.status === 'resolved' && ['open', 'in_progress'].includes(status)) {
+        throw createError('Resolved tickets cannot revert to pending or in progress', 400);
+      }
+    }
     const updates = []; const values = []; let i = 1;
     if (status) { updates.push(`status = $${i++}`); values.push(status); }
     if (priority && req.user.role === 'admin') { updates.push(`priority = $${i++}`); values.push(priority); }
