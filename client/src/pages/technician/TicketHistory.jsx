@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge';
 import DataTable from '../../components/common/DataTable';
 import Pagination from '../../components/common/Pagination';
 import Loader from '../../components/common/Loader';
+import toast from 'react-hot-toast';
 import {
   Clock,
   CheckCircle,
@@ -13,7 +14,7 @@ import {
   Search,
   RotateCcw,
   Eye,
-  FileText,
+  Trash2,
   Filter,
   Calendar,
   Archive,
@@ -21,7 +22,6 @@ import {
 } from 'lucide-react';
 
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
-import ViewServiceReportModal from '../../components/technician/ViewServiceReportModal';
 
 const TicketHistory = () => {
   const [tickets, setTickets] = useState([]);
@@ -41,8 +41,7 @@ const TicketHistory = () => {
   const [viewTicketId, setViewTicketId] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  const [reportTicket, setReportTicket] = useState(null);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Fetch History tickets
   const fetchHistory = async () => {
@@ -56,6 +55,22 @@ const TicketHistory = () => {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (ticket, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Delete ticket ${ticket.ticket_number}? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(ticket.id);
+      await api.delete(`/tickets/${ticket.id}`);
+      setTickets(prev => prev.filter(t => t.id !== ticket.id));
+      toast.success(`Ticket ${ticket.ticket_number} deleted from history.`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete ticket. Please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -200,11 +215,7 @@ const TicketHistory = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleOpenReportModal = (ticket, e) => {
-    if (e) e.stopPropagation();
-    setReportTicket(ticket);
-    setIsReportModalOpen(true);
-  };
+
 
   const columns = [
     {
@@ -287,12 +298,13 @@ const TicketHistory = () => {
           </button>
 
           <button
-            onClick={(e) => handleOpenReportModal(row, e)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all active:scale-95"
-            title="View Attached Service Report"
+            onClick={(e) => handleDelete(row, e)}
+            disabled={deletingId === row.id}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Delete this history record"
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Service Report</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{deletingId === row.id ? 'Deleting...' : 'Delete'}</span>
           </button>
         </div>
       ),
@@ -513,8 +525,8 @@ const TicketHistory = () => {
                   <Button variant="ghost" size="sm" onClick={(e) => handleOpenView(t, e)} icon={Eye}>
                     View
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={(e) => handleOpenReportModal(t, e)} icon={FileText}>
-                    Report
+                  <Button variant="ghost" size="sm" onClick={(e) => handleDelete(t, e)} icon={Trash2} disabled={deletingId === t.id}>
+                    {deletingId === t.id ? '...' : 'Delete'}
                   </Button>
                 </div>
               </div>
@@ -531,13 +543,6 @@ const TicketHistory = () => {
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         ticketId={viewTicketId}
-      />
-
-      <ViewServiceReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        ticketId={reportTicket?.id}
-        ticket={reportTicket}
       />
     </div>
   );

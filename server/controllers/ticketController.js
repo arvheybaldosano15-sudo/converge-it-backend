@@ -166,6 +166,15 @@ exports.updateTicket = async (req, res, next) => {
 
 exports.deleteTicket = async (req, res, next) => {
   try {
+    let checkResult;
+    if (req.user.role === 'technician') {
+      // Technicians may only delete their own resolved/closed tickets
+      checkResult = await query(
+        `SELECT id, ticket_number FROM tickets WHERE id = $1 AND assigned_technician_id = $2 AND status IN ('resolved','closed')`,
+        [req.params.id, req.user.id]
+      );
+      if (!checkResult.rows[0]) throw createError('Ticket not found or not authorised to delete', 403);
+    }
     const result = await query('DELETE FROM tickets WHERE id = $1 RETURNING ticket_number', [req.params.id]);
     if (!result.rows[0]) throw createError('Ticket not found', 404);
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'delete', targetType: 'ticket', targetId: req.params.id, targetDescription: result.rows[0].ticket_number });
