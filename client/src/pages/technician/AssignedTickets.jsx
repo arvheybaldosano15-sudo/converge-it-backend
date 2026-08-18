@@ -5,7 +5,7 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import DataTable from '../../components/common/DataTable';
 import Pagination from '../../components/common/Pagination';
-import { Edit } from 'lucide-react';
+import { Edit, FileText } from 'lucide-react';
 
 import { useTickets } from '../../hooks/useTickets';
 import UpdateTicketModal from '../../components/technician/UpdateTicketModal';
@@ -82,14 +82,25 @@ const AssignedTickets = () => {
     {
       header: 'Actions',
       cell: (row) => (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={(e) => handleOpenUpdate(row, e)}
-          icon={Edit}
-        >
-          Update
-        </Button>
+        <div className="flex items-center justify-end space-x-1.5" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => handleOpenUpdate(row, e)}
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 transition-colors"
+            title="Update Ticket"
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenFileReport(row);
+            }}
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-800 hover:border-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors"
+            title="File Service Report"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+        </div>
       ),
     },
   ];
