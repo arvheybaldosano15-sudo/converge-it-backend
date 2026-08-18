@@ -46,7 +46,7 @@ exports.getTickets = async (req, res, next) => {
     const [data, count] = await Promise.all([
       query(`SELECT t.id, t.ticket_number, t.subject, t.description, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
              t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
-             c.full_name AS customer_name, c.contact_number AS customer_contact, c.messenger_psid,
+             c.full_name AS customer_name, c.contact_number AS customer_contact, c.complete_address AS customer_address, c.messenger_psid,
              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color,
              u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.employee_id AS assignee_employee_id
              FROM tickets t

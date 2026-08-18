@@ -242,12 +242,20 @@ const AssignedTickets = () => {
     },
     {
       header: 'Location',
-      cell: (row) => (
-        <div className="flex items-center gap-1.5 text-xs text-slate-300 max-w-[200px]">
-          <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span className="truncate" title={row.customer_address}>{row.customer_address || 'Address on file'}</span>
-        </div>
-      ),
+      cell: (row) => {
+        let loc = row.customer_address;
+        if (!loc && row.description) {
+          const match = row.description.match(/Address:\s*([^\n\r]+)/i);
+          if (match && match[1]) loc = match[1].trim();
+        }
+        const locationText = loc || 'Address on file';
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-slate-300 max-w-[200px]">
+            <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="truncate" title={locationText}>{locationText}</span>
+          </div>
+        );
+      },
     },
     {
       header: 'Priority',
