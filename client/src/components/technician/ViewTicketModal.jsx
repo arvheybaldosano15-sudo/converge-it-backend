@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/axios';
 import Modal from '../common/Modal';
-import Button from '../common/Button';
 import Badge from '../common/Badge';
 import Loader from '../common/Loader';
 import { getUploadUrl } from '../../utils/urlHelper';
@@ -15,7 +14,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Send,
-  Edit,
   Camera,
   History,
   ShieldAlert,
@@ -241,32 +239,6 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
             </div>
           )}
 
-          {/* Action buttons at bottom of view modal */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-3 border-t border-slate-800">
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                onClose();
-                if (onOpenUpdateModal) onOpenUpdateModal(ticket);
-              }}
-              icon={Edit}
-            >
-              Update Ticket Status
-            </Button>
-
-            <Button
-              variant="success"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                onClose();
-                if (onOpenFileServiceReport) onOpenFileServiceReport(ticket);
-              }}
-              icon={FileText}
-            >
-              File Service Report
-            </Button>
-          </div>
         </div>
       )}
     </Modal>
