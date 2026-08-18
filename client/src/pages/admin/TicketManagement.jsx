@@ -254,7 +254,7 @@ const TicketManagement = () => {
   // Summary KPI Cards data
   const summaryCards = [
     { label: 'Total Tickets', count: parseInt(ticketStats.total) || 0, icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500', active: !statusFilter && !slaFilter, onClick: () => resetFilters() },
-    { label: 'Open', count: parseInt(ticketStats.open_count) || 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500', active: statusFilter === 'open', onClick: () => { setStatusFilter('open'); setSlaFilter(''); setPage(1); } },
+    { label: 'Pending', count: parseInt(ticketStats.open_count) || 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500', active: statusFilter === 'open', onClick: () => { setStatusFilter('open'); setSlaFilter(''); setPage(1); } },
     { label: 'In Progress', count: parseInt(ticketStats.in_progress_count) || 0, icon: UserCheck, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500', active: statusFilter === 'in_progress', onClick: () => { setStatusFilter('in_progress'); setSlaFilter(''); setPage(1); } },
     { label: 'Resolved', count: parseInt(ticketStats.resolved_count) || 0, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500', active: statusFilter === 'resolved', onClick: () => { setStatusFilter('resolved'); setSlaFilter(''); setPage(1); } },
     { label: 'SLA At Risk', count: parseInt(ticketStats.sla_at_risk) || 0, icon: AlertCircle, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500', active: slaFilter === 'at_risk', onClick: () => { setSlaFilter('at_risk'); setStatusFilter(''); setPage(1); } },
@@ -366,7 +366,7 @@ const TicketManagement = () => {
             className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
           >
             <option value="">All Statuses</option>
-            <option value="open">Open</option>
+            <option value="open">Pending</option>
             <option value="in_progress">In Progress</option>
             <option value="on_hold">On Hold</option>
             <option value="resolved">Resolved</option>
@@ -528,7 +528,7 @@ const TicketManagement = () => {
                           row.status === 'open' ? 'warning' :
                           row.status === 'closed' ? 'secondary' : 'danger'
                         } className="capitalize">
-                          {row.status ? row.status.replace('_', ' ') : 'open'}
+                          {row.status ? (row.status === 'open' ? 'pending' : row.status.replace('_', ' ')) : 'pending'}
                         </Badge>
                       </td>
 
@@ -654,7 +654,7 @@ const TicketManagement = () => {
                     {selectedTicket.priority} Priority
                   </Badge>
                   <Badge variant={selectedTicket.status === 'resolved' ? 'success' : selectedTicket.status === 'in_progress' ? 'info' : 'warning'}>
-                    {selectedTicket.status ? selectedTicket.status.replace('_', ' ') : 'open'}
+                    {selectedTicket.status ? (selectedTicket.status === 'open' ? 'pending' : selectedTicket.status.replace('_', ' ')) : 'pending'}
                   </Badge>
                 </div>
                 <h3 className="text-lg font-bold text-white mt-1 font-display">{selectedTicket.subject || selectedTicket.title}</h3>

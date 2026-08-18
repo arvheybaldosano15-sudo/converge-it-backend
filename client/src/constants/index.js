@@ -20,7 +20,7 @@ export const TICKET_STATUS = {
 };
 
 export const TICKET_STATUS_CONFIG = {
-  open: { label: 'Open', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+  open: { label: 'Pending', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
   in_progress: { label: 'In Progress', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   on_hold: { label: 'On Hold', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
   resolved: { label: 'Resolved', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
