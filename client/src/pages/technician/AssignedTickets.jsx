@@ -42,7 +42,21 @@ const AssignedTickets = () => {
     },
     {
       header: 'Status',
-      cell: (row) => <Badge variant={row.status === 'resolved' ? 'success' : 'primary'} className="capitalize">{row.status === 'open' ? 'pending' : row.status}</Badge>,
+      cell: (row) => {
+        const variantMap = {
+          open: 'warning',
+          in_progress: 'primary',
+          on_hold: 'purple',
+          resolved: 'success',
+          closed: 'default'
+        };
+        const displayStatus = row.status === 'open' ? 'pending' : row.status;
+        return (
+          <Badge variant={variantMap[row.status] || 'default'} className="capitalize">
+            {displayStatus ? displayStatus.replace('_', ' ') : ''}
+          </Badge>
+        );
+      }
     },
     {
       header: 'Actions',
