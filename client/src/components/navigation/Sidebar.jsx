@@ -52,7 +52,6 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
     { label: 'Dashboard',        icon: LayoutDashboard, path: '/technician/dashboard' },
     { label: 'Assigned Tickets', icon: Ticket,          path: '/technician/assigned' },
     { label: 'Ticket History',   icon: Clock,           path: '/technician/history' },
-    { label: 'Service Reports',  icon: ClipboardList,   path: '/technician/reports' },
     { label: 'Notifications',    icon: Bell,            path: '/technician/notifications' },
     { label: 'Profile',          icon: User,            path: '/technician/profile' },
   ];

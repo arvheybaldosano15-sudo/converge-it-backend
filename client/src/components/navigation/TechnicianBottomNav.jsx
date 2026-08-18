@@ -14,7 +14,6 @@ import {
 const leftItems = [
   { label: 'Assigned', icon: Ticket,        path: '/technician/assigned' },
   { label: 'History',  icon: Clock,         path: '/technician/history' },
-  { label: 'Reports',  icon: ClipboardList, path: '/technician/reports' },
 ];
 
 const rightItems = [
