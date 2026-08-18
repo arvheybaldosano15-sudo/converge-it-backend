@@ -20,14 +20,14 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-md"
           />
 
           {/* Modal Box (Mobile bottom sheet / Desktop centered dialog) */}
@@ -53,12 +53,12 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
             {/* Header */}
             {title && (
               <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800/80 pr-12 shrink-0">
-                <h3 className="text-base sm:text-lg font-bold text-slate-100 font-display">{title}</h3>
+                <h3 className="text-base sm:text-lg font-bold text-slate-100 font-display truncate">{title}</h3>
               </div>
             )}
 
             {/* Body (Scrollable on mobile) */}
-            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
+            <div className="p-4 sm:p-6 pb-8 sm:pb-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
           </motion.div>
         </div>
       )}

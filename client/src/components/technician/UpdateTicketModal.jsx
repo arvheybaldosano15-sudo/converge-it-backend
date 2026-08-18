@@ -69,40 +69,44 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Update Ticket: ${ticket.ticket_number}`} maxWidth="max-w-2xl">
-      <div className="space-y-4 text-xs">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Update: ${ticket.ticket_number}`} maxWidth="max-w-lg">
+      <div className="space-y-4">
         {/* Ticket Info Box */}
-        <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2">
-          <div className="flex justify-between items-start">
-            <h3 className="text-sm font-bold text-white">{ticket.title}</h3>
-            <Badge variant={ticket.priority === 'critical' ? 'danger' : 'cyan'}>
-              {ticket.priority} Priority
+        <div className="p-3 sm:p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1.5">
+          <div className="flex flex-wrap justify-between items-start gap-2">
+            <h3 className="text-sm font-bold text-white leading-snug flex-1 min-w-0 pr-2">{ticket.title}</h3>
+            <Badge variant={ticket.priority === 'critical' ? 'danger' : 'cyan'} className="shrink-0">
+              {ticket.priority}
             </Badge>
           </div>
-          <p className="text-slate-300">
-            <span className="text-slate-400 font-medium">Customer:</span> {ticket.customer_name} ({ticket.customer_contact || 'N/A'})
+          <p className="text-xs text-slate-300">
+            <span className="text-slate-400 font-medium">Customer: </span>
+            {ticket.customer_name}
+            {ticket.customer_contact ? ` (${ticket.customer_contact})` : ''}
           </p>
-          <p className="text-slate-300 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" /> {ticket.customer_address || 'Address on file'}
+          <p className="text-xs text-slate-300 flex items-start gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+            <span>{ticket.customer_address || 'Address on file'}</span>
           </p>
-          <p className="text-slate-300">
-            <span className="text-slate-400 font-medium">Category:</span> {ticket.category_name}
+          <p className="text-xs text-slate-300">
+            <span className="text-slate-400 font-medium">Category: </span>{ticket.category_name}
           </p>
           <div className="pt-2 border-t border-slate-800">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Description</span>
-            <p className="text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 leading-relaxed">
+            <p className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 leading-relaxed max-h-24 overflow-y-auto">
               {ticket.description}
             </p>
           </div>
         </div>
 
         {/* Action Header & File Report trigger */}
-        <div className="flex justify-between items-center pt-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-1">
           <span className="text-xs font-bold text-white font-display">Service Progress & Update</span>
           <Button
             type="button"
             variant="success"
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => {
               onClose();
               if (onOpenFileServiceReport) onOpenFileServiceReport(ticket);
@@ -126,7 +130,7 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 disabled={statusOptions.length <= 1}
-                className="glass-input w-full rounded-xl py-2 px-3 text-xs bg-slate-900 text-white disabled:opacity-60"
+                className="glass-input w-full rounded-xl py-3 px-3 text-sm bg-slate-900 text-white disabled:opacity-60"
               >
                 {statusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-slate-900">
@@ -143,7 +147,7 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="e.g. Arrived on site. Testing Starlink dish alignment..."
-                className="glass-input w-full rounded-xl p-3 text-xs bg-slate-900 text-white"
+                className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
               />
             </div>
 
@@ -155,13 +159,13 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
                   value={resolutionSummary}
                   onChange={(e) => setResolutionSummary(e.target.value)}
                   placeholder="Explain what was done to fix the concern..."
-                  className="glass-input w-full rounded-xl p-3 text-xs bg-slate-900 text-white"
+                  className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
                   required
                 />
               </div>
             )}
 
-            <Button type="submit" variant="primary" className="w-full py-2.5 text-xs" isLoading={updating} icon={Send}>
+            <Button type="submit" variant="primary" className="w-full py-3 text-sm" isLoading={updating} icon={Send}>
               Save Status & Progress
             </Button>
           </form>

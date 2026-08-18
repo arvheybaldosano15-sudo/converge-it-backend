@@ -219,88 +219,88 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="File Field Service Report" maxWidth="max-w-2xl">
+      <Modal isOpen={isOpen} onClose={onClose} title="File Service Report" maxWidth="max-w-lg">
         {ticket && (
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Ticket Summary */}
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-              <span className="font-mono text-cyan-400 font-bold">{ticket.ticket_number}</span>
-              <p className="text-white font-bold text-sm">{ticket.title}</p>
-              <p className="text-slate-400">Customer: {ticket.customer_name}</p>
+              <span className="font-mono text-xs text-cyan-400 font-bold">{ticket.ticket_number}</span>
+              <p className="text-white font-bold text-sm leading-snug">{ticket.title}</p>
+              <p className="text-xs text-slate-400">Customer: {ticket.customer_name}</p>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-300">Report Title</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Report Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Starlink Dish Alignment & Router Setup"
-                className="glass-input w-full rounded-xl py-2 px-3 text-xs bg-slate-900 text-white"
+                className="glass-input w-full rounded-xl py-3 px-3 text-sm bg-slate-900 text-white"
                 required
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-300">Work Performed *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Work Performed *</label>
               <textarea
                 rows={3}
                 value={workPerformed}
                 onChange={(e) => setWorkPerformed(e.target.value)}
                 placeholder="Describe all technical tasks executed..."
-                className="glass-input w-full rounded-xl p-3 text-xs bg-slate-900 text-white"
+                className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
                 required
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-300">Materials & Parts Used</label>
-                <textarea
-                  rows={2}
-                  value={materialsUsed}
-                  onChange={(e) => setMaterialsUsed(e.target.value)}
-                  placeholder="e.g. 15m Cat6 cable, 2x RJ45 connectors"
-                  className="glass-input w-full rounded-xl p-2.5 text-xs bg-slate-900 text-white"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-300">Additional Completion Notes</label>
-                <textarea
-                  rows={2}
-                  value={completionNotes}
-                  onChange={(e) => setCompletionNotes(e.target.value)}
-                  placeholder="e.g. Customer verified speed test at 150 Mbps"
-                  className="glass-input w-full rounded-xl p-2.5 text-xs bg-slate-900 text-white"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Materials & Parts Used</label>
+              <textarea
+                rows={2}
+                value={materialsUsed}
+                onChange={(e) => setMaterialsUsed(e.target.value)}
+                placeholder="e.g. 15m Cat6 cable, 2x RJ45 connectors"
+                className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
+              />
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-300">Customer Sign-off Name</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Additional Completion Notes</label>
+              <textarea
+                rows={2}
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                placeholder="e.g. Customer verified speed test at 150 Mbps"
+                className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Customer Sign-off Name</label>
               <input
                 type="text"
                 value={customerNameSigned}
                 onChange={(e) => setCustomerNameSigned(e.target.value)}
                 placeholder="Customer or representative full name"
-                className="glass-input w-full rounded-xl py-2 px-3 text-xs bg-slate-900 text-white"
+                className="glass-input w-full rounded-xl py-3 px-3 text-sm bg-slate-900 text-white"
               />
             </div>
 
-            {/* Installation Photos & Camera Capture */}
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300 flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5 text-cyan-400" /> Work Proof Photos ({files.length})
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => openCamera('environment')}>
-                    📷 Rear Camera
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => openCamera('user')}>
-                    🤳 Front Camera
-                  </Button>
-                </div>
+            {/* Photos & Camera */}
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center gap-1">
+                <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-xs font-bold text-slate-300">Work Proof Photos ({files.length})</span>
+              </div>
+
+              {/* Camera buttons stacked on mobile */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => openCamera('environment')} className="w-full justify-center">
+                  📷 Rear Camera
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => openCamera('user')} className="w-full justify-center">
+                  🤳 Front Camera
+                </Button>
               </div>
 
               <input
@@ -308,18 +308,18 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
-                className="glass-input w-full rounded-xl py-1.5 px-3 text-xs bg-slate-900 text-slate-300"
+                className="w-full rounded-xl py-2.5 px-3 text-xs text-slate-300 bg-slate-950/60 border border-slate-700 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-400"
               />
 
               {files.length > 0 && (
-                <div className="grid grid-cols-4 gap-2 pt-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {files.map((file, idx) => (
-                    <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-700 bg-slate-950">
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-700 bg-slate-950">
                       <img src={URL.createObjectURL(file)} alt="Upload preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}
-                        className="absolute top-1 right-1 p-1 bg-red-600/90 text-white rounded-full text-xs"
+                        className="absolute top-1 right-1 p-1 bg-red-600/90 text-white rounded-full"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -329,7 +329,7 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
               )}
             </div>
 
-            <Button type="submit" variant="success" className="w-full py-3 text-xs" isLoading={submitLoading} icon={Send}>
+            <Button type="submit" variant="success" className="w-full py-3 text-sm" isLoading={submitLoading} icon={Send}>
               Submit Field Service Report
             </Button>
           </form>
