@@ -99,22 +99,9 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
           </div>
         </div>
 
-        {/* Action Header & File Report trigger */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-1">
+        {/* Action Header */}
+        <div className="pt-1">
           <span className="text-xs font-bold text-white font-display">Service Progress & Update</span>
-          <Button
-            type="button"
-            variant="success"
-            size="sm"
-            className="w-full sm:w-auto"
-            onClick={() => {
-              onClose();
-              if (onOpenFileServiceReport) onOpenFileServiceReport(ticket);
-            }}
-            icon={FileText}
-          >
-            File Service Report
-          </Button>
         </div>
 
         {isClosed ? (
