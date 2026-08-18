@@ -232,11 +232,11 @@ const AssignedTickets = () => {
       ),
     },
     {
-      header: 'Task & Customer',
+      header: 'Customer',
       cell: (row) => (
         <div>
-          <p className="font-bold text-white text-sm line-clamp-1">{row.title || row.subject}</p>
-          <span className="text-[11px] text-slate-400">{row.customer_name} • {row.category_name}</span>
+          <p className="font-bold text-white text-sm line-clamp-1">{row.customer_name || 'N/A'}</p>
+          <span className="text-[11px] text-slate-400">{row.category_name}</span>
         </div>
       ),
     },

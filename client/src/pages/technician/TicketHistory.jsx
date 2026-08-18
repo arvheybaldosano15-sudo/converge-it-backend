@@ -35,11 +35,11 @@ const TicketHistory = () => {
       cell: (row) => <span className="font-mono text-xs font-bold text-cyan-400">{row.ticket_number}</span>,
     },
     {
-      header: 'Completed / Closed Task',
+      header: 'Customer',
       cell: (row) => (
         <div>
-          <p className="font-bold text-white text-sm line-clamp-1">{row.title}</p>
-          <span className="text-[11px] text-slate-400">{row.customer_name}</span>
+          <p className="font-bold text-white text-sm line-clamp-1">{row.customer_name || 'N/A'}</p>
+          <span className="text-[11px] text-slate-400">{row.category_name}</span>
         </div>
       ),
     },
