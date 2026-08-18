@@ -27,7 +27,12 @@ const DataTable = ({
         <thead className="bg-slate-900/80 text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
           <tr>
             {columns.map((col, idx) => (
-              <th key={idx} className="px-3 py-3 font-semibold">
+              <th
+                key={idx}
+                className={`px-3 py-3 font-semibold ${
+                  col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                } ${col.headerClassName || ''}`}
+              >
                 {col.header}
               </th>
             ))}
@@ -43,7 +48,12 @@ const DataTable = ({
               }`}
             >
               {columns.map((col, colIdx) => (
-                <td key={colIdx} className="px-3 py-3">
+                <td
+                  key={colIdx}
+                  className={`px-3 py-3 ${
+                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''
+                  } ${col.className || ''}`}
+                >
                   {col.cell ? col.cell(row) : row[col.accessorKey]}
                 </td>
               ))}

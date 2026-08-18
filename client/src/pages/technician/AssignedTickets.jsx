@@ -55,6 +55,7 @@ const AssignedTickets = () => {
     },
     {
       header: 'Priority',
+      align: 'center',
       cell: (row) => (
         <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : 'cyan'}>
           {row.priority}
@@ -63,6 +64,7 @@ const AssignedTickets = () => {
     },
     {
       header: 'Status',
+      align: 'center',
       cell: (row) => {
         const variantMap = {
           open: 'warning',
@@ -81,6 +83,7 @@ const AssignedTickets = () => {
     },
     {
       header: 'Actions',
+      align: 'center',
       cell: (row) => (
         <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
           <button
