@@ -660,18 +660,29 @@ const TicketManagement = () => {
                 <h3 className="text-lg font-bold text-white mt-1 font-display">{selectedTicket.subject || selectedTicket.title}</h3>
               </div>
 
-              {/* SLA Target Badge */}
-              <div className="shrink-0 text-right">
+              {/* SLA Target Badge + Close Ticket */}
+              <div className="shrink-0 text-right flex flex-col items-end gap-2">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SLA Compliance Target</span>
                 {(() => {
                   const sla = getSlaStatus(selectedTicket.sla_deadline, selectedTicket.status);
                   return (
-                    <div className={`mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${sla.bg} ${sla.color} ${sla.border}`}>
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${sla.bg} ${sla.color} ${sla.border}`}>
                       <Clock className="w-3.5 h-3.5" />
                       <span>{sla.text} ({sla.desc || 'Active Target'})</span>
                     </div>
                   );
                 })()}
+                {selectedTicket.status !== 'closed' && (
+                  <button
+                    onClick={() => handleStatusChange(selectedTicket.id, 'closed')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700/60 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-600 hover:border-rose-500/50 transition-all active:scale-95"
+                  >
+                    <X className="w-3.5 h-3.5" /> Close Ticket
+                  </button>
+                )}
+                {selectedTicket.status === 'closed' && (
+                  <span className="text-xs text-slate-500 italic">Ticket Closed</span>
+                )}
               </div>
             </div>
 
@@ -784,56 +795,7 @@ const TicketManagement = () => {
               </div>
             )}
 
-            {/* PROFESSIONAL TICKET ACTIVITY TIMELINE */}
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-white font-display block">Professional Activity & Update Timeline</span>
 
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {/* Automatic Ticket Creation Entry */}
-                <div className="flex items-start space-x-3 p-2.5 rounded-xl bg-slate-900/50 border border-slate-800 text-xs">
-                  <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 mt-0.5">
-                    <Ticket className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-slate-200 font-semibold">
-                      Automatic Ticket Created via <span className="text-cyan-400">Messenger Integration</span>
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{new Date(selectedTicket.created_at).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {/* Ticket Updates Array */}
-                {selectedTicket.updates && selectedTicket.updates.map((up, i) => (
-                  <div key={i} className="flex items-start space-x-3 p-2.5 rounded-xl bg-slate-900/50 border border-slate-800 text-xs">
-                    <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 mt-0.5">
-                      <MessageSquare className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200">
-                        <strong className="text-white">{up.user_name || 'System User'}</strong> updated status to{' '}
-                        <Badge variant="cyan" className="capitalize">{up.status_changed_to ? up.status_changed_to.replace('_', ' ') : 'updated'}</Badge>
-                      </p>
-                      {up.notes && <p className="text-slate-300 mt-1 italic bg-slate-950/40 p-2 rounded-lg border border-slate-800">{up.notes}</p>}
-                      <p className="text-[10px] text-slate-500 mt-1">{new Date(up.created_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Add Internal Note Form */}
-              <form onSubmit={handleAddNote} className="flex gap-2 pt-2 border-t border-slate-800">
-                <input
-                  type="text"
-                  placeholder="Add internal note or technician update..."
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  className="glass-input flex-1 text-xs rounded-xl py-2 px-3 border-slate-700 bg-slate-950 text-white"
-                />
-                <Button type="submit" variant="primary" size="sm" disabled={isSubmittingNote} icon={Send}>
-                  Add Note
-                </Button>
-              </form>
-            </div>
           </div>
         )}
       </Modal>
