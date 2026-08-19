@@ -3,7 +3,7 @@ const { createError } = require('../middleware/errorHandler');
 
 exports.getCustomers = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search, filter, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 10, search, filter, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = [];
     const params = [];

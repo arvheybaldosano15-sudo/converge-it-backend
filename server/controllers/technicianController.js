@@ -6,7 +6,7 @@ const { emitToAdmins } = require('../services/socketService');
 
 exports.getTechnicians = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, specialization, workload, search, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 10, status, specialization, workload, search, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = ["u.role = 'technician'"];
     const params = [];
