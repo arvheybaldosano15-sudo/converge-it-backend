@@ -6,7 +6,7 @@ const { createNotification } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
+    const { page = 1, limit = 10, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;
     if (req.user.role === 'technician') { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(req.user.id); }
