@@ -244,7 +244,27 @@ exports.getMe = async (req, res, next) => {
        FROM users WHERE id = $1`,
       [req.user.id]
     );
-    res.json({ success: true, data: result.rows[0] });
+    const u = result.rows[0];
+    if (!u) throw createError('User not found', 404);
+    res.json({
+      success: true,
+      data: {
+        id: u.id,
+        employeeId: u.employee_id,
+        fullName: u.full_name,
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        contactNumber: u.contact_number,
+        address: u.address,
+        profileImageUrl: u.profile_image_url,
+        specialization: u.specialization,
+        department: u.department,
+        isFirstLogin: u.is_first_login,
+        lastLoginAt: u.last_login_at,
+        createdAt: u.created_at
+      }
+    });
   } catch (error) { next(error); }
 };
 
@@ -252,6 +272,7 @@ exports.changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) throw createError('Both current and new password are required', 400);
+    if (newPassword.length < 6) throw createError('New password must be at least 6 characters long', 400);
     const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     const isMatch = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
     if (!isMatch) throw createError('Current password is incorrect', 400);
@@ -268,15 +289,36 @@ exports.updateProfile = async (req, res, next) => {
     const { fullName, contactNumber, address, specialization, department } = req.body;
     const profileImageUrl = req.file ? fileToDataUri(req.file) : undefined;
     const updates = []; const values = []; let i = 1;
-    if (fullName) { updates.push(`full_name = $${i++}`); values.push(fullName); }
-    if (contactNumber) { updates.push(`contact_number = $${i++}`); values.push(contactNumber); }
-    if (address) { updates.push(`address = $${i++}`); values.push(address); }
-    if (specialization) { updates.push(`specialization = $${i++}`); values.push(specialization); }
-    if (department) { updates.push(`department = $${i++}`); values.push(department); }
+    if (fullName !== undefined && fullName !== '') { updates.push(`full_name = $${i++}`); values.push(fullName); }
+    if (contactNumber !== undefined) { updates.push(`contact_number = $${i++}`); values.push(contactNumber); }
+    if (address !== undefined) { updates.push(`address = $${i++}`); values.push(address); }
+    if (specialization !== undefined) { updates.push(`specialization = $${i++}`); values.push(specialization); }
+    if (department !== undefined) { updates.push(`department = $${i++}`); values.push(department); }
     if (profileImageUrl) { updates.push(`profile_image_url = $${i++}`); values.push(profileImageUrl); }
     if (updates.length === 0) throw createError('No fields to update', 400);
     values.push(req.user.id);
-    const result = await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, full_name, email, role, contact_number, address, profile_image_url, specialization, department`, values);
-    res.json({ success: true, data: result.rows[0] });
+    const result = await query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i}
+       RETURNING id, employee_id, full_name, email, role, status, contact_number, address, profile_image_url, specialization, department`,
+      values
+    );
+    const u = result.rows[0];
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: u.id,
+        employeeId: u.employee_id,
+        fullName: u.full_name,
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        contactNumber: u.contact_number,
+        address: u.address,
+        profileImageUrl: u.profile_image_url,
+        specialization: u.specialization,
+        department: u.department
+      }
+    });
   } catch (error) { next(error); }
 };

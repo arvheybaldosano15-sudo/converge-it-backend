@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 
 import { getAuthToken } from '../utils/authStorage';
+import api from '../utils/axios';
 
 const SocketContext = createContext(null);
 
@@ -12,6 +13,24 @@ export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotifications(0);
+      return;
+    }
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get('/notifications/unread-count');
+        if (res.success && res.data) {
+          setUnreadNotifications(res.data.count || 0);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchUnreadCount();
+  }, [user]);
 
   useEffect(() => {
     const token = getAuthToken(user?.role);
