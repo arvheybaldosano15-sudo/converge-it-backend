@@ -21,8 +21,8 @@ const Input = React.forwardRef(({
       )}
       <div className="relative flex items-center">
         {Icon && (
-          <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">
-            <Icon className="w-4 h-4 text-white stroke-white" color="#ffffff" stroke="#ffffff" />
+          <div className="absolute left-3.5 z-10 pointer-events-none flex items-center justify-center">
+            <Icon className="w-4 h-4 text-cyan-400" />
           </div>
         )}
         <input
