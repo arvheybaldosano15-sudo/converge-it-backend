@@ -9,15 +9,27 @@ import { formatDistanceToNow } from 'date-fns';
 const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMenuToggle }) => {
   const { user } = useAuth();
   const { unreadNotifications, setUnreadNotifications } = useSocket();
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return true;
+  });
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const panelRef = useRef(null);
 
   const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+    const nextDark = !darkMode;
+    setDarkMode(nextDark);
+    if (nextDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
   };
 
   const fetchNotifications = async () => {

@@ -2,45 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for Light / Dark Themes */
+:root {
+  /* Default is dark mode colors (Converge Navy Glassmorphism) */
+  --bg-color: #070b1e;
+  --bg-gradient: radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.25) 0px, transparent 50%),
+                 radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.2) 0px, transparent 50%),
+                 radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-input-bg: rgba(15, 23, 42, 0.6);
+  --glass-input-border: rgba(255, 255, 255, 0.12);
+  --card-hover-bg: rgba(30, 41, 59, 0.75);
+  --border-cyan-glass: rgba(6, 182, 212, 0.3);
+  --glass-nav-bottom: rgba(10, 15, 46, 0.85);
+  --scrollbar-track: rgba(15, 23, 42, 0.5);
+  --sidebar-active-bg: rgba(6, 182, 212, 0.15);
+  --sidebar-active-text: #22d3ee;
+}
+
+/* Override variables when HTML doesn't have class="dark" (i.e. Light Mode) */
+html:not(.dark) {
+  --bg-color: #f1f5f9;
+  --bg-gradient: radial-gradient(at 0% 0%, rgba(186, 224, 253, 0.35) 0px, transparent 50%),
+                 radial-gradient(at 100% 0%, rgba(207, 250, 254, 0.35) 0px, transparent 50%),
+                 radial-gradient(at 50% 100%, rgba(226, 232, 240, 0.6) 0px, transparent 50%);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(15, 23, 42, 0.09);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+  --glass-input-bg: rgba(255, 255, 255, 0.85);
+  --glass-input-border: rgba(15, 23, 42, 0.14);
+  --card-hover-bg: rgba(241, 245, 249, 0.85);
+  --border-cyan-glass: rgba(6, 182, 212, 0.25);
+  --glass-nav-bottom: rgba(248, 250, 252, 0.9);
+  --scrollbar-track: rgba(241, 245, 249, 0.5);
+  --sidebar-active-bg: rgba(2, 112, 199, 0.1);
+  --sidebar-active-text: #0270c7;
+}
+
 @layer base {
   *, ::before, ::after {
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
   }
   body {
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif !important;
-    @apply bg-[#070b1e] text-slate-100 antialiased selection:bg-cyan-500 selection:text-white min-h-screen overflow-x-hidden;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.25) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.2) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+    background-color: var(--bg-color);
+    background-image: var(--bg-gradient);
+    color: var(--text-primary);
     background-attachment: fixed;
+    @apply antialiased selection:bg-cyan-500 selection:text-white min-h-screen overflow-x-hidden transition-colors duration-300;
   }
 }
 
 /* Glassmorphism Utility Classes */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--text-primary);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s;
 }
 
 .glass-panel-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-panel-hover:hover {
-  background: rgba(30, 41, 59, 0.75);
-  border-color: rgba(6, 182, 212, 0.3);
+  background: var(--card-hover-bg);
+  border-color: var(--border-cyan-glass);
   box-shadow: 0 12px 40px 0 rgba(6, 182, 212, 0.15);
   transform: translateY(-2px);
 }
 
 .glass-input {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--glass-input-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-input-border);
+  color: var(--text-primary);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 .glass-input:focus {
   outline: none;
@@ -60,20 +106,71 @@
 }
 
 .glass-nav-bottom {
-  background: rgba(10, 15, 46, 0.85);
+  background: var(--glass-nav-bottom);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--glass-border);
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
-/* Mobile GPU Performance Optimization for Smooth 60fps Touch Scrolling */
+/* Mobile GPU Performance Optimization for Smooth Touch Scrolling */
 @media (max-width: 768px) {
   .glass-panel,
-  .glass-input,
   .glass-nav-bottom {
     backdrop-filter: blur(6px) !important;
     -webkit-backdrop-filter: blur(6px) !important;
-    background: rgba(15, 23, 42, 0.92) !important;
+    background: var(--glass-bg) !important;
+  }
+
+  .glass-input {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--glass-input-bg) !important;
+  }
+}
+
+/* Global Light Theme Helper Rules to instantly override standard tailwind dark colors */
+html:not(.dark) {
+  /* text colors */
+  .text-white, .text-slate-100, .text-slate-200, .text-slate-100\/90 {
+    color: #0f172a !important;
+  }
+  .text-slate-300, .text-slate-400 {
+    color: #475569 !important;
+  }
+  .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  /* dark container backgrounds */
+  .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/80, .bg-slate-900\/90, .bg-slate-950, .bg-slate-950\/50, .bg-slate-950\/70, .bg-slate-950\/80, .bg-slate-950\/90 {
+    background-color: rgba(255, 255, 255, 0.65) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+  }
+
+  /* cards and border lines */
+  .border-slate-800, .border-slate-800\/80, .border-slate-700, .border-slate-700\/60, .border-slate-700\/80 {
+    border-color: rgba(15, 23, 42, 0.08) !important;
+  }
+
+  /* specific layout overrides */
+  aside, header {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(15, 23, 42, 0.08) !important;
+  }
+
+  /* table components styles */
+  th {
+    color: #475569 !important;
+    background-color: rgba(241, 245, 249, 0.8) !important;
+  }
+  tbody tr:hover {
+    background-color: rgba(241, 245, 249, 0.6) !important;
+  }
+  
+  /* placeholder visibility */
+  input::placeholder {
+    color: #94a3b8 !important;
   }
 }
 
@@ -83,7 +180,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(6, 182, 212, 0.3);

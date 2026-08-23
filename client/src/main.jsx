@@ -10,6 +10,14 @@ import { SocketProvider } from './context/SocketContext';
 import App from './App';
 import './index.css';
 
+// Initialize theme state from localStorage (default to dark mode)
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+  document.documentElement.classList.remove('dark');
+} else {
+  document.documentElement.classList.add('dark');
+}
+
 // Configure TanStack Query Client for ZERO-LOADING Instant Caching UI
 const queryClient = new QueryClient({
   defaultOptions: {

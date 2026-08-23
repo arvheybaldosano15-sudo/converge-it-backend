@@ -9,7 +9,7 @@ const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#070b1e]">
+    <div className="flex min-h-screen bg-transparent">
       {/* Sidebar — desktop with collapse support, mobile via drawer */}
       <Sidebar
         mobileOpen={sidebarOpen}
