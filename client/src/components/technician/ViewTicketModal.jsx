@@ -3,7 +3,7 @@ import api from '../../utils/axios';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
 import Loader from '../common/Loader';
-import { getUploadUrl } from '../../utils/urlHelper';
+import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
 import {
   Clock,
   MapPin,
@@ -18,7 +18,8 @@ import {
   History,
   ShieldAlert,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -60,6 +61,7 @@ const getSlaInfo = (deadlineStr, status, resolvedAtStr) => {
 const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenFileServiceReport }) => {
   const [ticketData, setTicketData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     if (!ticketId || !isOpen) return;
@@ -87,161 +89,239 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
   const slaInfo = ticket ? getSlaInfo(ticket.sla_deadline, ticket.status, ticket.resolved_at || ticket.updated_at) : {};
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={ticket ? `Ticket Details: ${ticket.ticket_number}` : 'Ticket Details'} maxWidth="max-w-2xl">
-      {loading || !ticket ? (
-        <div className="py-12 flex justify-center">
-          <Loader text="Loading field ticket profile..." />
-        </div>
-      ) : (
-        <div className="space-y-5 text-xs">
-          {/* Header Bar: ID, Priority, SLA, Status */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-            <div className="flex flex-wrap justify-between items-start gap-2">
-              <div>
-                <span className="font-mono text-sm font-extrabold text-cyan-400">{ticket.ticket_number}</span>
-                <h3 className="text-base font-bold text-white mt-1 leading-snug">{ticket.subject || ticket.title}</h3>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Badge variant={ticket.priority === 'critical' ? 'danger' : ticket.priority === 'high' ? 'warning' : 'cyan'}>
-                  {ticket.priority} Priority
-                </Badge>
-                <Badge variant={ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'primary' : 'warning'}>
-                  {ticket.status === 'open' ? 'pending' : ticket.status.replace('_', ' ')}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
-              <span className="text-slate-400 font-medium flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-cyan-400" /> {ticket.category_name}
-              </span>
-              <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
-                ⏰ {slaInfo.text}
-              </span>
-            </div>
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} title={ticket ? `Ticket Details: ${ticket.ticket_number}` : 'Ticket Details'} maxWidth="max-w-2xl">
+        {loading || !ticket ? (
+          <div className="py-12 flex justify-center">
+            <Loader text="Loading field ticket profile..." />
           </div>
-
-          {/* Customer & Location Box */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-            <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
-              Customer Profile & Field Location
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              <div>
-                <p className="text-slate-400 font-medium">Customer Name:</p>
-                <p className="text-white font-bold text-sm">{ticket.customer_name || 'N/A'}</p>
+        ) : (
+          <div className="space-y-5 text-xs">
+            {/* Header Bar: ID, Priority, SLA, Status */}
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+              <div className="flex flex-wrap justify-between items-start gap-2">
+                <div>
+                  <span className="font-mono text-sm font-extrabold text-cyan-400">{ticket.ticket_number}</span>
+                  <h3 className="text-base font-bold text-white mt-1 leading-snug">{ticket.subject || ticket.title}</h3>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Badge variant={ticket.priority === 'critical' ? 'danger' : ticket.priority === 'high' ? 'warning' : 'cyan'}>
+                    {ticket.priority} Priority
+                  </Badge>
+                  <Badge variant={ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'primary' : 'warning'}>
+                    {ticket.status === 'open' ? 'pending' : ticket.status.replace('_', ' ')}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <p className="text-slate-400 font-medium">Contact Phone:</p>
-                <p className="text-white font-semibold flex items-center gap-1">
-                  <Phone className="w-3 h-3 text-cyan-400" /> {ticket.customer_contact || 'Not provided'}
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+                <span className="text-slate-400 font-medium flex items-center gap-1">
+                  <Tag className="w-3.5 h-3.5 text-cyan-400" /> {ticket.category_name}
+                </span>
+                <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
+                  ⏰ {slaInfo.text}
+                </span>
+              </div>
+            </div>
+
+            {/* Customer & Location Box */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+              <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
+                Customer Profile & Field Location
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div>
+                  <p className="text-slate-400 font-medium">Customer Name:</p>
+                  <p className="text-white font-bold text-sm">{ticket.customer_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium">Contact Phone:</p>
+                  <p className="text-white font-semibold flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-cyan-400" /> {ticket.customer_contact || 'Not provided'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <p className="text-slate-400 font-medium">Service Location Address:</p>
+                <p className="text-white font-semibold flex items-start gap-1.5 mt-0.5 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+                  <MapPin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <span>{ticket.customer_address || 'Address provided in issue description'}</span>
                 </p>
               </div>
             </div>
 
-            <div className="pt-2">
-              <p className="text-slate-400 font-medium">Service Location Address:</p>
-              <p className="text-white font-semibold flex items-start gap-1.5 mt-0.5 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <MapPin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>{ticket.customer_address || 'Address provided in issue description'}</span>
+            {/* Issue Description */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
+              <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+                Issue & Technical Concern Description
+              </h4>
+              <p className="text-xs text-slate-200 bg-slate-950/80 p-3 rounded-lg border border-slate-700/60 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
+                {ticket.description || ticket.subject || 'No detailed description available.'}
               </p>
             </div>
-          </div>
 
-          {/* Issue Description */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
-            <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
-              Issue & Technical Concern Description
-            </h4>
-            <p className="text-xs text-slate-200 bg-slate-950/80 p-3 rounded-lg border border-slate-700/60 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
-              {ticket.description || ticket.subject || 'No detailed description available.'}
-            </p>
-          </div>
+            {/* Status Updates & Timeline */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5" /> Ticket Status & Activity Timeline
+              </h4>
 
-          {/* Status Updates & Timeline */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-            <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5" /> Ticket Status & Activity Timeline
-            </h4>
-
-            <div className="space-y-3 pt-1">
-              {/* Event 1: Created */}
-              <div className="flex items-start space-x-3 text-xs">
-                <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <p className="font-bold text-white">Ticket Created</p>
-                  <p className="text-slate-400 text-[11px]">System recorded ticket entry</p>
-                  <span className="text-[10px] text-slate-500 block">
-                    {new Date(ticket.created_at).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Event Updates */}
-              {updates.map((up, idx) => (
-                <div key={up.id || idx} className="flex items-start space-x-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    {idx + 2}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white">
-                      Status updated to <span className="text-cyan-300 capitalize">{up.status_changed_to?.replace('_', ' ')}</span>
-                    </p>
-                    {up.notes && <p className="text-slate-300 italic text-[11px] bg-slate-950/50 p-2 rounded border border-slate-800/80 mt-1">"{up.notes}"</p>}
-                    <span className="text-[10px] text-slate-500 block mt-0.5">
-                      by {up.user_name || 'Technician'} • {new Date(up.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {/* Resolved/Closed state */}
-              {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+              <div className="space-y-3 pt-1">
+                {/* Event 1: Created */}
                 <div className="flex items-start space-x-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    ✓
+                  <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                    1
                   </div>
                   <div>
-                    <p className="font-bold text-emerald-400">
-                      Ticket {ticket.status === 'closed' ? 'Closed' : 'Resolved'}
-                    </p>
+                    <p className="font-bold text-white">Ticket Created</p>
+                    <p className="text-slate-400 text-[11px]">System recorded ticket entry</p>
                     <span className="text-[10px] text-slate-500 block">
-                      {ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleString() : new Date(ticket.updated_at).toLocaleString()}
+                      {new Date(ticket.created_at).toLocaleString()}
                     </span>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Filed Service Report Section if available */}
-          {report && (
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30 space-y-2">
-              <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" /> Filed Field Service Report
-              </h4>
-              <p className="text-sm font-bold text-white">{report.title}</p>
-              <div>
-                <span className="text-slate-400 font-medium block text-[11px]">Work Performed:</span>
-                <p className="text-slate-200 bg-slate-950/70 p-2.5 rounded border border-slate-800 mt-0.5">{report.work_performed}</p>
+                {/* Event Updates */}
+                {updates.map((up, idx) => (
+                  <div key={up.id || idx} className="flex items-start space-x-3 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      {idx + 2}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white">
+                        Status updated to <span className="text-cyan-300 capitalize">{up.status_changed_to?.replace('_', ' ')}</span>
+                      </p>
+                      {up.notes && <p className="text-slate-300 italic text-[11px] bg-slate-950/50 p-2 rounded border border-slate-800/80 mt-1">"{up.notes}"</p>}
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        by {up.user_name || 'Technician'} • {new Date(up.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Resolved/Closed state */}
+                {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+                  <div className="flex items-start space-x-3 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-400">
+                        Ticket {ticket.status === 'closed' ? 'Closed' : 'Resolved'}
+                      </p>
+                      <span className="text-[10px] text-slate-500 block">
+                        {ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleString() : new Date(ticket.updated_at).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-              {report.materials_used && (
-                <div>
-                  <span className="text-slate-400 font-medium block text-[11px]">Materials Used:</span>
-                  <p className="text-slate-300 mt-0.5">{report.materials_used}</p>
-                </div>
-              )}
-              {report.customer_name_signed && (
-                <p className="text-xs text-slate-300 pt-1">✍️ Signed by: <strong className="text-white">{report.customer_name_signed}</strong></p>
-              )}
             </div>
-          )}
 
+            {/* Filed Service Report Section if available */}
+            {report && (
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30 space-y-3">
+                <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> Filed Field Service Report
+                </h4>
+                <p className="text-sm font-bold text-white">{report.title}</p>
+                <div>
+                  <span className="text-slate-400 font-medium block text-[11px]">Work Performed:</span>
+                  <p className="text-slate-200 bg-slate-950/70 p-2.5 rounded border border-slate-800 mt-0.5 leading-relaxed">{report.work_performed}</p>
+                </div>
+                {report.materials_used && (
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[11px]">Materials Used:</span>
+                    <p className="text-slate-300 mt-0.5">{report.materials_used}</p>
+                  </div>
+                )}
+                {report.customer_name_signed && (
+                  <p className="text-xs text-slate-300 pt-0.5">✍️ Signed by: <strong className="text-white">{report.customer_name_signed}</strong></p>
+                )}
+
+                {/* Submitted Work Proof Photos & Signature */}
+                {(() => {
+                  const photos = parseImageUrls(report.images_urls || report.imagesUrls || report.image_urls || report.images);
+                  if (photos.length === 0 && !report.signature_url) return null;
+                  return (
+                    <div className="pt-2 space-y-3 border-t border-slate-800/80">
+                      {photos.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5 text-cyan-400" /> Work Proof Photos ({photos.length})
+                          </span>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {photos.map((imgUrl, idx) => {
+                              const fullUrl = getUploadUrl(imgUrl);
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => setSelectedPhoto(fullUrl)}
+                                  className="aspect-square rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 cursor-pointer hover:border-cyan-400 transition-all hover:scale-105 group relative shadow-md"
+                                >
+                                  <img
+                                    src={fullUrl}
+                                    alt={`Work proof photo ${idx + 1}`}
+                                    className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = 'https://via.placeholder.com/150?text=Photo+Unavailable';
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <ExternalLink className="w-4 h-4 text-cyan-300" />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {report.signature_url && (
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[11px] font-medium text-slate-400 block">Customer Signature:</span>
+                          <div
+                            onClick={() => setSelectedPhoto(getUploadUrl(report.signature_url))}
+                            className="p-2 rounded-xl bg-slate-950 border border-slate-800 inline-block cursor-pointer hover:border-cyan-400 transition-colors"
+                          >
+                            <img
+                              src={getUploadUrl(report.signature_url)}
+                              alt="Customer signature"
+                              className="h-16 object-contain max-w-full"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+          </div>
+        )}
+      </Modal>
+
+      {/* Full Resolution Photo Lightbox Modal */}
+      {selectedPhoto && (
+        <div
+          onClick={() => setSelectedPhoto(null)}
+          className="fixed inset-0 z-[10000] bg-slate-950/90 sm:backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-fadeIn"
+        >
+          <div className="relative max-w-3xl max-h-[85vh] rounded-2xl overflow-hidden border border-cyan-500/30 bg-slate-900 shadow-2xl">
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-3 right-3 p-2 bg-slate-950/80 text-white rounded-full hover:bg-rose-600 transition-colors z-20 shadow-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img src={selectedPhoto} alt="Full resolution service proof" className="w-full h-full object-contain max-h-[80vh] p-2" />
+          </div>
         </div>
       )}
-    </Modal>
+    </>
   );
 };
 
