@@ -148,7 +148,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
               }
             }}
             disabled={isLoading || pin.length >= 6}
-            className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
+            className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-95 active:bg-blue-600/40 active:border-blue-400 transition-all duration-75 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20 transform-gpu"
           >
             {num}
           </button>
@@ -158,7 +158,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           type="button"
           onClick={handleClear}
           disabled={isLoading || !pin}
-          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold flex items-center justify-center border border-slate-800 active:scale-90 active:bg-slate-700 transition-all duration-100 disabled:opacity-30 touch-manipulation cursor-pointer"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold flex items-center justify-center border border-slate-800 active:scale-95 active:bg-slate-700 transition-all duration-75 disabled:opacity-30 touch-manipulation cursor-pointer transform-gpu"
         >
           Clear
         </button>
@@ -176,7 +176,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
             }
           }}
           disabled={isLoading || pin.length >= 6}
-          className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-90 active:bg-blue-600/30 active:border-blue-400 transition-all duration-100 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-white font-bold text-lg sm:text-xl flex items-center justify-center border border-slate-700/60 hover:border-blue-500/50 active:scale-95 active:bg-blue-600/40 active:border-blue-400 transition-all duration-75 disabled:opacity-40 touch-manipulation cursor-pointer shadow-md shadow-black/20 transform-gpu"
         >
           0
         </button>
@@ -185,7 +185,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
           type="button"
           onClick={handleDelete}
           disabled={isLoading || !pin}
-          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 active:scale-90 active:bg-slate-700 transition-all duration-100 disabled:opacity-30 touch-manipulation cursor-pointer"
+          className="h-12 sm:h-13 rounded-2xl bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 active:scale-95 active:bg-slate-700 transition-all duration-75 disabled:opacity-30 touch-manipulation cursor-pointer transform-gpu"
         >
           <Delete className="w-5 h-5" />
         </button>
