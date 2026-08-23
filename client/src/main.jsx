@@ -28,6 +28,7 @@ const queryClient = new QueryClient({
 const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   key: 'CONVERGE_TANSTACK_QUERY_CACHE',
+  throttleTime: 1000,
 });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
