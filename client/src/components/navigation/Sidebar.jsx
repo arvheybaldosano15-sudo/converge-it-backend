@@ -85,7 +85,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
                     width: '1.1rem',
                     height: '1.1rem',
                     flexShrink: 0,
-                    color: isActive ? '#ffffff' : '#94a3b8',
+                    color: isActive ? '#ffffff' : 'var(--sidebar-text)',
                   }}
                 />
                 {/* Label — hidden when collapsed */}
@@ -120,8 +120,8 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
           />
           {!collapsed && (
             <div className="leading-tight">
-              <h1 className="font-display font-extrabold text-base tracking-wide text-white">CONVERGE IT</h1>
-              <p className="text-xs font-semibold" style={{ color: '#60a5fa' }}>Ticketing System</p>
+              <h1 className="font-display font-extrabold text-base tracking-wide" style={{ color: 'var(--sidebar-brand-text)' }}>CONVERGE IT</h1>
+              <p className="text-xs font-semibold" style={{ color: 'var(--sidebar-brand-sub)' }}>Ticketing System</p>
             </div>
           )}
         </div>
@@ -182,16 +182,18 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
 
       <style>{`
         .sidebar-desktop {
-          background: rgba(8, 15, 40, 0.92);
-          border-right: 1px solid rgba(30, 58, 138, 0.35);
+          background: var(--sidebar-bg);
+          border-right: 1px solid var(--sidebar-border);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
+          transition: background 0.3s, border-color 0.3s;
         }
         .sidebar-mobile {
-          background: rgba(6, 12, 35, 0.97);
-          border-right: 1px solid rgba(30, 58, 138, 0.40);
+          background: var(--sidebar-bg);
+          border-right: 1px solid var(--sidebar-border);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
+          transition: background 0.3s, border-color 0.3s;
         }
         .active-nav-item {
           background: linear-gradient(135deg, rgba(30,58,138,0.90), rgba(29,78,216,0.85));
@@ -200,12 +202,13 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
           border: 1px solid rgba(96,165,250,0.25);
         }
         .inactive-nav-item {
-          color: #94a3b8;
+          color: var(--sidebar-text);
           border: 1px solid transparent;
+          transition: all 0.2s;
         }
         .inactive-nav-item:hover {
           background: rgba(29, 78, 216, 0.10);
-          color: #e2e8f0;
+          color: var(--sidebar-text-hover);
           border-color: rgba(29, 78, 216, 0.18);
         }
         .logout-btn {
