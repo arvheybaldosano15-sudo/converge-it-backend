@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -70,7 +70,7 @@ const InstallationRequests = () => {
 
   const refreshTicketDetail = async (ticketId) => {
     try {
-      const res = await api.get(/tickets/\);
+      const res = await api.get(`/tickets/${ticketId}`);
       if (res.success) {
         setSelectedTicket(res.data);
       }
@@ -81,7 +81,7 @@ const InstallationRequests = () => {
 
   const handleAssignTechnician = async (ticketId, technicianId) => {
     try {
-      const res = await api.put(/tickets/\, { assignedTo: technicianId || null });
+      const res = await api.put(`/tickets/${ticketId}`, { assignedTo: technicianId || null });
       if (res.success) {
         toast.success('Technician assigned successfully');
         fetchInstallationRequestsOnly();
@@ -96,9 +96,9 @@ const InstallationRequests = () => {
 
   const handleStatusChange = async (ticketId, newStatus) => {
     try {
-      const res = await api.put(/tickets/\, { status: newStatus });
+      const res = await api.put(`/tickets/${ticketId}`, { status: newStatus });
       if (res.success) {
-        toast.success(Status updated to \);
+        toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
         fetchInstallationRequestsOnly();
         if (selectedTicket && selectedTicket.id === ticketId) {
           refreshTicketDetail(ticketId);
@@ -114,7 +114,7 @@ const InstallationRequests = () => {
     if (!noteText.trim() || !selectedTicket) return;
     setIsSubmittingNote(true);
     try {
-      const res = await api.put(/tickets/\, { note: noteText });
+      const res = await api.put(`/tickets/${selectedTicket.id}`, { note: noteText });
       if (res.success) {
         toast.success('Note added successfully');
         setNoteText('');
