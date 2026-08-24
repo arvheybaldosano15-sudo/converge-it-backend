@@ -92,14 +92,11 @@ exports.verifyAccountNumber = async (req, res) => {
     const withPrefix = `ACC-${digitsOnly}`;
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
-       WHERE LOWER(account_number) = LOWER($1)
-          OR LOWER(account_number) = LOWER($2)
-          OR LOWER(account_number) = LOWER($3)
-          OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
-          OR ($4 != '' AND (
-               REPLACE(LOWER(account_number), 'acc-', '') = $4
-               OR LOWER(account_number) ILIKE '%' || $4 || '%'
-          ))
+       WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
+          OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
        LIMIT 1`,
       [accNum, withPrefix, digitsOnly, digitsOnly]
     );
@@ -326,10 +323,7 @@ exports.verifyAndBroadcast = async (req, res) => {
           OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
           OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
           OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
-          OR ($4 != '' AND (
-               TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4
-               OR LOWER(account_number) ILIKE '%' || $4 || '%'
-          ))
+          OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
        LIMIT 1`,
       [accNum, withPrefix, digitsOnly, digitsOnly]
     );
