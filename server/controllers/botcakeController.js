@@ -331,10 +331,9 @@ exports.verifyAndBroadcast = async (req, res) => {
     if (result.rows.length === 0) {
       logger.warn(`❌ verify-and-broadcast: account not found in DB for rawAcc="${rawAcc}" accNum="${accNum}" digits="${digitsOnly}"`);
       
-      const notFoundText = `❌ Invalid account number.\nPlease check your account number and try again.`;
-
       // Direct message reply to subscriber if subscriberId is available
       if (subscriberId) {
+        const notFoundText = `❌ Invalid account number.\nPlease check your account number and try again.`;
         try {
           await sendBotcakeMessage(subscriberId, notFoundText);
         } catch (msgErr) {
@@ -345,16 +344,12 @@ exports.verifyAndBroadcast = async (req, res) => {
       return res.status(200).json({
         success: false, found: false, found_str: 'false',
         found_account: 'not_found', status: 'not_found',
-        message: 'Invalid account number.',
-        reply_message: notFoundText,
-        messages: [{ text: notFoundText }]
+        message: 'Invalid account number.'
       });
     }
 
     const customer = result.rows[0];
     logger.info(`✅ verify-and-broadcast: found "${customer.full_name}" (${customer.account_number})`);
-
-    const verifiedPromptText = `✅ Account Number Verified!\n\nTo create a support ticket, please send the following information in one message:\n\nName:\nContact Number:\nAddress:\nLandmark:\nProblem:`;
 
     // Auto-link messenger_psid if subscriberId is passed
     if (subscriberId) {
@@ -366,6 +361,7 @@ exports.verifyAndBroadcast = async (req, res) => {
       }
 
       // Direct message reply matching user's requested verification prompt
+      const verifiedPromptText = `✅ Account Number Verified!\n\nTo create a support ticket, please send the following information in one message:\n\nName:\nContact Number:\nAddress:\nLandmark:\nProblem:`;
       try {
         await sendBotcakeMessage(subscriberId, verifiedPromptText);
       } catch (msgErr) {
@@ -390,8 +386,6 @@ exports.verifyAndBroadcast = async (req, res) => {
       found_str: 'true',
       found_account: 'found',
       status: 'found',
-      reply_message: verifiedPromptText,
-      messages: [{ text: verifiedPromptText }],
       result: 'found',
       value: 'found',
       data: {
