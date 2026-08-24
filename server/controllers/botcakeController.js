@@ -92,11 +92,14 @@ exports.verifyAccountNumber = async (req, res) => {
     const withPrefix = `ACC-${digitsOnly}`;
     const result = await query(
       `SELECT id, full_name, account_number, contact_number FROM customers
-       WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
-          OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
-          OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
-          OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
-          OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
+       WHERE LOWER(account_number) = LOWER($1)
+          OR LOWER(account_number) = LOWER($2)
+          OR LOWER(account_number) = LOWER($3)
+          OR LOWER(account_number) = LOWER(REPLACE($1, 'ACC-', ''))
+          OR ($4 != '' AND (
+               REPLACE(LOWER(account_number), 'acc-', '') = $4
+               OR LOWER(account_number) ILIKE '%' || $4 || '%'
+          ))
        LIMIT 1`,
       [accNum, withPrefix, digitsOnly, digitsOnly]
     );
@@ -323,7 +326,10 @@ exports.verifyAndBroadcast = async (req, res) => {
           OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
           OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
           OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
-          OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
+          OR ($4 != '' AND (
+               TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4
+               OR LOWER(account_number) ILIKE '%' || $4 || '%'
+          ))
        LIMIT 1`,
       [accNum, withPrefix, digitsOnly, digitsOnly]
     );
@@ -331,12 +337,19 @@ exports.verifyAndBroadcast = async (req, res) => {
     if (result.rows.length === 0) {
       logger.warn(`❌ verify-and-broadcast: account not found in DB for rawAcc="${rawAcc}" accNum="${accNum}" digits="${digitsOnly}"`);
       
+      // Direct message reply to subscriber if subscriberId is available
+      if (subscriberId) {
+        const notFoundText = `❌ Invalid account number.\nPlease check your account number and try again.`;
+        try {
+          await sendBotcakeMessage(subscriberId, notFoundText);
+        } catch (msgErr) {
+          await sendTextMessage(subscriberId, notFoundText).catch(() => {});
+        }
+      }
+
       return res.status(200).json({
-        success: false,
-        found: false,
-        found_str: 'false',
-        found_account: 'not_found',
-        status: 'not_found',
+        success: false, found: false, found_str: 'false',
+        found_account: 'not_found', status: 'not_found',
         message: 'Invalid account number.'
       });
     }
@@ -351,6 +364,14 @@ exports.verifyAndBroadcast = async (req, res) => {
         logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer ${customer.full_name}`);
       } catch (linkErr) {
         logger.warn('Failed to auto-link subscriber PSID:', linkErr.message);
+      }
+
+      // Direct message reply matching user's requested verification prompt
+      const verifiedPromptText = `✅ Account Number Verified!\n\nTo create a support ticket, please send the following information in one message:\n\nName:\nContact Number:\nAddress:\nLandmark:\nProblem:`;
+      try {
+        await sendBotcakeMessage(subscriberId, verifiedPromptText);
+      } catch (msgErr) {
+        await sendTextMessage(subscriberId, verifiedPromptText).catch(() => {});
       }
     }
 
