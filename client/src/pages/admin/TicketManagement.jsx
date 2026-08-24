@@ -76,6 +76,7 @@ const TicketManagement = () => {
         search: activeSearch,
         sortBy,
         sortOrder,
+        excludeCategoryName: 'Installation Request',
       };
       const [ticketsRes, statsRes] = await Promise.all([
         api.get('/tickets', { params }),
@@ -678,9 +679,7 @@ const TicketManagement = () => {
                   <p className="text-sm font-bold text-white">{selectedTicket.customer_name || 'N/A'}</p>
                   <p className="text-slate-300 mt-0.5">📞 Contact: <strong className="text-white">{selectedTicket.customer_contact || 'Not specified'}</strong></p>
                   <p className="text-slate-300 mt-0.5">📍 Address: <strong className="text-white">{selectedTicket.customer_address || 'Address provided in concern'}</strong></p>
-                  {selectedTicket.messenger_psid && (
-                    <p className="text-slate-400 text-[10px] mt-1 font-mono">Messenger PSID: {selectedTicket.messenger_psid}</p>
-                  )}
+
                 </div>
               </div>
 

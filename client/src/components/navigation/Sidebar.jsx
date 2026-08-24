@@ -37,6 +37,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
 
   const adminNavItems = [
     { label: 'Dashboard',          icon: LayoutDashboard, path: '/admin/dashboard' },
+    { label: 'Installation Request', icon: ClipboardList, path: '/admin/installation-requests' },
     { label: 'Tickets',            icon: Ticket,          path: '/admin/tickets' },
     { label: 'Customers',          icon: Users,           path: '/admin/customers' },
     { label: 'Technicians',        icon: Wrench,          path: '/admin/technicians' },

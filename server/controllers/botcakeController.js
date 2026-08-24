@@ -429,8 +429,9 @@ exports.createTicket = async (req, res) => {
   try {
     const subscriberId = req.query.subscriber_id || req.body?.subscriber_id || req.query.psid || req.body?.psid || '';
     let concernText = req.query.concern || req.query.text || req.body?.concern || req.body?.text || '';
+    const requestType = (req.query.request_type || req.body?.request_type || '').toLowerCase();
 
-    logger.info(`🔍 createTicket hit: subscriberId="${subscriberId}", concern="${concernText}"`);
+    logger.info(`🔍 createTicket hit: subscriberId="${subscriberId}", requestType="${requestType}", concern="${concernText}"`);
 
     if (!concernText) {
       return res.status(200).json({ success: false, message: 'Concern text is required.' });
@@ -451,14 +452,25 @@ exports.createTicket = async (req, res) => {
       });
     }
 
-    // Parse structured form fields if present (Name, Contact Number, Address, Landmark, Problem)
-    const nameMatch = concernText.match(/Name:\s*([^\n]+)/i);
+    // Parse structured form fields if present
+    const nameMatch = concernText.match(/(?:Name|Full Name):\s*([^\n]+)/i);
     const phoneMatch = concernText.match(/(?:Contact Number|Contact|Phone):\s*([^\n]+)/i);
-    const addressMatch = concernText.match(/Address:\s*([^\n]+)/i);
+    const addressMatch = concernText.match(/(?:Address|Complete Address):\s*([^\n]+)/i);
     const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
+    
+    // Installation specific fields
+    const installTypeMatch = concernText.match(/Type\s*of\s*Installation:\s*([^\n]+)/i);
+    const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
+    const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || installTypeMatch;
+
     const problemMatch = concernText.match(/Problem:\s*([\s\S]+)/i);
 
-    const actualProblem = problemMatch ? problemMatch[1].trim() : concernText;
+    let actualProblem = concernText;
+    if (problemMatch) {
+      actualProblem = problemMatch[1].trim();
+    } else if (isInstallationRequest) {
+      actualProblem = `Installation Request. Type: ${installTypeMatch ? installTypeMatch[1].trim() : 'Not specified'}. Preferred Date: ${installDateMatch ? installDateMatch[1].trim() : 'Not specified'}.`;
+    }
 
     // Only update customer fields that are currently NULL/empty — never overwrite admin-verified data
     if (nameMatch || phoneMatch || addressMatch || landmarkMatch) {
@@ -482,7 +494,6 @@ exports.createTicket = async (req, res) => {
         logger.info(`✅ Updated empty customer fields for id=${customer.id}`);
       } catch (updateErr) {
         logger.warn('Customer update failed (non-critical):', updateErr.message);
-
       }
     }
 
@@ -491,7 +502,16 @@ exports.createTicket = async (req, res) => {
 
     let categoryId = null;
     let categoryName = 'General Support';
-    if (aiResult.category) {
+    
+    if (isInstallationRequest) {
+      const catRes = await query(`SELECT id, name FROM service_categories WHERE name ILIKE '%Installation Request%' LIMIT 1`);
+      if (catRes.rows.length > 0) {
+        categoryId = catRes.rows[0].id;
+        categoryName = catRes.rows[0].name;
+      }
+    }
+
+    if (!categoryId && aiResult.category) {
       const catRes = await query(
         `SELECT id, name FROM service_categories 
          WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
@@ -514,7 +534,9 @@ exports.createTicket = async (req, res) => {
     const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
     const validPriorities = ['low', 'medium', 'high', 'critical'];
     const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
-    const subjectVal = aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger';
+    const subjectVal = isInstallationRequest 
+      ? `Installation Request${installTypeMatch ? ' - ' + installTypeMatch[1].trim() : ''}`
+      : (aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger');
 
     // Duplicate guard: if same customer already has an open ticket created in last 5 minutes, don't create another
     const recentCheck = await query(

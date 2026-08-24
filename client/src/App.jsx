@@ -29,6 +29,7 @@ const Unauthorized = lazy(() => import('./pages/auth/Unauthorized'));
 // Code-Split Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const TicketManagement = lazy(() => import('./pages/admin/TicketManagement'));
+const InstallationRequests = lazy(() => import('./pages/admin/InstallationRequests'));
 const MessengerManagement = lazy(() => import('./pages/admin/MessengerManagement'));
 const CustomerManagement = lazy(() => import('./pages/admin/CustomerManagement'));
 const TechnicianManagement = lazy(() => import('./pages/admin/TechnicianManagement'));
@@ -80,6 +81,7 @@ function App() {
           <Route element={<RoleRoute allowedRoles={['admin']} />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/installation-requests" element={<InstallationRequests />} />
               <Route path="/admin/tickets" element={<TicketManagement />} />
               <Route path="/admin/messenger" element={<MessengerManagement />} />
               <Route path="/admin/customers" element={<CustomerManagement />} />

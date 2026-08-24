@@ -11,7 +11,7 @@ import Input from '../../components/common/Input';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import Loader from '../../components/common/Loader';
 import {
-  Users, Phone, MapPin, Ticket, MessageSquare, Plus, User, Hash,
+  Users, Phone, MapPin, Ticket, Plus, User, Hash,
   Compass, Eye, Pencil, Trash2, Search, Filter, ArrowUpDown,
   Clock, CheckCircle, AlertCircle, ShieldAlert, Calendar, RefreshCw,
   ExternalLink, UserCheck, Activity, Layers, AlertTriangle
@@ -63,14 +63,7 @@ const CustomerForm = ({ formData, onChange, onSubmit, onCancel, submitLabel, isE
           placeholder={isEdit ? "Account Number" : "Auto-generated if left blank"}
           icon={Hash}
         />
-        <Input
-          label="Messenger PSID (Optional)"
-          name="messengerPsid"
-          value={formData.messengerPsid || ''}
-          onChange={onChange}
-          placeholder="e.g. 28102908006006406"
-          icon={MessageSquare}
-        />
+
       </div>
     </div>
 
@@ -149,7 +142,6 @@ const CustomerManagement = () => {
     completeAddress: '',
     nearbyLandmark: '',
     accountNumber: '',
-    messengerPsid: '',
   };
   const [formData, setFormData] = useState(emptyForm);
 
@@ -219,7 +211,6 @@ const CustomerManagement = () => {
       completeAddress: cust.complete_address || '',
       nearbyLandmark: cust.nearby_landmark || '',
       accountNumber: cust.account_number || '',
-      messengerPsid: cust.messenger_psid || '',
     });
     setIsEditModalOpen(true);
   };
@@ -368,11 +359,6 @@ const CustomerManagement = () => {
       cell: (row) => (
         <div>
           <p className="font-bold text-slate-100 text-xs sm:text-sm">{row.full_name || 'Messenger Customer'}</p>
-          {row.messenger_psid && (
-            <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
-              <MessageSquare className="w-3 h-3 text-cyan-400" /> PSID: {row.messenger_psid}
-            </span>
-          )}
         </div>
       ),
     },
@@ -526,7 +512,7 @@ const CustomerManagement = () => {
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Name, Account #, Phone, PSID..."
+              placeholder="Search Name, Account #, Phone..."
               value={localSearch}
               onChange={(e) => { setLocalSearch(e.target.value); setPage(1); }}
               className="glass-input w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border-slate-700 bg-slate-900 text-white placeholder-slate-500"
@@ -716,12 +702,7 @@ const CustomerManagement = () => {
                       <Phone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                       <span>Phone: <strong className="text-white">{cust.contact_number || 'Not specified'}</strong></span>
                     </p>
-                    {cust.messenger_psid && (
-                      <p className="text-slate-300 flex items-center gap-2 mt-1">
-                        <MessageSquare className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span>Messenger PSID: <strong className="text-white font-mono">{cust.messenger_psid}</strong></span>
-                      </p>
-                    )}
+
                   </div>
 
                   <div>

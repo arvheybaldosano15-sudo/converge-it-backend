@@ -38,6 +38,12 @@ exports.getTickets = async (req, res, next) => {
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     if (search) { conditions.push(`(t.ticket_number ILIKE $${idx} OR t.subject ILIKE $${idx} OR c.full_name ILIKE $${idx})`); params.push(`%${search}%`); idx++; }
+    
+    if (req.query.excludeCategoryName) {
+      conditions.push(`t.service_category_id NOT IN (SELECT id FROM service_categories WHERE name ILIKE $${idx++})`);
+      params.push(`%${req.query.excludeCategoryName}%`);
+    }
+
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const validSort = ['created_at','updated_at','priority','status','ticket_number','sla_deadline'];
     const col = validSort.includes(sortBy) ? sortBy : 'created_at';
@@ -185,21 +191,34 @@ exports.deleteTicket = async (req, res, next) => {
 exports.getTicketStats = async (req, res, next) => {
   try {
     const isTech = req.user.role === 'technician';
+    let baseWhere = isTech ? 'WHERE assigned_technician_id = $1' : '';
+    let params = isTech ? [req.user.id] : [];
+    
+    if (req.query.excludeCategoryName) {
+      if (baseWhere === '') {
+        baseWhere = 'WHERE t.service_category_id NOT IN (SELECT id FROM service_categories WHERE name ILIKE $1)';
+        params.push(`%${req.query.excludeCategoryName}%`);
+      } else {
+        baseWhere += ' AND t.service_category_id NOT IN (SELECT id FROM service_categories WHERE name ILIKE $2)';
+        params.push(`%${req.query.excludeCategoryName}%`);
+      }
+    }
+
     const result = await query(`
-      SELECT COUNT(*) FILTER (WHERE status = 'open') AS open_count,
-             COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress_count,
-             COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_count,
-             COUNT(*) FILTER (WHERE status = 'closed') AS closed_count,
-             COUNT(*) FILTER (WHERE assigned_technician_id IS NULL AND status NOT IN ('resolved','closed')) AS unassigned_count,
-             COUNT(*) FILTER (WHERE priority = 'critical') AS critical_count,
-             COUNT(*) FILTER (WHERE priority = 'high') AS high_count,
-             COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS sla_breached,
-             COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '4 hours' AND status NOT IN ('resolved','closed')) AS sla_at_risk,
-             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') AS created_today,
-             COUNT(*) FILTER (WHERE resolved_at >= NOW() - INTERVAL '24 hours') AS resolved_today,
+      SELECT COUNT(*) FILTER (WHERE t.status = 'open') AS open_count,
+             COUNT(*) FILTER (WHERE t.status = 'in_progress') AS in_progress_count,
+             COUNT(*) FILTER (WHERE t.status = 'resolved') AS resolved_count,
+             COUNT(*) FILTER (WHERE t.status = 'closed') AS closed_count,
+             COUNT(*) FILTER (WHERE t.assigned_technician_id IS NULL AND t.status NOT IN ('resolved','closed')) AS unassigned_count,
+             COUNT(*) FILTER (WHERE t.priority = 'critical') AS critical_count,
+             COUNT(*) FILTER (WHERE t.priority = 'high') AS high_count,
+             COUNT(*) FILTER (WHERE t.sla_deadline < NOW() AND t.status NOT IN ('resolved','closed')) AS sla_breached,
+             COUNT(*) FILTER (WHERE t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '4 hours' AND t.status NOT IN ('resolved','closed')) AS sla_at_risk,
+             COUNT(*) FILTER (WHERE t.created_at >= NOW() - INTERVAL '24 hours') AS created_today,
+             COUNT(*) FILTER (WHERE t.resolved_at >= NOW() - INTERVAL '24 hours') AS resolved_today,
              COUNT(*) AS total
-      FROM tickets ${isTech ? 'WHERE assigned_technician_id = $1' : ''}`,
-      isTech ? [req.user.id] : []
+      FROM tickets t ${baseWhere}`,
+      params
     );
     res.json({ success: true, data: result.rows[0] });
   } catch (error) { next(error); }
