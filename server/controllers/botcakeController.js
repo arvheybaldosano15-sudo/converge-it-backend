@@ -441,27 +441,51 @@ exports.createTicket = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Subscriber ID is required.' });
     }
 
-    // Find customer ONLY by their specific messenger_psid — no unsafe fallback to random latest customer
+    // Find customer ONLY by their specific messenger_psid
     let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
     let customer = custResult.rows[0];
 
-    if (!customer) {
-      return res.status(200).json({
-        success: false,
-        message: 'No linked customer found. Please verify your account number first.'
-      });
-    }
-
-    // Parse structured form fields if present
+    // Parse structured form fields first (needed for auto-create below)
     const nameMatch = concernText.match(/(?:Name|Full Name):\s*([^\n]+)/i);
     const phoneMatch = concernText.match(/(?:Contact Number|Contact|Phone):\s*([^\n]+)/i);
     const addressMatch = concernText.match(/(?:Address|Complete Address):\s*([^\n]+)/i);
     const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
-    
+
     // Installation specific fields
     const installTypeMatch = concernText.match(/Type\s*of\s*Installation:\s*([^\n]+)/i);
     const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
     const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || installTypeMatch;
+
+    if (!customer) {
+      if (!isInstallationRequest) {
+        // Regular concerns still require a linked account
+        return res.status(200).json({
+          success: false,
+          message: 'No linked customer found. Please verify your account number first.'
+        });
+      }
+
+      // ✅ Installation Request: auto-create a new customer from form data
+      logger.info(`🆕 Auto-creating new customer for installation request from PSID: ${subscriberId}`);
+      const autoName = nameMatch ? nameMatch[1].trim() : 'New Customer';
+      const autoPhone = phoneMatch ? phoneMatch[1].trim() : null;
+      const autoAddress = addressMatch ? addressMatch[1].trim() : 'Not provided';
+      const autoLandmark = landmarkMatch ? landmarkMatch[1].trim() : null;
+      const autoAccNum = `ACC-${Date.now().toString().slice(-6)}`;
+
+      try {
+        const newCust = await query(
+          `INSERT INTO customers (account_number, messenger_psid, full_name, complete_address, nearby_landmark, contact_number)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [autoAccNum, subscriberId, autoName, autoAddress, autoLandmark, autoPhone]
+        );
+        customer = newCust.rows[0];
+        logger.info(`✅ Auto-created customer: ${autoName} (${autoAccNum})`);
+      } catch (createErr) {
+        logger.error('Failed to auto-create customer:', createErr.message);
+        return res.status(200).json({ success: false, message: 'Failed to process your request. Please try again.' });
+      }
+    }
 
     const problemMatch = concernText.match(/Problem:\s*([\s\S]+)/i);
 
@@ -491,7 +515,7 @@ exports.createTicket = async (req, res) => {
             customer.id
           ]
         );
-        logger.info(`✅ Updated empty customer fields for id=${customer.id}`);
+        logger.info(`✅ Updated customer fields for id=${customer.id}`);
       } catch (updateErr) {
         logger.warn('Customer update failed (non-critical):', updateErr.message);
       }
