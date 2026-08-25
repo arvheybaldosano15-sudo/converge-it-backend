@@ -502,9 +502,9 @@ const TicketManagement = () => {
                       </td>
 
                       {/* Customer Details */}
-                      <td className="p-2.5 sm:p-3">
-                        <p className="font-bold text-white text-[13px] whitespace-normal break-words">{row.customer_name || 'Customer'}</p>
-                        <p className="text-[10px] text-slate-400 whitespace-normal break-words">{row.customer_contact || row.subject}</p>
+                      <td className="p-2.5 sm:p-3 max-w-[150px]">
+                        <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">{row.customer_name || 'Customer'}</p>
+                        <p className="text-[10px] text-slate-400 whitespace-normal break-words mt-0.5">{row.customer_contact || row.subject}</p>
                       </td>
 
                       {/* Category */}

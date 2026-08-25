@@ -266,9 +266,9 @@ const AssignedTickets = () => {
     {
       header: 'Customer',
       cell: (row) => (
-        <div>
-          <p className="font-bold text-white text-[13px] whitespace-normal break-words">{row.customer_name || 'N/A'}</p>
-          <span className="text-[11px] text-slate-400">{row.category_name}</span>
+        <div className="max-w-[150px]">
+          <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">{row.customer_name || 'N/A'}</p>
+          <span className="text-[11px] text-slate-400 block mt-0.5">{row.category_name}</span>
         </div>
       ),
     },
@@ -384,10 +384,10 @@ const AssignedTickets = () => {
     {
       header: 'Customer & Contact',
       cell: (row) => (
-        <div>
-          <p className="font-bold text-white text-[13px] whitespace-normal break-words">{row.customer_name || 'N/A'}</p>
-          <p className="text-[11px] text-slate-400">📞 {row.customer_contact || 'No Contact'}</p>
-          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate max-w-[220px]">
+        <div className="max-w-[160px]">
+          <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">{row.customer_name || 'N/A'}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">📞 {row.customer_contact || 'No Contact'}</p>
+          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
             <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
             <span className="truncate" title={row.customer_address}>{row.customer_address || 'Address on file'}</span>
           </div>
