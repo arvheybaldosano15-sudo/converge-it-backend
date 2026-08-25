@@ -476,23 +476,7 @@ const InstallationRequests = () => {
               </div>
             )}
 
-            {/* Ticket Updates / History */}
-            {selectedTicket.updates && selectedTicket.updates.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Activity History & Notes</span>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                  {selectedTicket.updates.map((u) => (
-                    <div key={u.id} className="p-2.5 rounded-lg bg-slate-900/40 border border-slate-800 text-xs space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-slate-400">
-                        <span className="font-bold text-cyan-400">{u.user_name || 'System'}</span>
-                        <span>{new Date(u.created_at).toLocaleString()}</span>
-                      </div>
-                      <p className="text-slate-300">{u.note || u.update_description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
 
             {/* Add Internal Note */}
             <form onSubmit={handleAddNote} className="space-y-2">
