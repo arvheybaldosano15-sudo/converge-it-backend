@@ -194,10 +194,24 @@ const InstallationRequests = () => {
                         {t.status === 'open' ? 'Pending' : t.status.replace('_', ' ')}
                       </Badge>
                     </td>
-                    <td className="p-4">
-                      <span className="text-xs font-semibold text-purple-300">
-                        {t.technician_name || t.assigned_technician_name || <span className="text-slate-500 italic">Unassigned</span>}
-                      </span>
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                      {t.assigned_to ? (
+                        <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[160px]">
+                          <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                          <span className="truncate font-semibold text-[11px]">{t.assignee_name || 'Assigned'}</span>
+                        </div>
+                      ) : (
+                        <select
+                          value=""
+                          onChange={(e) => handleAssignTechnician(t.id, e.target.value)}
+                          className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-300 font-semibold max-w-[140px]"
+                        >
+                          <option value="">-- Assign Tech --</option>
+                          {technicians.map((tech) => (
+                            <option key={tech.id} value={tech.id}>{tech.full_name}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="p-4 text-slate-400 whitespace-nowrap">
                       {new Date(t.created_at).toLocaleDateString()}
@@ -270,36 +284,48 @@ const InstallationRequests = () => {
               <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
             </div>
 
-            {/* Read-only Status & Assignment Info */}
+            {/* Management & Assignment Controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Assigned Technician
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Assign Technician
                 </label>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                  <Wrench className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="font-semibold text-purple-300">
-                    {selectedTicket.technician_name || selectedTicket.assigned_technician_name || '-- Unassigned --'}
-                  </span>
-                </div>
+                {(selectedTicket.assigned_technician_id || selectedTicket.assigned_to) ? (
+                  <div className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-indigo-300 w-full">
+                    <UserCheck className="w-4 h-4 shrink-0 text-indigo-400" />
+                    <div>
+                      <p className="font-bold text-sm text-indigo-200">{selectedTicket.assignee_name || 'Assigned Technician'}</p>
+                      <p className="text-[10px] text-indigo-400/70 mt-0.5">Technician already assigned — cannot be changed</p>
+                    </div>
+                  </div>
+                ) : (
+                  <select
+                    value=""
+                    onChange={(e) => handleAssignTechnician(selectedTicket.id, e.target.value)}
+                    className="glass-input w-full rounded-xl py-2 px-3 border-slate-700 bg-slate-900 text-purple-300 font-semibold"
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {technicians.map((t) => (
+                      <option key={t.id} value={t.id}>{t.full_name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Current Request Status
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Update Request Status
                 </label>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                  <CheckCircle className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className={`font-semibold capitalize ${
-                    selectedTicket.status === 'resolved' ? 'text-emerald-400' :
-                    selectedTicket.status === 'in_progress' ? 'text-blue-400' :
-                    selectedTicket.status === 'closed' ? 'text-slate-400' :
-                    'text-amber-400'
-                  }`}>
-                    {selectedTicket.status === 'open' ? 'Pending / Open' : selectedTicket.status.replace('_', ' ')}
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 italic">Set by technician</span>
-                </div>
+                <select
+                  value={selectedTicket.status || 'open'}
+                  onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}
+                  className="glass-input w-full rounded-xl py-2 px-3 border-slate-700 bg-slate-900 text-slate-200 font-semibold"
+                >
+                  <option value="open">Pending / Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
               </div>
             </div>
 
