@@ -6,7 +6,7 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
 import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
-import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink } from 'lucide-react';
+import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const InstallationRequests = () => {
@@ -134,6 +134,25 @@ const InstallationRequests = () => {
     setSelectedTicket(ticket);
     setIsDetailModalOpen(true);
     refreshTicketDetail(ticket.id);
+  };
+
+  const handleDeleteTicket = async (ticketId) => {
+    if (!window.confirm('Are you sure you want to delete this installation request? This action cannot be undone.')) return;
+    try {
+      const res = await api.delete(`/tickets/${ticketId}`);
+      if (res.success) {
+        toast.success('Installation request deleted successfully');
+        fetchInstallationRequestsOnly();
+        if (selectedTicket && selectedTicket.id === ticketId) {
+          setIsDetailModalOpen(false);
+          setSelectedTicket(null);
+        }
+      } else {
+        toast.error('Failed to delete installation request');
+      }
+    } catch (err) {
+      toast.error('Failed to delete installation request');
+    }
   };
 
   const getSlaStatus = (slaDeadline, status) => {
@@ -282,6 +301,13 @@ const InstallationRequests = () => {
                             title="View Installation Request Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTicket(row.id)}
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-900/60 border border-slate-800 hover:border-rose-500/40 text-slate-500 hover:text-rose-400 transition-colors"
+                            title="Delete Installation Request"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
