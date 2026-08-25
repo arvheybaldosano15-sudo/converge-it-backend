@@ -20,7 +20,8 @@ import {
   FileText,
   Filter,
   ArrowUpDown,
-  Sparkles
+  Sparkles,
+  Wrench
 } from 'lucide-react';
 
 import { useTickets } from '../../hooks/useTickets';
@@ -28,6 +29,18 @@ import { useTechDashboard } from '../../hooks/useDashboard';
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import UpdateTicketModal from '../../components/technician/UpdateTicketModal';
 import FileServiceReportModal from '../../components/technician/FileServiceReportModal';
+
+// Helper to determine if a ticket is an installation request
+const isInstallation = (t) => {
+  const catName = (t.category_name || '').toLowerCase();
+  const subject = (t.subject || t.title || '').toLowerCase();
+  const desc = (t.description || '').toLowerCase();
+  return (
+    catName.includes('installation') ||
+    subject.includes('installation request') ||
+    desc.includes('installation request')
+  );
+};
 
 // Helper for live SLA countdown calculation
 const getSlaInfo = (deadlineStr, status) => {
@@ -64,7 +77,6 @@ const AssignedTickets = () => {
   // Summary stats from dashboard endpoint
   const { data: dashboardData } = useTechDashboard();
   const dashStats = dashboardData?.stats || {};
-  const completedTodayCount = dashboardData?.completedToday || 0;
 
   // Filter & Search state
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'pending', 'in_progress', 'urgent', 'completed', 'closed'
@@ -73,8 +85,11 @@ const AssignedTickets = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [slaFilter, setSlaFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('smart'); // 'smart', 'sla_deadline', 'priority', 'created_at', 'updated_at'
-  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('smart');
+
+  // Independent Pagination states for the two tables
+  const [supportPage, setSupportPage] = useState(1);
+  const [installPage, setInstallPage] = useState(1);
 
   // Categories list for dropdown filter
   const [categories, setCategories] = useState([]);
@@ -100,7 +115,7 @@ const AssignedTickets = () => {
   const [reportTicket, setReportTicket] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Query Backend tickets (limit 100 to allow rich client-side smart sorting & tabs)
+  // Query Backend tickets
   const { data: ticketsData, isLoading: loading } = useTickets({
     limit: 100,
     search: search ? search : undefined,
@@ -148,7 +163,6 @@ const AssignedTickets = () => {
 
     // Sorting
     if (sortBy === 'smart') {
-      // Smart priority: active tickets first (In Progress -> Pending -> Resolved -> Closed), then Priority (Critical -> High -> Medium -> Low), then SLA Deadline ASC
       result.sort((a, b) => {
         const statusOrder = { in_progress: 1, open: 2, resolved: 3, closed: 4 };
         const priorityOrder = { critical: 1, high: 2, medium: 3, low: 4 };
@@ -180,13 +194,29 @@ const AssignedTickets = () => {
     return result;
   }, [rawTickets, activeTab, slaFilter, sortBy]);
 
-  // Client-side pagination
+  // Separate processed tickets into Support Tickets and Installation Requests
+  const supportTickets = useMemo(() => {
+    return processedTickets.filter(t => !isInstallation(t));
+  }, [processedTickets]);
+
+  const installationTickets = useMemo(() => {
+    return processedTickets.filter(t => isInstallation(t));
+  }, [processedTickets]);
+
+  // Client-side pagination for Table 1 (Support Tasks)
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(processedTickets.length / itemsPerPage) || 1;
-  const paginatedTickets = useMemo(() => {
-    const start = (page - 1) * itemsPerPage;
-    return processedTickets.slice(start, start + itemsPerPage);
-  }, [processedTickets, page]);
+  const supportTotalPages = Math.ceil(supportTickets.length / itemsPerPage) || 1;
+  const paginatedSupportTickets = useMemo(() => {
+    const start = (supportPage - 1) * itemsPerPage;
+    return supportTickets.slice(start, start + itemsPerPage);
+  }, [supportTickets, supportPage]);
+
+  // Client-side pagination for Table 2 (Installation Requests)
+  const installTotalPages = Math.ceil(installationTickets.length / itemsPerPage) || 1;
+  const paginatedInstallTickets = useMemo(() => {
+    const start = (installPage - 1) * itemsPerPage;
+    return installationTickets.slice(start, start + itemsPerPage);
+  }, [installationTickets, installPage]);
 
   const handleResetFilters = () => {
     setActiveTab('all');
@@ -196,7 +226,8 @@ const AssignedTickets = () => {
     setCategoryFilter('all');
     setSlaFilter('all');
     setSortBy('smart');
-    setPage(1);
+    setSupportPage(1);
+    setInstallPage(1);
   };
 
   const handleOpenView = (ticket, e) => {
@@ -222,7 +253,8 @@ const AssignedTickets = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
   };
 
-  const columns = [
+  // Columns for Table 1: Support Tickets
+  const supportColumns = [
     {
       header: 'Ticket ID',
       cell: (row) => (
@@ -339,12 +371,114 @@ const AssignedTickets = () => {
     },
   ];
 
+  // Columns for Table 2: Installation Requests
+  const installationColumns = [
+    {
+      header: 'Ticket ID',
+      cell: (row) => (
+        <span className="font-mono text-xs font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+          {row.ticket_number}
+        </span>
+      ),
+    },
+    {
+      header: 'Customer & Contact',
+      cell: (row) => (
+        <div>
+          <p className="font-bold text-white text-sm line-clamp-1">{row.customer_name || 'N/A'}</p>
+          <p className="text-[11px] text-slate-400">📞 {row.customer_contact || 'No Contact'}</p>
+          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate max-w-[220px]">
+            <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate" title={row.customer_address}>{row.customer_address || 'Address on file'}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Installation Details',
+      cell: (row) => (
+        <div>
+          <p className="text-xs font-bold text-slate-200 line-clamp-1">{row.subject || 'Installation Request'}</p>
+          <p className="text-[11px] text-slate-400 line-clamp-2 max-w-[260px] mt-0.5">{row.description}</p>
+        </div>
+      ),
+    },
+    {
+      header: 'Priority',
+      align: 'center',
+      cell: (row) => (
+        <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : 'cyan'}>
+          {row.priority}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Status',
+      align: 'center',
+      cell: (row) => {
+        const variantMap = {
+          open: 'warning',
+          in_progress: 'primary',
+          resolved: 'success',
+          closed: 'default'
+        };
+        const displayStatus = row.status === 'open' ? 'pending' : row.status;
+        return (
+          <Badge variant={variantMap[row.status] || 'default'} className="capitalize">
+            {displayStatus ? displayStatus.replace('_', ' ') : ''}
+          </Badge>
+        );
+      },
+    },
+    {
+      header: 'Assigned Date',
+      align: 'center',
+      cell: (row) => (
+        <span className="text-xs text-slate-400">
+          {new Date(row.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
+      header: 'Actions',
+      align: 'center',
+      cell: (row) => (
+        <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => handleOpenView(row, e)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold transition-all active:scale-95"
+            title="View Ticket Details"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">View</span>
+          </button>
+          <button
+            onClick={(e) => handleOpenUpdate(row, e)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold transition-all active:scale-95"
+            title="Update Status"
+          >
+            <Edit className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Update</span>
+          </button>
+          <button
+            onClick={(e) => handleOpenFileReport(row, e)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all active:scale-95"
+            title="File Service Report"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Report</span>
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Title & Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white font-display">Assigned Support Tasks</h1>
-        <p className="text-xs text-slate-400">Field work orders assigned to you</p>
+        <h1 className="text-2xl font-bold text-white font-display">Assigned Support & Installation Work Orders</h1>
+        <p className="text-xs text-slate-400">Field support tasks and installation requests assigned to you</p>
       </div>
 
       {/* ── 1. COMPACT KPI SUMMARY INDICATORS ── */}
@@ -414,7 +548,8 @@ const AssignedTickets = () => {
             key={tab.key}
             onClick={() => {
               setActiveTab(tab.key);
-              setPage(1);
+              setSupportPage(1);
+              setInstallPage(1);
             }}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
               activeTab === tab.key
@@ -443,7 +578,8 @@ const AssignedTickets = () => {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(1);
+                setSupportPage(1);
+                setInstallPage(1);
               }}
               placeholder="Search ID, customer, title..."
               className="glass-input w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-900 text-white"
@@ -453,7 +589,7 @@ const AssignedTickets = () => {
           {/* Status Dropdown */}
           <select
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            onChange={(e) => { setStatusFilter(e.target.value); setSupportPage(1); setInstallPage(1); }}
             className="glass-input w-full py-2 px-2.5 text-xs rounded-xl bg-slate-900 text-white"
           >
             <option value="all">All Statuses</option>
@@ -466,7 +602,7 @@ const AssignedTickets = () => {
           {/* Priority Dropdown */}
           <select
             value={priorityFilter}
-            onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
+            onChange={(e) => { setPriorityFilter(e.target.value); setSupportPage(1); setInstallPage(1); }}
             className="glass-input w-full py-2 px-2.5 text-xs rounded-xl bg-slate-900 text-white"
           >
             <option value="all">All Priorities</option>
@@ -479,7 +615,7 @@ const AssignedTickets = () => {
           {/* SLA Status Dropdown */}
           <select
             value={slaFilter}
-            onChange={(e) => { setSlaFilter(e.target.value); setPage(1); }}
+            onChange={(e) => { setSlaFilter(e.target.value); setSupportPage(1); setInstallPage(1); }}
             className="glass-input w-full py-2 px-2.5 text-xs rounded-xl bg-slate-900 text-white"
           >
             <option value="all">All SLA Statuses</option>
@@ -508,7 +644,7 @@ const AssignedTickets = () => {
             <span className="text-[11px] text-slate-400">Category:</span>
             <select
               value={categoryFilter}
-              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+              onChange={(e) => { setCategoryFilter(e.target.value); setSupportPage(1); setInstallPage(1); }}
               className="glass-input py-1 px-2.5 text-xs rounded-lg bg-slate-900 text-white min-w-[140px]"
             >
               <option value="all">All Categories</option>
@@ -527,19 +663,55 @@ const AssignedTickets = () => {
         </div>
       </Card>
 
-      {/* ── 4. DATA TABLE ── */}
-      <DataTable
-        columns={columns}
-        data={paginatedTickets}
-        isLoading={loading}
-        onRowClick={(row) => handleOpenView(row)}
-        emptyMessage="No assigned tickets found matching your filter criteria."
-      />
+      {/* ── 4. TABLE 1: ASSIGNED SUPPORT TASKS ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Ticket className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-lg font-bold text-white font-display">Assigned Support Tasks</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              {supportTickets.length}
+            </span>
+          </div>
+          <span className="text-xs text-slate-400">Technical support & repair work orders</span>
+        </div>
 
-      {/* Pagination */}
-      <Pagination currentPage={page} totalPages={totalPages} itemsPerPage={itemsPerPage} onPageChange={setPage} />
+        <DataTable
+          columns={supportColumns}
+          data={paginatedSupportTickets}
+          isLoading={loading}
+          onRowClick={(row) => handleOpenView(row)}
+          emptyMessage="No assigned support tasks found matching your filter criteria."
+        />
 
-      {/* ── 5. ALL MODALS INTEGRATED ── */}
+        <Pagination currentPage={supportPage} totalPages={supportTotalPages} itemsPerPage={itemsPerPage} onPageChange={setSupportPage} />
+      </div>
+
+      {/* ── 5. TABLE 2: ASSIGNED INSTALLATION REQUESTS ── */}
+      <div className="space-y-3 pt-6 border-t border-slate-800/80">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Wrench className="w-5 h-5 text-amber-400" />
+            <h2 className="text-lg font-bold text-white font-display">Assigned Installation Requests</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              {installationTickets.length}
+            </span>
+          </div>
+          <span className="text-xs text-slate-400">New equipment & service installation orders</span>
+        </div>
+
+        <DataTable
+          columns={installationColumns}
+          data={paginatedInstallTickets}
+          isLoading={loading}
+          onRowClick={(row) => handleOpenView(row)}
+          emptyMessage="No assigned installation requests found matching your filter criteria."
+        />
+
+        <Pagination currentPage={installPage} totalPages={installTotalPages} itemsPerPage={itemsPerPage} onPageChange={setInstallPage} />
+      </div>
+
+      {/* ── 6. ALL MODALS INTEGRATED ── */}
       <ViewTicketModal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
