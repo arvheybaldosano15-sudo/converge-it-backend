@@ -5,7 +5,8 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
-import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare } from 'lucide-react';
+import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
+import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const InstallationRequests = () => {
@@ -14,6 +15,7 @@ const InstallationRequests = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   // Workflow action states
   const [noteText, setNoteText] = useState('');
@@ -317,6 +319,103 @@ const InstallationRequests = () => {
               </div>
             </div>
 
+            {/* Field Service Report (if available) */}
+            {selectedTicket.serviceReport && (
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-emerald-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                    <FileText className="w-4 h-4" />
+                    <span>Filed Field Technician Service Completion Report</span>
+                  </div>
+                  <Badge variant="success">Report Submitted</Badge>
+                </div>
+
+                {selectedTicket.serviceReport.title && (
+                  <p className="text-sm font-bold text-white">{selectedTicket.serviceReport.title}</p>
+                )}
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Work Performed</span>
+                  <p className="text-xs text-slate-200 bg-slate-950/70 p-3 rounded-lg border border-slate-800 mt-1 leading-relaxed whitespace-pre-wrap">
+                    {selectedTicket.serviceReport.work_performed}
+                  </p>
+                </div>
+
+                {selectedTicket.serviceReport.materials_used && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Materials Used</span>
+                    <p className="text-xs text-slate-300 bg-slate-950/70 p-3 rounded-lg border border-slate-800 mt-1">
+                      {selectedTicket.serviceReport.materials_used}
+                    </p>
+                  </div>
+                )}
+
+                {selectedTicket.serviceReport.customer_name_signed && (
+                  <p className="text-xs text-slate-300 pt-0.5">✍️ Signed by: <strong className="text-white">{selectedTicket.serviceReport.customer_name_signed}</strong></p>
+                )}
+
+                {/* Submitted Work Proof Photos & Signature */}
+                {(() => {
+                  const report = selectedTicket.serviceReport;
+                  const photos = parseImageUrls(report.images_urls || report.imagesUrls || report.image_urls || report.images);
+                  if (photos.length === 0 && !report.signature_url) return null;
+                  return (
+                    <div className="pt-2 space-y-3 border-t border-slate-800/80">
+                      {photos.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5 text-cyan-400" /> Installation Photos ({photos.length})
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
+                            {photos.map((url, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setFullscreenImage(getUploadUrl(url))}
+                                className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video block w-full text-left cursor-pointer transition-all hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10"
+                              >
+                                <img
+                                  src={getUploadUrl(url)}
+                                  alt={`Installation Photo ${i + 1}`}
+                                  crossOrigin="anonymous"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Unavailable%3C/text%3E%3C/svg%3E";
+                                  }}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                  <span className="text-white text-xs font-semibold bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
+                                    <Maximize2 className="w-3.5 h-3.5 text-cyan-400" /> Full Size
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {report.signature_url && (
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[11px] font-medium text-slate-400 block">Customer Signature:</span>
+                          <div
+                            onClick={() => setFullscreenImage(getUploadUrl(report.signature_url))}
+                            className="p-2 rounded-xl bg-slate-950 border border-slate-800 inline-block cursor-pointer hover:border-cyan-400 transition-colors"
+                          >
+                            <img
+                              src={getUploadUrl(report.signature_url)}
+                              alt="Customer signature"
+                              className="h-16 object-contain max-w-full"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* Ticket Updates / History */}
             {selectedTicket.updates && selectedTicket.updates.length > 0 && (
               <div className="space-y-2">
@@ -356,6 +455,44 @@ const InstallationRequests = () => {
           </div>
         )}
       </Modal>
+
+      {/* Fullscreen Image Lightbox Modal */}
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenImage(null)}
+        >
+          {/* Header controls */}
+          <div className="absolute top-4 right-4 flex items-center gap-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <a
+              href={fullscreenImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white transition-colors border border-slate-700 shadow-lg flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Open Original Image"
+            >
+              <ExternalLink className="w-4 h-4 text-blue-400" /> Open Original
+            </a>
+            <button
+              type="button"
+              onClick={() => setFullscreenImage(null)}
+              className="p-2.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-colors shadow-lg active:scale-95"
+              title="Close Viewer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Image Container */}
+          <div className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={fullscreenImage}
+              alt="Enlarged View"
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-slate-800"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
