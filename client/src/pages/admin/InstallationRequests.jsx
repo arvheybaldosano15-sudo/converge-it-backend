@@ -284,48 +284,36 @@ const InstallationRequests = () => {
               <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
             </div>
 
-            {/* Management & Assignment Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Assign Technician
-                </label>
-                {(selectedTicket.assigned_technician_id || selectedTicket.assigned_to) ? (
-                  <div className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-indigo-300 w-full">
-                    <UserCheck className="w-4 h-4 shrink-0 text-indigo-400" />
-                    <div>
-                      <p className="font-bold text-sm text-indigo-200">{selectedTicket.assignee_name || 'Assigned Technician'}</p>
-                      <p className="text-[10px] text-indigo-400/70 mt-0.5">Technician already assigned — cannot be changed</p>
+            {/* Assigned Technician Info & Close Request Action */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Assigned Technician</span>
+                  {selectedTicket.assignee_name || selectedTicket.assigned_to ? (
+                    <div className="flex items-center space-x-2">
+                      <UserCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <span className="font-bold text-sm text-indigo-200">{selectedTicket.assignee_name || 'Assigned Technician'}</span>
                     </div>
-                  </div>
-                ) : (
-                  <select
-                    value=""
-                    onChange={(e) => handleAssignTechnician(selectedTicket.id, e.target.value)}
-                    className="glass-input w-full rounded-xl py-2 px-3 border-slate-700 bg-slate-900 text-purple-300 font-semibold"
-                  >
-                    <option value="">-- Unassigned --</option>
-                    {technicians.map((t) => (
-                      <option key={t.id} value={t.id}>{t.full_name}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                  ) : (
+                    <span className="text-xs text-amber-400 font-medium italic">Unassigned</span>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Update Request Status
-                </label>
-                <select
-                  value={selectedTicket.status || 'open'}
-                  onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}
-                  className="glass-input w-full rounded-xl py-2 px-3 border-slate-700 bg-slate-900 text-slate-200 font-semibold"
-                >
-                  <option value="open">Pending / Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </select>
+                <div className="self-end sm:self-center">
+                  {selectedTicket.status !== 'closed' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(selectedTicket.id, 'closed')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 border border-rose-400/30 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" /> Close Request
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-400 border border-slate-700/60 italic">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" /> Request Closed
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
