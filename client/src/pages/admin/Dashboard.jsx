@@ -667,7 +667,7 @@ const Dashboard = () => {
                     <tr key={t.id} className="hover:bg-slate-900/70 transition-colors">
                       <td className="p-3 font-mono font-bold text-cyan-400">{t.ticket_number}</td>
                       <td className="p-3">
-                        <p className="font-semibold text-white truncate max-w-[140px]">{t.customer_name || 'N/A'}</p>
+                        <p className="font-semibold text-white text-[13px] whitespace-normal break-words">{t.customer_name || 'N/A'}</p>
                         <p className="text-[10px] text-slate-400 truncate max-w-[140px]">{t.title}</p>
                       </td>
                       <td className="p-3">{t.category_name || 'General Support'}</td>
