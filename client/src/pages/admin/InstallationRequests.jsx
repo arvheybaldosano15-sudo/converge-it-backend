@@ -478,24 +478,7 @@ const InstallationRequests = () => {
 
 
 
-            {/* Add Internal Note */}
-            <form onSubmit={handleAddNote} className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Add Internal Note
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type an internal note or update..."
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  className="glass-input flex-1 text-xs rounded-xl py-2 px-3 border-slate-700 bg-slate-900 text-white placeholder-slate-500"
-                />
-                <Button type="submit" size="sm" variant="primary" disabled={isSubmittingNote || !noteText.trim()}>
-                  {isSubmittingNote ? 'Saving...' : 'Add Note'}
-                </Button>
-              </div>
-            </form>
+
           </div>
         )}
       </Modal>
