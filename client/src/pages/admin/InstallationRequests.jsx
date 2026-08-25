@@ -136,6 +136,31 @@ const InstallationRequests = () => {
     refreshTicketDetail(ticket.id);
   };
 
+  const getSlaStatus = (slaDeadline, status) => {
+    if (['resolved', 'closed'].includes(status)) {
+      return { text: 'RESOLVED', variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+    }
+    if (!slaDeadline) {
+      return { text: 'WITHIN SLA', variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+    }
+
+    const now = new Date();
+    const deadline = new Date(slaDeadline);
+    const diffMs = deadline - now;
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffMs < 0) {
+      const overHours = Math.abs(Math.floor(diffHours));
+      return { text: 'BREACHED', desc: `${overHours}h overdue`, variant: 'danger', color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/40' };
+    } else if (diffHours <= 4) {
+      const remHours = Math.max(1, Math.floor(diffHours));
+      return { text: 'AT RISK', desc: `${remHours}h left`, variant: 'warning', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/40' };
+    } else {
+      const remHours = Math.floor(diffHours);
+      return { text: 'WITHIN SLA', desc: `${remHours}h remaining`, variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+    }
+  };
+
   if (loading) return <Loader text="Loading Installation Requests..." />;
 
   return (
@@ -157,82 +182,117 @@ const InstallationRequests = () => {
       </div>
 
       {/* Main Table */}
-      <Card className="p-0 overflow-hidden border border-slate-800">
+      <div className="glass-panel overflow-hidden border border-slate-800 rounded-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] sm:text-[11px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-4 font-bold">Ticket #</th>
-                <th className="p-4 font-bold">Customer Details</th>
-                <th className="p-4 font-bold">Installation Details</th>
-                <th className="p-4 font-bold">Status</th>
-                <th className="p-4 font-bold">Assigned Tech</th>
-                <th className="p-4 font-bold">Date Created</th>
-                <th className="p-4 text-right font-bold">Action</th>
+                <th className="p-2.5 sm:p-3">Ticket #</th>
+                <th className="p-2.5 sm:p-3">Customer</th>
+                <th className="p-2.5 sm:p-3">Installation Details</th>
+                <th className="p-2.5 sm:p-3">Status</th>
+                <th className="p-2.5 sm:p-3">Assigned Tech</th>
+                <th className="p-2.5 sm:p-3">SLA Status</th>
+                <th className="p-2.5 sm:p-3">Created Date</th>
+                <th className="p-2.5 sm:p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
+            <tbody className="divide-y divide-slate-800/60">
               {tickets.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-500">
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
                     <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-700" />
-                    <p>No installation requests found.</p>
+                    <p className="text-sm font-semibold text-slate-400">No installation requests found.</p>
                   </td>
                 </tr>
               ) : (
-                tickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-900/70 transition-colors align-middle">
-                    <td className="p-4 align-middle font-mono font-bold text-cyan-400">{t.ticket_number}</td>
-                    <td className="p-4 align-middle">
-                      <p className="font-bold text-slate-100 text-[13px] whitespace-normal break-words leading-tight">{t.customer_name || 'N/A'}</p>
-                      <p className="text-slate-400 text-[10px] mt-0.5">{t.customer_contact || 'No Contact'}</p>
-                      <p className="text-slate-500 text-[10px] truncate max-w-[200px] mt-0.5">{t.customer_address}</p>
-                    </td>
-                    <td className="p-4 align-middle">
-                      <p className="text-slate-300 line-clamp-2 max-w-[300px]">{t.description}</p>
-                    </td>
-                    <td className="p-4 align-middle">
-                      <Badge variant={t.status === 'resolved' ? 'success' : t.status === 'in_progress' ? 'info' : t.status === 'closed' ? 'default' : 'warning'}>
-                        {t.status === 'open' ? 'Pending' : t.status.replace('_', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="p-4 align-middle" onClick={(e) => e.stopPropagation()}>
-                      {t.assigned_to ? (
-                        <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[160px]">
-                          <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-                          <span className="truncate font-semibold text-[11px]">{t.assignee_name || 'Assigned'}</span>
+                tickets.map((row) => {
+                  const slaInfo = getSlaStatus(row.sla_deadline, row.status);
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-900/70 transition-colors align-middle">
+                      {/* Ticket Number */}
+                      <td className="p-2.5 sm:p-3 align-middle font-mono font-extrabold text-cyan-400">
+                        {row.ticket_number}
+                      </td>
+
+                      {/* Customer Details */}
+                      <td className="p-2.5 sm:p-3 align-middle max-w-[150px]">
+                        <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">{row.customer_name || 'N/A'}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 whitespace-normal break-words">{row.customer_contact || 'No Contact'}</p>
+                        <p className="text-[10px] text-slate-500 truncate max-w-[180px] mt-0.5">{row.customer_address}</p>
+                      </td>
+
+                      {/* Installation Details */}
+                      <td className="p-2.5 sm:p-3 align-middle">
+                        <p className="text-slate-200 font-semibold text-xs line-clamp-1">{row.subject || 'Installation Request'}</p>
+                        <p className="text-slate-400 text-[11px] line-clamp-2 max-w-[280px] mt-0.5">{row.description}</p>
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-2.5 sm:p-3 align-middle">
+                        <Badge variant={
+                          row.status === 'resolved' ? 'success' :
+                          row.status === 'in_progress' ? 'info' :
+                          row.status === 'open' ? 'warning' :
+                          row.status === 'closed' ? 'secondary' : 'danger'
+                        } className="capitalize">
+                          {row.status ? (row.status === 'open' ? 'pending' : row.status.replace('_', ' ')) : 'pending'}
+                        </Badge>
+                      </td>
+
+                      {/* Assigned Tech */}
+                      <td className="p-2.5 sm:p-3 align-middle" onClick={(e) => e.stopPropagation()}>
+                        {row.assigned_to ? (
+                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[130px]">
+                            <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                            <span className="truncate font-semibold text-[11px]">{row.assignee_name || 'Assigned'}</span>
+                          </div>
+                        ) : (
+                          <select
+                            value=""
+                            onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
+                            className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[130px]"
+                          >
+                            <option value="">Select Tech...</option>
+                            {technicians.map((tech) => (
+                              <option key={tech.id} value={tech.id}>{tech.full_name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+
+                      {/* SLA Status */}
+                      <td className="p-2.5 sm:p-3 align-middle">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${slaInfo.bg} ${slaInfo.color} ${slaInfo.border}`}>
+                          {slaInfo.text}
+                        </span>
+                      </td>
+
+                      {/* Created Date */}
+                      <td className="p-2.5 sm:p-3 align-middle text-slate-400 text-[11px]">
+                        {new Date(row.created_at).toLocaleDateString()}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-2.5 sm:p-3 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end space-x-1.5">
+                          <button
+                            onClick={() => viewTicketDetail(row)}
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 hover:text-cyan-300 transition-colors"
+                            title="View Installation Request Details"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      ) : (
-                        <select
-                          value=""
-                          onChange={(e) => handleAssignTechnician(t.id, e.target.value)}
-                          className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-300 font-semibold max-w-[140px]"
-                        >
-                          <option value="">-- Assign Tech --</option>
-                          {technicians.map((tech) => (
-                            <option key={tech.id} value={tech.id}>{tech.full_name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className="p-4 align-middle text-slate-400 whitespace-nowrap">
-                      {new Date(t.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      <button
-                        onClick={() => viewTicketDetail(t)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-semibold transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> View
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
       {/* DETAIL MODAL */}
       <Modal
