@@ -179,22 +179,22 @@ const InstallationRequests = () => {
                 </tr>
               ) : (
                 tickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-900/70 transition-colors">
-                    <td className="p-4 font-mono font-bold text-cyan-400">{t.ticket_number}</td>
-                    <td className="p-4">
-                      <p className="font-bold text-slate-100">{t.customer_name || 'N/A'}</p>
-                      <p className="text-slate-400 text-[10px]">{t.customer_contact || 'No Contact'}</p>
-                      <p className="text-slate-500 text-[10px] truncate max-w-[200px]">{t.customer_address}</p>
+                  <tr key={t.id} className="hover:bg-slate-900/70 transition-colors align-middle">
+                    <td className="p-4 align-middle font-mono font-bold text-cyan-400">{t.ticket_number}</td>
+                    <td className="p-4 align-middle">
+                      <p className="font-bold text-slate-100 text-[13px] whitespace-normal break-words leading-tight">{t.customer_name || 'N/A'}</p>
+                      <p className="text-slate-400 text-[10px] mt-0.5">{t.customer_contact || 'No Contact'}</p>
+                      <p className="text-slate-500 text-[10px] truncate max-w-[200px] mt-0.5">{t.customer_address}</p>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 align-middle">
                       <p className="text-slate-300 line-clamp-2 max-w-[300px]">{t.description}</p>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 align-middle">
                       <Badge variant={t.status === 'resolved' ? 'success' : t.status === 'in_progress' ? 'info' : t.status === 'closed' ? 'default' : 'warning'}>
                         {t.status === 'open' ? 'Pending' : t.status.replace('_', ' ')}
                       </Badge>
                     </td>
-                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-4 align-middle" onClick={(e) => e.stopPropagation()}>
                       {t.assigned_to ? (
                         <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[160px]">
                           <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
@@ -213,10 +213,10 @@ const InstallationRequests = () => {
                         </select>
                       )}
                     </td>
-                    <td className="p-4 text-slate-400 whitespace-nowrap">
+                    <td className="p-4 align-middle text-slate-400 whitespace-nowrap">
                       {new Date(t.created_at).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 align-middle text-right">
                       <button
                         onClick={() => viewTicketDetail(t)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-semibold transition-colors"

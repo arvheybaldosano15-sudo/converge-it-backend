@@ -29,7 +29,7 @@ const DataTable = ({
             {columns.map((col, idx) => (
               <th
                 key={idx}
-                className={`px-3 py-3 font-semibold ${
+                className={`px-3 py-3.5 font-semibold align-middle ${
                   col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
                 } ${col.headerClassName || ''}`}
               >
@@ -43,14 +43,14 @@ const DataTable = ({
             <tr
               key={row.id || rowIdx}
               onClick={() => onRowClick && onRowClick(row)}
-              className={`transition-colors hover:bg-slate-800/40 ${
+              className={`transition-colors hover:bg-slate-800/40 align-middle ${
                 onRowClick ? 'cursor-pointer' : ''
               }`}
             >
               {columns.map((col, colIdx) => (
                 <td
                   key={colIdx}
-                  className={`px-3 py-3 ${
+                  className={`px-3 py-3 font-sans align-middle ${
                     col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''
                   } ${col.className || ''}`}
                 >
