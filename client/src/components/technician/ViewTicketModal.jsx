@@ -161,63 +161,7 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
               </p>
             </div>
 
-            {/* Status Updates & Timeline */}
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-              <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5" /> Ticket Status & Activity Timeline
-              </h4>
 
-              <div className="space-y-3 pt-1">
-                {/* Event 1: Created */}
-                <div className="flex items-start space-x-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div>
-                    <p className="font-bold text-white">Ticket Created</p>
-                    <p className="text-slate-400 text-[11px]">System recorded ticket entry</p>
-                    <span className="text-[10px] text-slate-500 block">
-                      {new Date(ticket.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Event Updates */}
-                {updates.map((up, idx) => (
-                  <div key={up.id || idx} className="flex items-start space-x-3 text-xs">
-                    <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      {idx + 2}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white">
-                        Status updated to <span className="text-cyan-300 capitalize">{up.status_changed_to?.replace('_', ' ')}</span>
-                      </p>
-                      {up.notes && <p className="text-slate-300 italic text-[11px] bg-slate-950/50 p-2 rounded border border-slate-800/80 mt-1">"{up.notes}"</p>}
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        by {up.user_name || 'Technician'} • {new Date(up.created_at).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Resolved/Closed state */}
-                {(ticket.status === 'resolved' || ticket.status === 'closed') && (
-                  <div className="flex items-start space-x-3 text-xs">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                      ✓
-                    </div>
-                    <div>
-                      <p className="font-bold text-emerald-400">
-                        Ticket {ticket.status === 'closed' ? 'Closed' : 'Resolved'}
-                      </p>
-                      <span className="text-[10px] text-slate-500 block">
-                        {ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleString() : new Date(ticket.updated_at).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Filed Service Report Section if available */}
             {report && (
