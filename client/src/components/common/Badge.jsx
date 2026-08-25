@@ -3,7 +3,9 @@ import React from 'react';
 const Badge = ({ children, variant = 'default', className = '' }) => {
   const variants = {
     default: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    secondary: 'bg-slate-500/20 text-slate-400 border-slate-600/40',
     primary: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    info: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
     cyan: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
     success: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     warning: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -11,9 +13,11 @@ const Badge = ({ children, variant = 'default', className = '' }) => {
     purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
+  const selectedVariant = variants[variant] || variants.default;
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-md ${variants[variant]} ${className}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-md ${selectedVariant} ${className}`}
     >
       {children}
     </span>
