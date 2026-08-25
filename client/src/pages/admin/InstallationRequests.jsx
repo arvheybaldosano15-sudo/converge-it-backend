@@ -304,7 +304,7 @@ const InstallationRequests = () => {
                           </button>
                           <button
                             onClick={() => handleDeleteTicket(row.id)}
-                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-900/60 border border-slate-800 hover:border-rose-500/40 text-slate-500 hover:text-rose-400 transition-colors"
+                            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 transition-colors"
                             title="Delete Installation Request"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
