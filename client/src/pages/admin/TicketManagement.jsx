@@ -191,7 +191,7 @@ const TicketManagement = () => {
         }
       }
     } catch (err) {
-      toast.error('Failed to assign technician');
+      toast.error(err.message || 'Failed to assign technician');
     }
   };
 
@@ -547,9 +547,14 @@ const TicketManagement = () => {
                             className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[130px]"
                           >
                             <option value="">Select Tech...</option>
-                            {technicians.map((t) => (
-                              <option key={t.id} value={t.id}>{t.full_name}</option>
-                            ))}
+                            {technicians.map((t) => {
+                              const isBusy = parseInt(t.active_tickets || 0) > 0;
+                              return (
+                                <option key={t.id} value={t.id} disabled={isBusy}>
+                                  {t.full_name}{isBusy ? ' (Busy)' : ''}
+                                </option>
+                              );
+                            })}
                           </select>
                         )}
                       </td>

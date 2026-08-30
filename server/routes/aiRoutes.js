@@ -136,17 +136,32 @@ router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async
         const techName = match[1].trim();
         const techResult = await query(`SELECT id FROM users WHERE full_name = $1 AND role = 'technician'`, [techName]);
         if (techResult.rows[0]) {
-          await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [techResult.rows[0].id, ticket.id]);
+          const techId = techResult.rows[0].id;
+          // Check if the suggested technician is busy with an unresolved ticket
+          const activeCheck = await query(
+            `SELECT ticket_number FROM tickets 
+             WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed') AND id != $2`,
+            [techId, ticket.id]
+          );
+          if (activeCheck.rows.length > 0) {
+            return next({ statusCode: 400, message: `This technician is currently assigned to unresolved ticket ${activeCheck.rows[0].ticket_number} and cannot receive new assignments.` });
+          }
+          await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [techId, ticket.id]);
         } else {
-          // Fallback to lowest workload active tech
+          // Fallback to lowest workload active tech who is not currently busy with another unresolved ticket
           const lowestTechResult = await query(`
             SELECT u.id FROM users u 
             WHERE u.role = 'technician' AND u.status = 'active'
-            ORDER BY (SELECT COUNT(*) FROM tickets t2 WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled')) ASC
+            AND NOT EXISTS (
+              SELECT 1 FROM tickets t2 
+              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed') AND t2.id != $1
+            )
             LIMIT 1
-          `);
+          `, [ticket.id]);
           if (lowestTechResult.rows[0]) {
             await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [lowestTechResult.rows[0].id, ticket.id]);
+          } else {
+            return next({ statusCode: 400, message: 'All technicians are currently busy with unresolved tickets. Cannot assign.' });
           }
         }
       }
