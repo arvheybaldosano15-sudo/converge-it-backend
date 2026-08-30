@@ -725,6 +725,11 @@ const AssignedTickets = () => {
         onClose={() => setIsUpdateModalOpen(false)}
         ticket={updateTicket}
         onSuccess={handleSuccess}
+        onOpenFileServiceReport={(t) => {
+          setIsUpdateModalOpen(false);
+          setReportTicket(t);
+          setIsReportModalOpen(true);
+        }}
       />
 
       <FileServiceReportModal
