@@ -102,6 +102,20 @@ exports.getTicketById = async (req, res, next) => {
 exports.createTicket = async (req, res, next) => {
   try {
     const { customerId, categoryId, assignedTo, priority, subject, description, aiPriority, aiEtaHours } = req.body;
+    
+    // Check if the assigned technician has unresolved tickets
+    if (assignedTo) {
+      const unresolvedCheck = await query(
+        `SELECT COUNT(*) FROM tickets 
+         WHERE assigned_technician_id = $1 
+           AND status NOT IN ('resolved', 'closed', 'cancelled')`,
+        [assignedTo]
+      );
+      if (parseInt(unresolvedCheck.rows[0].count) > 0) {
+        throw createError('This technician has unresolved tickets and cannot be assigned new work.', 400);
+      }
+    }
+
     const ticketNumber = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const priorityVal = (priority || 'medium').toLowerCase();
     const result = await query(
@@ -138,6 +152,21 @@ exports.updateTicket = async (req, res, next) => {
         throw createError('Resolved tickets cannot revert to pending or in progress', 400);
       }
     }
+
+    // Check if the assigned technician has unresolved tickets (excluding the current ticket itself)
+    if (assignedTo && assignedTo !== old.assigned_technician_id) {
+      const unresolvedCheck = await client.query(
+        `SELECT COUNT(*) FROM tickets 
+         WHERE assigned_technician_id = $1 
+           AND status NOT IN ('resolved', 'closed', 'cancelled')
+           AND id != $2`,
+        [assignedTo, id]
+      );
+      if (parseInt(unresolvedCheck.rows[0].count) > 0) {
+        throw createError('This technician has unresolved tickets and cannot be assigned new work.', 400);
+      }
+    }
+
     const updates = []; const values = []; let i = 1;
     if (status) { updates.push(`status = $${i++}`); values.push(status); }
     if (priority && req.user.role === 'admin') { updates.push(`priority = $${i++}`); values.push(priority); }
