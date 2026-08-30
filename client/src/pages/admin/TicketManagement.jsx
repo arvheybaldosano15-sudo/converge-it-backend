@@ -9,6 +9,7 @@ import Modal from '../../components/common/Modal';
 import Pagination from '../../components/common/Pagination';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import Loader from '../../components/common/Loader';
+import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
 import {
   Ticket, Filter, UserCheck, Clock, CheckCircle, AlertTriangle,
   Eye, Trash2, Edit3, MessageSquare, FileText, Camera,
@@ -536,26 +537,15 @@ const TicketManagement = () => {
                       {/* Assignee */}
                       <td className="p-2.5 sm:p-3" onClick={(e) => e.stopPropagation()}>
                         {row.assignee_name ? (
-                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[130px]">
+                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[140px]">
                             <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
                             <span className="truncate font-semibold text-[11px]">{row.assignee_name}</span>
                           </div>
                         ) : (
-                          <select
-                            value={row.assigned_to || ''}
-                            onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
-                            className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[130px]"
-                          >
-                            <option value="">Select Tech...</option>
-                            {technicians.map((t) => {
-                              const isBusy = parseInt(t.active_tickets || 0) > 0;
-                              return (
-                                <option key={t.id} value={t.id} disabled={isBusy}>
-                                  {t.full_name}{isBusy ? ' (Busy)' : ''}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          <TechnicianAssignDropdown
+                            technicians={technicians}
+                            onAssign={(techId) => handleAssignTechnician(row.id, techId)}
+                          />
                         )}
                       </td>
 

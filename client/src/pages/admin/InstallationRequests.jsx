@@ -5,6 +5,7 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
+import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
 import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
 import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -262,26 +263,15 @@ const InstallationRequests = () => {
                       {/* Assigned Tech */}
                       <td className="p-2.5 sm:p-3 align-middle" onClick={(e) => e.stopPropagation()}>
                         {row.assigned_to ? (
-                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[130px]">
+                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[140px]">
                             <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
                             <span className="truncate font-semibold text-[11px]">{row.assignee_name || 'Assigned'}</span>
                           </div>
                         ) : (
-                          <select
-                            value=""
-                            onChange={(e) => handleAssignTechnician(row.id, e.target.value)}
-                            className="glass-input text-[11px] rounded-lg py-1 px-2 border-slate-700 bg-slate-900 text-purple-400 font-semibold max-w-[130px]"
-                          >
-                            <option value="">Select Tech...</option>
-                            {technicians.map((tech) => {
-                              const isBusy = parseInt(tech.active_tickets || 0) > 0;
-                              return (
-                                <option key={tech.id} value={tech.id} disabled={isBusy}>
-                                  {tech.full_name}{isBusy ? ' (Busy)' : ''}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          <TechnicianAssignDropdown
+                            technicians={technicians}
+                            onAssign={(techId) => handleAssignTechnician(row.id, techId)}
+                          />
                         )}
                       </td>
 
