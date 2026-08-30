@@ -82,45 +82,45 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         <p className="text-xs text-blue-400 mt-1">Enter your 6-digit Security PIN to access dashboard</p>
       </div>
 
-      {/* Hidden input for native mobile numpad support */}
-      <input
-        id="native-pin-input"
-        type="password"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={6}
-        value={pin}
-        onChange={(e) => {
-          const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-          setPin(val);
-          setErrorMessage('');
-          if (val.length === 6) {
-            handleSubmit(null, val);
-          }
-        }}
-        className="sr-only opacity-0 w-0 h-0 pointer-events-none"
-        disabled={isLoading}
-      />
-
-      {/* PIN Dots Display — Tapping focuses native keyboard on mobile */}
-      <div
-        onClick={() => document.getElementById('native-pin-input')?.focus()}
-        className="flex justify-center items-center gap-3 sm:gap-3.5 my-5 sm:my-6 cursor-pointer py-1"
-        title="Tap to type on keyboard"
-      >
-        {[0, 1, 2, 3, 4, 5].map((index) => {
-          const filled = index < pin.length;
-          return (
-            <div
-              key={index}
-              className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full transition-all duration-200 border ${
-                filled
-                  ? 'bg-gradient-to-tr from-blue-600 to-cyan-400 border-blue-300 shadow-lg shadow-blue-500/60 scale-115 animate-pulse'
-                  : 'bg-slate-800/80 border-slate-700/80 scale-100'
-              }`}
-            />
-          );
-        })}
+      {/* Native PIN input overlayed transparently on top of the visual dots display */}
+      <div className="relative my-5 sm:my-6 py-2">
+        <input
+          id="native-pin-input"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
+          value={pin}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+            setPin(val);
+            setErrorMessage('');
+            if (val.length === 6) {
+              handleSubmit(null, val);
+            }
+          }}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20 text-base"
+          disabled={isLoading}
+          autoComplete="one-time-code"
+          autoFocus={!isModal}
+        />
+        
+        {/* Visual PIN Dots Display */}
+        <div className="flex justify-center items-center gap-3 sm:gap-3.5 relative z-10 pointer-events-none">
+          {[0, 1, 2, 3, 4, 5].map((index) => {
+            const filled = index < pin.length;
+            return (
+              <div
+                key={index}
+                className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full transition-all duration-200 border ${
+                  filled
+                    ? 'bg-gradient-to-tr from-blue-600 to-cyan-400 border-blue-300 shadow-lg shadow-blue-500/60 scale-115'
+                    : 'bg-slate-800/80 border-slate-700/80 scale-100'
+                }`}
+              />
+            );
+          })}
+        </div>
       </div>
 
       {/* Error display */}
