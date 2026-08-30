@@ -80,7 +80,11 @@ api.interceptors.response.use(
         }
       }
     }
-    return Promise.reject(error.response?.data || error);
+    return Promise.reject({
+      ...(typeof error.response?.data === 'object' ? error.response.data : { message: error.message }),
+      status: error.response?.status,
+      statusCode: error.response?.status,
+    });
   }
 );
 

@@ -29,13 +29,24 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data);
         }
       } catch (err) {
-        // Only clear session on confirmed 401 (invalid/expired token)
-        if (err?.status === 401 || err?.statusCode === 401) {
+        const httpStatus = err?.status || err?.statusCode;
+        const msg = (err?.message || '').toLowerCase();
+        const isAuthError =
+          httpStatus === 401 ||
+          msg.includes('token') ||
+          msg.includes('unauthorized') ||
+          msg.includes('expired') ||
+          msg.includes('no token') ||
+          msg.includes('invalid');
+
+        if (isAuthError) {
           queryClient.clear();
           clearAuthSession();
           setUser(null);
+        } else {
+          // Keep session — server may be temporarily unavailable (e.g. 5xx / network error)
+          console.warn('Auth check failed (keeping session):', err?.message || err);
         }
-        console.warn('Auth check failed (keeping session):', err?.message || err);
       } finally {
         setLoading(false);
       }
