@@ -77,7 +77,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         minWidth: '180px',
         width: `${Math.max(180, coords.width)}px`,
       }}
-      className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100"
+      className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/80 overflow-hidden"
     >
       {technicians.length === 0 ? (
         <p className="text-slate-500 text-[11px] px-3 py-2.5 text-center">No active technicians</p>
