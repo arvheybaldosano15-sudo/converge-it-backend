@@ -115,7 +115,7 @@ const TechnicianProfile = () => {
       formData.append('specialization', specialization);
       formData.append('department', department);
       if (profileImage) {
-        formData.append('profileImage', profileImage);
+        formData.append('profile_image', profileImage);
       }
 
       const res = await api.put('/auth/profile', formData, {
