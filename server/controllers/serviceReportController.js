@@ -54,9 +54,6 @@ exports.createServiceReport = async (req, res, next) => {
       [resolvedTicketId, req.user.id, title, workPerformed, materialsUsed, completionNotes, gpsLatitude || null, gpsLongitude || null, gpsAddress, imagesUrls, customerNameSigned, workStartTime || null, workEndTime || null, isComplete || false]
     );
 
-    if (isComplete) {
-      await query(`UPDATE tickets SET status = 'resolved' WHERE id = $1 AND status NOT IN ('resolved','closed')`, [resolvedTicketId]);
-    }
     res.status(201).json({ success: true, data: result.rows[0], message: 'Service report created' });
   } catch (error) { next(error); }
 };

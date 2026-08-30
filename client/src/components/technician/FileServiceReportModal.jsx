@@ -55,7 +55,7 @@ const FileServiceReportModal = ({ isOpen, onClose, ticket, onSuccess }) => {
   const [materialsUsed, setMaterialsUsed] = useState('');
   const [completionNotes, setCompletionNotes] = useState('');
   const [customerNameSigned, setCustomerNameSigned] = useState('');
-  const [isComplete, setIsComplete] = useState(true);
+  const [isComplete, setIsComplete] = useState(false);
 
   // Camera state
   const [cameraOpen, setCameraOpen] = useState(false);
