@@ -48,16 +48,26 @@ export const setAuthSession = (userData, accessToken, refreshToken) => {
   const isTech = userData.role === 'technician';
   const prefix = isTech ? 'tech_' : 'admin_';
 
-  if (accessToken) {
-    localStorage.setItem(`${prefix}token`, accessToken);
-    localStorage.setItem('token', accessToken);
+  // Sanitize userData to exclude potentially massive base64 profile image URIs from localStorage.
+  // The full image string will still remain in the in-memory React user state.
+  const sanitizedUser = { ...userData };
+  delete sanitizedUser.profileImageUrl;
+  delete sanitizedUser.profile_image_url;
+
+  try {
+    if (accessToken) {
+      localStorage.setItem(`${prefix}token`, accessToken);
+      localStorage.setItem('token', accessToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem(`${prefix}refreshToken`, refreshToken);
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    localStorage.setItem(`${prefix}user`, JSON.stringify(sanitizedUser));
+    localStorage.setItem('user', JSON.stringify(sanitizedUser));
+  } catch (error) {
+    console.error('Failed to write authentication session to localStorage:', error);
   }
-  if (refreshToken) {
-    localStorage.setItem(`${prefix}refreshToken`, refreshToken);
-    localStorage.setItem('refreshToken', refreshToken);
-  }
-  localStorage.setItem(`${prefix}user`, JSON.stringify(userData));
-  localStorage.setItem('user', JSON.stringify(userData));
 };
 
 export const clearAuthSession = (roleHint) => {
