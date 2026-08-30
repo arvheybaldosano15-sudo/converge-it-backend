@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServiceReport }) => {
   const [status, setStatus] = useState('in_progress');
   const [note, setNote] = useState('');
-  const [resolutionSummary, setResolutionSummary] = useState('');
   const [updating, setUpdating] = useState(false);
   const [fullTicket, setFullTicket] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -29,12 +28,10 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
         if (res.success) {
           setFullTicket(res.data);
           setStatus(res.data.status || 'in_progress');
-          setResolutionSummary(res.data.resolution_summary || '');
         }
       } catch (err) {
         // Fallback to the ticket prop if fetch fails
         setStatus(ticket.status || 'in_progress');
-        setResolutionSummary(ticket.resolution_summary || '');
       } finally {
         setLoadingDetails(false);
       }
@@ -89,7 +86,6 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
       const res = await api.put(`/tickets/${ticket.id}`, {
         status,
         note,
-        resolutionSummary,
       });
       if (res.success) {
         toast.success('Ticket updated successfully!');
@@ -224,20 +220,6 @@ const UpdateTicketModal = ({ isOpen, onClose, ticket, onSuccess, onOpenFileServi
                   className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
                 />
               </div>
-
-              {status === 'resolved' && (
-                <div className="flex flex-col space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">Final Resolution Summary</label>
-                  <textarea
-                    rows={3}
-                    value={resolutionSummary}
-                    onChange={(e) => setResolutionSummary(e.target.value)}
-                    placeholder="Explain what was done to fix the concern..."
-                    className="glass-input w-full rounded-xl p-3 text-sm bg-slate-900 text-white"
-                    required
-                  />
-                </div>
-              )}
 
               <Button
                 type="submit"
