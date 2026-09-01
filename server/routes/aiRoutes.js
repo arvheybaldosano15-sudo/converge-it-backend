@@ -115,7 +115,7 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
   } catch (error) { next(error); }
 });
 
-router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async (req, res, next) => {
+const applyRecommendationHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     const recResult = await query(`SELECT * FROM ai_recommendations WHERE id = $1`, [id]);
@@ -130,14 +130,12 @@ router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async
 
     if (rec.type === 'reassignment') {
       // Parse the technician name from the suggestion text
-      // Suggestion: "Assign ticket CIT-YYYY-NNNN to [Tech Name]"
       const match = rec.suggestion.match(/to\s+(.+)$/i);
       if (match && match[1]) {
         const techName = match[1].trim();
         const techResult = await query(`SELECT id FROM users WHERE full_name = $1 AND role = 'technician'`, [techName]);
         if (techResult.rows[0]) {
           const techId = techResult.rows[0].id;
-          // Check if the suggested technician is busy with an unresolved ticket
           const activeCheck = await query(
             `SELECT ticket_number FROM tickets 
              WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed') AND id != $2`,
@@ -148,7 +146,6 @@ router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async
           }
           await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [techId, ticket.id]);
         } else {
-          // Fallback to lowest workload active tech who is not currently busy with another unresolved ticket
           const lowestTechResult = await query(`
             SELECT u.id FROM users u 
             WHERE u.role = 'technician' AND u.status = 'active'
@@ -166,7 +163,6 @@ router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async
         }
       }
     } else if (rec.type === 'priority_change') {
-      // Suggestion: "Upgrade priority of CIT-YYYY-NNNN to [medium/high]"
       const match = rec.suggestion.match(/to\s+(medium|high|critical)$/i);
       if (match && match[1]) {
         const newPriority = match[1].toLowerCase();
@@ -185,6 +181,9 @@ router.put('/recommendations/:id/apply', authenticate, authorize('admin'), async
 
     res.json({ success: true, message: 'Recommendation applied successfully' });
   } catch (error) { next(error); }
-});
+};
+
+router.post('/recommendations/:id/apply', authenticate, authorize('admin'), applyRecommendationHandler);
+router.put('/recommendations/:id/apply', authenticate, authorize('admin'), applyRecommendationHandler);
 
 module.exports = router;
