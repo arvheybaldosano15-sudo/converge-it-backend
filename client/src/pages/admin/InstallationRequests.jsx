@@ -17,7 +17,8 @@ const InstallationRequests = () => {
 
   const [tickets, setTickets] = useState([]);
   const [technicians, setTechnicians] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const hasLoaded = React.useRef(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
@@ -68,7 +69,8 @@ const InstallationRequests = () => {
   }, [socket, selectedTicket]);
 
   const fetchInitialData = async () => {
-    setLoading(true);
+    // Only show spinner on the very first load
+    if (!hasLoaded.current) setLoading(true);
     try {
       // Load active technicians
       const techRes = await api.get('/technicians?status=active&limit=100').catch(() => null);
@@ -87,9 +89,10 @@ const InstallationRequests = () => {
           }
         }
       }
+      hasLoaded.current = true;
     } catch (err) {
       console.error('Error fetching installation requests:', err);
-      toast.error('Failed to load installation requests');
+      if (!hasLoaded.current) toast.error('Failed to load installation requests');
     } finally {
       setLoading(false);
     }
