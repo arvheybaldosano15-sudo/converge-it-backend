@@ -7,7 +7,16 @@ const aiService = require('../services/aiService');
 
 router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, async (req, res, next) => {
   try {
-    // 1. Fetch active tickets
+    // 1. Auto-escalate tickets unresolved for > 48 hours directly to HIGH priority
+    await query(`
+      UPDATE tickets 
+      SET priority = 'high', updated_at = NOW() 
+      WHERE status NOT IN ('resolved', 'closed', 'cancelled') 
+        AND created_at <= NOW() - INTERVAL '48 hours'
+        AND priority IN ('low', 'medium')
+    `).catch(() => {});
+
+    // 2. Fetch active unresolved tickets
     const ticketsRes = await query(`
       SELECT t.id, t.ticket_number, t.subject, t.priority, t.status, t.created_at, 
              t.assigned_technician_id, t.service_category_id, cat.name AS category_name
@@ -17,7 +26,7 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       ORDER BY t.created_at ASC
     `);
 
-    // 2. Fetch active technicians with workload
+    // 3. Fetch active technicians with workload
     const techsRes = await query(`
       SELECT u.id, u.full_name, u.specialization,
              (SELECT COUNT(*) FROM tickets t2 WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled')) AS workload
@@ -26,24 +35,21 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       ORDER BY workload ASC
     `);
 
-    // Auto-escalate tickets unresolved for > 48 hours directly to HIGH priority
+    const activeTickets = ticketsRes.rows;
+    const technicians = techsRes.rows;
+
+    // Delete existing unapplied recommendations or recommendations for resolved/closed tickets
     await query(`
-      UPDATE tickets 
-      SET priority = 'high', updated_at = NOW() 
-      WHERE status NOT IN ('resolved', 'closed', 'cancelled') 
-        AND created_at <= NOW() - INTERVAL '48 hours'
-        AND priority IN ('low', 'medium')
-    `).catch(() => {});
+      DELETE FROM ai_recommendations 
+      WHERE is_applied = FALSE 
+         OR ticket_id IN (SELECT id FROM tickets WHERE status IN ('resolved', 'closed', 'cancelled'))
+    `);
 
-    // Delete existing unapplied recommendations to avoid duplication
-    await query(`DELETE FROM ai_recommendations WHERE is_applied = FALSE`);
-
-    // Generate new recommendations
+    // Generate new recommendations for active unresolved tickets
     for (const ticket of activeTickets) {
       // Rule 1: Ticket is Unassigned -> Suggest assignment
       if (!ticket.assigned_technician_id && technicians.length > 0) {
-        // Find best matching tech or lowest workload tech
-        let selectedTech = technicians[0]; // fallback to lowest workload
+        let selectedTech = technicians[0];
         const matchingTech = technicians.find(t => 
           t.specialization && 
           ticket.category_name && 
@@ -108,12 +114,13 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       }
     }
 
-    // Return the generated recommendations joined with ticket details
+    // Return recommendations strictly for unresolved tickets
     const finalRecs = await query(`
       SELECT r.*, t.ticket_number 
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
       WHERE r.is_applied = FALSE
+        AND t.status NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY r.confidence DESC, r.created_at DESC
     `);
 
