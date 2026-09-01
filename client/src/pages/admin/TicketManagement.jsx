@@ -63,8 +63,8 @@ const TicketManagement = () => {
 
   const activeSearch = localSearch || globalSearch || '';
 
-  const fetchTickets = async () => {
-    setLoading(true);
+  const fetchTickets = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         page,
@@ -94,9 +94,9 @@ const TicketManagement = () => {
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
-      toast.error('Failed to load support tickets');
+      if (!silent) toast.error('Failed to load support tickets');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -135,7 +135,7 @@ const TicketManagement = () => {
   // Fast 5-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchTickets();
+      fetchTickets(true);
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
@@ -148,7 +148,7 @@ const TicketManagement = () => {
     if (!socket || typeof socket.on !== 'function') return;
 
     const handleUpdate = () => {
-      fetchTickets();
+      fetchTickets(true);
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
