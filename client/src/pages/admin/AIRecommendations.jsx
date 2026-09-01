@@ -225,7 +225,11 @@ const AIRecommendations = () => {
 
                       {/* Right: Action */}
                       <div className="shrink-0 sm:pt-1">
-                        {rec.is_applied ? (
+                        {rec.type === 'priority_change' ? (
+                          <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
+                            <Zap className="w-3.5 h-3.5" /> Auto-Applied
+                          </span>
+                        ) : rec.is_applied ? (
                           <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
                             <CheckCircle2 className="w-3.5 h-3.5" /> Applied
                           </span>
