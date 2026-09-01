@@ -31,7 +31,8 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const hasLoaded = React.useRef(false);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -64,7 +65,8 @@ const TicketManagement = () => {
   const activeSearch = localSearch || globalSearch || '';
 
   const fetchTickets = async (silent = false) => {
-    if (!silent) setLoading(true);
+    // Only show spinner on first-ever load OR explicit user actions (filter/page change)
+    if (!silent && !hasLoaded.current) setLoading(true);
     try {
       const params = {
         page,
@@ -92,11 +94,12 @@ const TicketManagement = () => {
       if (statsRes.success) {
         setTicketStats(statsRes.data || {});
       }
+      hasLoaded.current = true;
     } catch (err) {
       console.error('Error loading tickets:', err);
       if (!silent) toast.error('Failed to load support tickets');
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -129,7 +132,8 @@ const TicketManagement = () => {
   }, []);
 
   useEffect(() => {
-    fetchTickets();
+    // Use silent if already loaded (filter change), show spinner only on first mount
+    fetchTickets(!hasLoaded.current ? false : true);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
   // Fast 5-second background auto-sync polling
