@@ -132,6 +132,17 @@ const TicketManagement = () => {
     fetchTickets();
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
+  // Fast 5-second background auto-sync polling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTickets();
+      if (selectedTicket) {
+        refreshTicketDetail(selectedTicket.id);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder, selectedTicket]);
+
   // Real-time socket event listener
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;

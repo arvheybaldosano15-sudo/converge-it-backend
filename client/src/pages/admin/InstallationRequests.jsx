@@ -6,11 +6,15 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
 import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
+import { useSocket } from '../../context/SocketContext';
 import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
 import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const InstallationRequests = () => {
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+
   const [tickets, setTickets] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +29,43 @@ const InstallationRequests = () => {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Background auto-sync polling every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchInstallationRequestsOnly();
+      if (selectedTicket) {
+        refreshTicketDetail(selectedTicket.id);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedTicket]);
+
+  // Real-time socket event listener
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleUpdate = () => {
+      fetchInstallationRequestsOnly();
+      if (selectedTicket) {
+        refreshTicketDetail(selectedTicket.id);
+      }
+    };
+
+    socket.on('ticket:created', handleUpdate);
+    socket.on('ticket_created', handleUpdate);
+    socket.on('ticket:updated', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
+
+    return () => {
+      if (typeof socket.off === 'function') {
+        socket.off('ticket:created', handleUpdate);
+        socket.off('ticket_created', handleUpdate);
+        socket.off('ticket:updated', handleUpdate);
+        socket.off('ticket_updated', handleUpdate);
+      }
+    };
+  }, [socket, selectedTicket]);
 
   const fetchInitialData = async () => {
     setLoading(true);
