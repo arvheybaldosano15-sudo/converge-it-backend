@@ -6,6 +6,15 @@ const { createNotification } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
   try {
+    // Auto-escalate tickets unresolved for > 48 hours directly to HIGH priority
+    await query(`
+      UPDATE tickets 
+      SET priority = 'high', updated_at = NOW() 
+      WHERE status NOT IN ('resolved', 'closed', 'cancelled') 
+        AND created_at <= NOW() - INTERVAL '48 hours'
+        AND priority IN ('low', 'medium')
+    `).catch(e => console.warn('Auto-escalation update notice:', e.message));
+
     const { page = 1, limit = 10, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;

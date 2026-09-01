@@ -26,8 +26,14 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       ORDER BY workload ASC
     `);
 
-    const activeTickets = ticketsRes.rows;
-    const technicians = techsRes.rows;
+    // Auto-escalate tickets unresolved for > 48 hours directly to HIGH priority
+    await query(`
+      UPDATE tickets 
+      SET priority = 'high', updated_at = NOW() 
+      WHERE status NOT IN ('resolved', 'closed', 'cancelled') 
+        AND created_at <= NOW() - INTERVAL '48 hours'
+        AND priority IN ('low', 'medium')
+    `).catch(() => {});
 
     // Delete existing unapplied recommendations to avoid duplication
     await query(`DELETE FROM ai_recommendations WHERE is_applied = FALSE`);
