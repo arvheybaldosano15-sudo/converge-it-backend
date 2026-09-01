@@ -42,7 +42,6 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
     { label: 'Customers',          icon: Users,           path: '/admin/customers' },
     { label: 'Technicians',        icon: Wrench,          path: '/admin/technicians' },
     { label: 'Approvals',          icon: UserCheck,       path: '/admin/approvals' },
-    { label: 'Knowledge Base',     icon: BookOpen,        path: '/admin/knowledge-base' },
     { label: 'Reports & Analytics',icon: BarChart3,       path: '/admin/reports' },
     { label: 'AI Recommendations', icon: Sparkles,        path: '/admin/ai' },
     { label: 'Audit Logs',         icon: ShieldCheck,     path: '/admin/audit-logs' },
