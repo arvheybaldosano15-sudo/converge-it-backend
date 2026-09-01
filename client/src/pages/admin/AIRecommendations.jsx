@@ -221,11 +221,6 @@ const AIRecommendations = () => {
 
                         <h4 className="text-sm font-bold text-white leading-snug">{rec.suggestion}</h4>
                         <p className="text-xs text-slate-400 leading-relaxed">{rec.reasoning}</p>
-
-                        <div>
-                          <p className="text-[9px] text-slate-500 uppercase tracking-wider mb-0.5">Confidence</p>
-                          <ConfidenceBar confidence={rec.confidence} />
-                        </div>
                       </div>
 
                       {/* Right: Action */}
