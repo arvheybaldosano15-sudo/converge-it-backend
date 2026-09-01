@@ -413,47 +413,6 @@ const TicketManagement = () => {
             <option value="breached">SLA Breached</option>
           </select>
         </div>
-
-        {/* Sort Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-          <div className="flex items-center space-x-2">
-            <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Sort By:</span>
-            <button
-              onClick={() => setSortBy('created_at')}
-              className={`px-2 py-1 rounded-lg transition-colors ${sortBy === 'created_at' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'hover:text-white'}`}
-            >
-              Newest
-            </button>
-            <button
-              onClick={() => setSortBy('priority')}
-              className={`px-2 py-1 rounded-lg transition-colors ${sortBy === 'priority' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'hover:text-white'}`}
-            >
-              Priority
-            </button>
-            <button
-              onClick={() => setSortBy('sla_deadline')}
-              className={`px-2 py-1 rounded-lg transition-colors ${sortBy === 'sla_deadline' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'hover:text-white'}`}
-            >
-              SLA Target
-            </button>
-            <button
-              onClick={() => setSortBy('updated_at')}
-              className={`px-2 py-1 rounded-lg transition-colors ${sortBy === 'updated_at' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'hover:text-white'}`}
-            >
-              Recently Updated
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC')}
-              className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-1"
-            >
-              Order: <span className="font-bold text-cyan-400">{sortOrder}</span>
-            </button>
-          </div>
-        </div>
       </Card>
 
       {/* Main Ticket Table */}
