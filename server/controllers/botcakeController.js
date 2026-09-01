@@ -445,7 +445,8 @@ exports.createTicket = async (req, res) => {
     const addressMatch = concernText.match(/(?:Address|Complete Address):\s*([^\n]+)/i);
     const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
 
-    // Installation specific fields
+    // Service & Installation specific fields
+    const serviceTypeMatch = concernText.match(/(?:Service Type|Service|Type of Service):\s*([^\n]+)/i);
     const installTypeMatch = concernText.match(/Type\s*of\s*Installation:\s*([^\n]+)/i);
     const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
     const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || installTypeMatch;
@@ -521,7 +522,25 @@ exports.createTicket = async (req, res) => {
     let categoryId = null;
     let categoryName = 'General Support';
     
-    if (isInstallationRequest) {
+    // 1. Check if user specified a Service Type in their message (e.g. "Service Type: CCTV")
+    if (serviceTypeMatch) {
+      const userTypeStr = serviceTypeMatch[1].trim();
+      const catRes = await query(
+        `SELECT id, name FROM service_categories 
+         WHERE LOWER(name) ILIKE '%' || LOWER($1) || '%' 
+            OR LOWER($1) ILIKE '%' || LOWER(name) || '%' 
+         LIMIT 1`,
+        [userTypeStr]
+      );
+      if (catRes.rows.length > 0) {
+        categoryId = catRes.rows[0].id;
+        categoryName = catRes.rows[0].name;
+        logger.info(`✅ Matched Service Type "${userTypeStr}" to category "${categoryName}"`);
+      }
+    }
+
+    // 2. If installation request, default to Installation Request category
+    if (!categoryId && isInstallationRequest) {
       const catRes = await query(`SELECT id, name FROM service_categories WHERE name ILIKE '%Installation Request%' LIMIT 1`);
       if (catRes.rows.length > 0) {
         categoryId = catRes.rows[0].id;
