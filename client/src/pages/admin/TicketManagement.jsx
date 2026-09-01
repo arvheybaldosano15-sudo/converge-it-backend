@@ -362,6 +362,7 @@ const TicketManagement = () => {
           </div>
 
           {/* Status Filter */}
+          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -370,10 +371,8 @@ const TicketManagement = () => {
             <option value="">All Statuses</option>
             <option value="open">Pending</option>
             <option value="in_progress">In Progress</option>
-            <option value="on_hold">On Hold</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
-            <option value="cancelled">Cancelled</option>
           </select>
 
           {/* Priority Filter */}
@@ -383,7 +382,6 @@ const TicketManagement = () => {
             className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
           >
             <option value="">All Priorities</option>
-            <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
@@ -396,7 +394,7 @@ const TicketManagement = () => {
             className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
           >
             <option value="">All Categories</option>
-            {categories.map((c) => (
+            {categories.filter(c => !c.name.toLowerCase().includes('installation request')).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
