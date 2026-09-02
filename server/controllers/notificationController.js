@@ -1,11 +1,15 @@
 const { query } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
 
+// Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
+
 exports.getNotifications = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, unreadOnly } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    const conditions = [`user_id = $1`]; const params = [req.user.id]; let idx = 2;
+    const conditions = [`user_id = $1`];
+    const params = [req.user.id];
+    let idx = 2;
     if (unreadOnly === 'true') { conditions.push(`is_read = FALSE`); }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const [data, count] = await Promise.all([
@@ -25,7 +29,10 @@ exports.getUnreadCount = async (req, res, next) => {
 
 exports.markAsRead = async (req, res, next) => {
   try {
-    const result = await query('UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING *', [req.params.id, req.user.id]);
+    const result = await query(
+      'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.id]
+    );
     if (!result.rows[0]) throw createError('Notification not found', 404);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) { next(error); }
@@ -33,7 +40,10 @@ exports.markAsRead = async (req, res, next) => {
 
 exports.markAllAsRead = async (req, res, next) => {
   try {
-    await query('UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = $1 AND is_read = FALSE', [req.user.id]);
+    await query(
+      'UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE',
+      [req.user.id]
+    );
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) { next(error); }
 };
