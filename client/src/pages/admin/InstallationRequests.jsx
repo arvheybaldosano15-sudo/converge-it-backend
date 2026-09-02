@@ -7,18 +7,49 @@ import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
 import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
 import { useSocket } from '../../context/SocketContext';
+import { useTechnicians } from '../../hooks/useTechnicians';
+import {
+  useInstallationRequests,
+  useAssignTechnician,
+  useUpdateInstallationStatus,
+  useDeleteInstallationRequest,
+} from '../../hooks/useInstallationRequests';
 import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
-import { ClipboardList, Eye, Wrench, UserCheck, CheckCircle, Clock, MapPin, Phone, User, X, RefreshCw, MessageSquare, FileText, Camera, Maximize2, ExternalLink, Trash2 } from 'lucide-react';
+import {
+  ClipboardList,
+  Eye,
+  Wrench,
+  UserCheck,
+  CheckCircle,
+  Clock,
+  MapPin,
+  Phone,
+  User,
+  X,
+  RefreshCw,
+  MessageSquare,
+  FileText,
+  Camera,
+  Maximize2,
+  ExternalLink,
+  Trash2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const InstallationRequests = () => {
   const socketContext = useSocket();
   const socket = socketContext?.socket;
+  const queryClient = useQueryClient();
 
-  const [tickets, setTickets] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const hasLoaded = React.useRef(false);
+  // Instant Zero-Loading Caching Hooks
+  const { data: tickets = [], isLoading: ticketsLoading, isFetching, refetch } = useInstallationRequests();
+  const { data: technicians = [] } = useTechnicians({ status: 'active', limit: 100 });
+
+  const assignTechnicianMutation = useAssignTechnician();
+  const updateStatusMutation = useUpdateInstallationStatus();
+  const deleteRequestMutation = useDeleteInstallationRequest();
+
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
@@ -27,27 +58,24 @@ const InstallationRequests = () => {
   const [noteText, setNoteText] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  // Background auto-sync polling every 5 seconds
+  // Background auto-sync polling every 8 seconds (soft background refetch)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchInstallationRequestsOnly();
+      refetch();
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 5000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [selectedTicket]);
+  }, [selectedTicket, refetch]);
 
-  // Real-time socket event listener
+  // Real-time socket event listener to update cache instantly
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
     const handleUpdate = () => {
-      fetchInstallationRequestsOnly();
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
@@ -66,54 +94,7 @@ const InstallationRequests = () => {
         socket.off('ticket_updated', handleUpdate);
       }
     };
-  }, [socket, selectedTicket]);
-
-  const fetchInitialData = async () => {
-    // Only show spinner on the very first load
-    if (!hasLoaded.current) setLoading(true);
-    try {
-      // Load active technicians
-      const techRes = await api.get('/technicians?status=active&limit=100').catch(() => null);
-      if (techRes && techRes.success) {
-        setTechnicians(techRes.data || []);
-      }
-
-      // Fetch category ID for Installation Request
-      const catRes = await api.get('/categories');
-      if (catRes.success) {
-        const installCat = catRes.data.find(c => c.name.toLowerCase().includes('installation request'));
-        if (installCat) {
-          const ticketsRes = await api.get('/tickets', { params: { category: installCat.id, limit: 100 } });
-          if (ticketsRes.success) {
-            setTickets(ticketsRes.data || []);
-          }
-        }
-      }
-      hasLoaded.current = true;
-    } catch (err) {
-      console.error('Error fetching installation requests:', err);
-      if (!hasLoaded.current) toast.error('Failed to load installation requests');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchInstallationRequestsOnly = async () => {
-    try {
-      const catRes = await api.get('/categories');
-      if (catRes.success) {
-        const installCat = catRes.data.find(c => c.name.toLowerCase().includes('installation request'));
-        if (installCat) {
-          const ticketsRes = await api.get('/tickets', { params: { category: installCat.id, limit: 100 } });
-          if (ticketsRes.success) {
-            setTickets(ticketsRes.data || []);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error refreshing installation requests:', err);
-    }
-  };
+  }, [socket, selectedTicket, refetch, queryClient]);
 
   const refreshTicketDetail = async (ticketId) => {
     try {
@@ -126,34 +107,30 @@ const InstallationRequests = () => {
     }
   };
 
-  const handleAssignTechnician = async (ticketId, technicianId) => {
-    try {
-      const res = await api.put(`/tickets/${ticketId}`, { assignedTo: technicianId || null });
-      if (res.success) {
-        toast.success('Technician assigned successfully');
-        fetchInstallationRequestsOnly();
-        if (selectedTicket && selectedTicket.id === ticketId) {
-          refreshTicketDetail(ticketId);
-        }
+  const handleAssignTechnician = (ticketId, technicianId) => {
+    assignTechnicianMutation.mutate(
+      { ticketId, technicianId },
+      {
+        onSuccess: () => {
+          if (selectedTicket && selectedTicket.id === ticketId) {
+            refreshTicketDetail(ticketId);
+          }
+        },
       }
-    } catch (err) {
-      toast.error(err.message || 'Failed to assign technician');
-    }
+    );
   };
 
-  const handleStatusChange = async (ticketId, newStatus) => {
-    try {
-      const res = await api.put(`/tickets/${ticketId}`, { status: newStatus });
-      if (res.success) {
-        toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
-        fetchInstallationRequestsOnly();
-        if (selectedTicket && selectedTicket.id === ticketId) {
-          refreshTicketDetail(ticketId);
-        }
+  const handleStatusChange = (ticketId, newStatus) => {
+    updateStatusMutation.mutate(
+      { ticketId, status: newStatus },
+      {
+        onSuccess: () => {
+          if (selectedTicket && selectedTicket.id === ticketId) {
+            refreshTicketDetail(ticketId);
+          }
+        },
       }
-    } catch (err) {
-      toast.error('Failed to update status');
-    }
+    );
   };
 
   const handleAddNote = async (e) => {
@@ -166,7 +143,7 @@ const InstallationRequests = () => {
         toast.success('Note added successfully');
         setNoteText('');
         refreshTicketDetail(selectedTicket.id);
-        fetchInstallationRequestsOnly();
+        refetch();
       }
     } catch (err) {
       toast.error('Failed to add note');
@@ -181,31 +158,42 @@ const InstallationRequests = () => {
     refreshTicketDetail(ticket.id);
   };
 
-  const handleDeleteTicket = async (ticketId) => {
-    if (!window.confirm('Are you sure you want to delete this installation request? This action cannot be undone.')) return;
-    try {
-      const res = await api.delete(`/tickets/${ticketId}`);
-      if (res.success) {
-        toast.success('Installation request deleted successfully');
-        fetchInstallationRequestsOnly();
+  const handleDeleteTicket = (ticketId) => {
+    if (
+      !window.confirm(
+        'Are you sure you want to delete this installation request? This action cannot be undone.'
+      )
+    )
+      return;
+
+    deleteRequestMutation.mutate(ticketId, {
+      onSuccess: () => {
         if (selectedTicket && selectedTicket.id === ticketId) {
           setIsDetailModalOpen(false);
           setSelectedTicket(null);
         }
-      } else {
-        toast.error('Failed to delete installation request');
-      }
-    } catch (err) {
-      toast.error('Failed to delete installation request');
-    }
+      },
+    });
   };
 
   const getSlaStatus = (slaDeadline, status) => {
     if (['resolved', 'closed'].includes(status)) {
-      return { text: 'RESOLVED', variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+      return {
+        text: 'RESOLVED',
+        variant: 'success',
+        color: 'text-emerald-400',
+        bg: 'bg-emerald-500/20',
+        border: 'border-emerald-500/40',
+      };
     }
     if (!slaDeadline) {
-      return { text: 'WITHIN SLA', variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+      return {
+        text: 'WITHIN SLA',
+        variant: 'success',
+        color: 'text-emerald-400',
+        bg: 'bg-emerald-500/20',
+        border: 'border-emerald-500/40',
+      };
     }
 
     const now = new Date();
@@ -215,17 +203,41 @@ const InstallationRequests = () => {
 
     if (diffMs < 0) {
       const overHours = Math.abs(Math.floor(diffHours));
-      return { text: 'BREACHED', desc: `${overHours}h overdue`, variant: 'danger', color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/40' };
+      return {
+        text: 'BREACHED',
+        desc: `${overHours}h overdue`,
+        variant: 'danger',
+        color: 'text-rose-400',
+        bg: 'bg-rose-500/20',
+        border: 'border-rose-500/40',
+      };
     } else if (diffHours <= 4) {
       const remHours = Math.max(1, Math.floor(diffHours));
-      return { text: 'AT RISK', desc: `${remHours}h left`, variant: 'warning', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/40' };
+      return {
+        text: 'AT RISK',
+        desc: `${remHours}h left`,
+        variant: 'warning',
+        color: 'text-amber-400',
+        bg: 'bg-amber-500/20',
+        border: 'border-amber-500/40',
+      };
     } else {
       const remHours = Math.floor(diffHours);
-      return { text: 'WITHIN SLA', desc: `${remHours}h remaining`, variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
+      return {
+        text: 'WITHIN SLA',
+        desc: `${remHours}h remaining`,
+        variant: 'success',
+        color: 'text-emerald-400',
+        bg: 'bg-emerald-500/20',
+        border: 'border-emerald-500/40',
+      };
     }
   };
 
-  if (loading) return <Loader text="Loading Installation Requests..." />;
+  // Only render full screen loader if no cached tickets exist at all
+  if (ticketsLoading && tickets.length === 0) {
+    return <Loader text="Loading Installation Requests..." />;
+  }
 
   return (
     <div className="space-y-6">
@@ -233,16 +245,33 @@ const InstallationRequests = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-white font-display">Installation Requests</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white font-display">
+              Installation Requests
+            </h1>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
               MODULE
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">Manage and assign new customer installation requests</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Manage and assign new customer installation requests
+          </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchInitialData} icon={RefreshCw} className="text-slate-400 hover:text-white">
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {isFetching && (
+            <span className="text-[11px] text-cyan-400 flex items-center gap-1.5 animate-pulse">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Syncing...
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => refetch()}
+            icon={RefreshCw}
+            className="text-slate-400 hover:text-white"
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Main Table */}
@@ -266,14 +295,19 @@ const InstallationRequests = () => {
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-slate-500">
                     <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-700" />
-                    <p className="text-sm font-semibold text-slate-400">No installation requests found.</p>
+                    <p className="text-sm font-semibold text-slate-400">
+                      No installation requests found.
+                    </p>
                   </td>
                 </tr>
               ) : (
                 tickets.map((row) => {
                   const slaInfo = getSlaStatus(row.sla_deadline, row.status);
                   return (
-                    <tr key={row.id} className="hover:bg-slate-900/70 transition-colors align-middle">
+                    <tr
+                      key={row.id}
+                      className="hover:bg-slate-900/70 transition-colors align-middle"
+                    >
                       {/* Ticket Number */}
                       <td className="p-2.5 sm:p-3 align-middle font-mono font-extrabold text-cyan-400">
                         {row.ticket_number}
@@ -281,35 +315,62 @@ const InstallationRequests = () => {
 
                       {/* Customer Details */}
                       <td className="p-2.5 sm:p-3 align-middle max-w-[150px]">
-                        <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">{row.customer_name || 'N/A'}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 whitespace-normal break-words">{row.customer_contact || 'No Contact'}</p>
-                        <p className="text-[10px] text-slate-500 truncate max-w-[180px] mt-0.5">{row.customer_address}</p>
+                        <p className="font-bold text-white text-[13px] whitespace-normal break-words leading-tight">
+                          {row.customer_name || 'N/A'}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 whitespace-normal break-words">
+                          {row.customer_contact || 'No Contact'}
+                        </p>
+                        <p className="text-[10px] text-slate-500 truncate max-w-[180px] mt-0.5">
+                          {row.customer_address}
+                        </p>
                       </td>
 
                       {/* Installation Details */}
                       <td className="p-2.5 sm:p-3 align-middle">
-                        <p className="text-slate-200 font-semibold text-xs line-clamp-1">{row.subject || 'Installation Request'}</p>
-                        <p className="text-slate-400 text-[11px] line-clamp-2 max-w-[280px] mt-0.5">{row.description}</p>
+                        <p className="text-slate-200 font-semibold text-xs line-clamp-1">
+                          {row.subject || 'Installation Request'}
+                        </p>
+                        <p className="text-slate-400 text-[11px] line-clamp-2 max-w-[280px] mt-0.5">
+                          {row.description}
+                        </p>
                       </td>
 
                       {/* Status */}
                       <td className="p-2.5 sm:p-3 align-middle">
-                        <Badge variant={
-                          row.status === 'resolved' ? 'success' :
-                          row.status === 'in_progress' ? 'info' :
-                          row.status === 'open' ? 'warning' :
-                          row.status === 'closed' ? 'secondary' : 'danger'
-                        } className="capitalize">
-                          {row.status ? (row.status === 'open' ? 'pending' : row.status.replace('_', ' ')) : 'pending'}
+                        <Badge
+                          variant={
+                            row.status === 'resolved'
+                              ? 'success'
+                              : row.status === 'in_progress'
+                              ? 'info'
+                              : row.status === 'open'
+                              ? 'warning'
+                              : row.status === 'closed'
+                              ? 'secondary'
+                              : 'danger'
+                          }
+                          className="capitalize"
+                        >
+                          {row.status
+                            ? row.status === 'open'
+                              ? 'pending'
+                              : row.status.replace('_', ' ')
+                            : 'pending'}
                         </Badge>
                       </td>
 
                       {/* Assigned Tech */}
-                      <td className="p-2.5 sm:p-3 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="p-2.5 sm:p-3 align-middle"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {row.assigned_to ? (
                           <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[140px]">
                             <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-                            <span className="truncate font-semibold text-[11px]">{row.assignee_name || 'Assigned'}</span>
+                            <span className="truncate font-semibold text-[11px]">
+                              {row.assignee_name || 'Assigned'}
+                            </span>
                           </div>
                         ) : (
                           <TechnicianAssignDropdown
@@ -321,7 +382,9 @@ const InstallationRequests = () => {
 
                       {/* SLA Status */}
                       <td className="p-2.5 sm:p-3 align-middle">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${slaInfo.bg} ${slaInfo.color} ${slaInfo.border}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${slaInfo.bg} ${slaInfo.color} ${slaInfo.border}`}
+                        >
                           {slaInfo.text}
                         </span>
                       </td>
@@ -332,7 +395,10 @@ const InstallationRequests = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="p-2.5 sm:p-3 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="p-2.5 sm:p-3 align-middle text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => viewTicketDetail(row)}
@@ -371,20 +437,38 @@ const InstallationRequests = () => {
             {/* Header */}
             <div className="pb-4 border-b border-slate-800">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-mono text-lg font-extrabold text-cyan-400">{selectedTicket.ticket_number}</span>
-                <Badge variant={selectedTicket.status === 'resolved' ? 'success' : selectedTicket.status === 'in_progress' ? 'info' : selectedTicket.status === 'closed' ? 'default' : 'warning'}>
-                  {selectedTicket.status === 'open' ? 'Pending' : selectedTicket.status.replace('_', ' ')}
+                <span className="font-mono text-lg font-extrabold text-cyan-400">
+                  {selectedTicket.ticket_number}
+                </span>
+                <Badge
+                  variant={
+                    selectedTicket.status === 'resolved'
+                      ? 'success'
+                      : selectedTicket.status === 'in_progress'
+                      ? 'info'
+                      : selectedTicket.status === 'closed'
+                      ? 'default'
+                      : 'warning'
+                  }
+                >
+                  {selectedTicket.status === 'open'
+                    ? 'Pending'
+                    : selectedTicket.status.replace('_', ' ')}
                 </Badge>
               </div>
               <h3 className="text-lg font-bold text-white font-display">
                 {selectedTicket.subject || 'Installation Request'}
               </h3>
-              <p className="text-xs text-slate-400 mt-1">Submitted on {new Date(selectedTicket.created_at).toLocaleString()}</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Submitted on {new Date(selectedTicket.created_at).toLocaleString()}
+              </p>
             </div>
 
             {/* Customer Details Box */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">Customer Information</span>
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+                Customer Information
+              </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
                   <p className="text-slate-400 flex items-center gap-2">
@@ -393,13 +477,19 @@ const InstallationRequests = () => {
                   </p>
                   <p className="text-slate-400 flex items-center gap-2 mt-1">
                     <Phone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    Contact: <strong className="text-white">{selectedTicket.customer_contact || 'Not provided'}</strong>
+                    Contact:{' '}
+                    <strong className="text-white">
+                      {selectedTicket.customer_contact || 'Not provided'}
+                    </strong>
                   </p>
                 </div>
                 <div>
                   <p className="text-slate-400 flex items-start gap-2">
                     <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                    Address: <strong className="text-white">{selectedTicket.customer_address || 'Not provided'}</strong>
+                    Address:{' '}
+                    <strong className="text-white">
+                      {selectedTicket.customer_address || 'Not provided'}
+                    </strong>
                   </p>
                 </div>
               </div>
@@ -407,19 +497,27 @@ const InstallationRequests = () => {
 
             {/* Installation Details */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Request & Form Details</span>
-              <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                Request & Form Details
+              </span>
+              <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
+                {selectedTicket.description}
+              </p>
             </div>
 
             {/* Assigned Technician Info & Close Request Action */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Assigned Technician</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Assigned Technician
+                  </span>
                   {selectedTicket.assignee_name || selectedTicket.assigned_to ? (
                     <div className="flex items-center space-x-2">
                       <UserCheck className="w-4 h-4 text-indigo-400 shrink-0" />
-                      <span className="font-bold text-sm text-indigo-200">{selectedTicket.assignee_name || 'Assigned Technician'}</span>
+                      <span className="font-bold text-sm text-indigo-200">
+                        {selectedTicket.assignee_name || 'Assigned Technician'}
+                      </span>
                     </div>
                   ) : (
                     <span className="text-xs text-amber-400 font-medium italic">Unassigned</span>
@@ -456,11 +554,15 @@ const InstallationRequests = () => {
                 </div>
 
                 {selectedTicket.serviceReport.title && (
-                  <p className="text-sm font-bold text-white">{selectedTicket.serviceReport.title}</p>
+                  <p className="text-sm font-bold text-white">
+                    {selectedTicket.serviceReport.title}
+                  </p>
                 )}
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Work Performed</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Work Performed
+                  </span>
                   <p className="text-xs text-slate-200 bg-slate-950/70 p-3 rounded-lg border border-slate-800 mt-1 leading-relaxed whitespace-pre-wrap">
                     {selectedTicket.serviceReport.work_performed}
                   </p>
@@ -468,7 +570,9 @@ const InstallationRequests = () => {
 
                 {selectedTicket.serviceReport.materials_used && (
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Materials Used</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                      Materials Used
+                    </span>
                     <p className="text-xs text-slate-300 bg-slate-950/70 p-3 rounded-lg border border-slate-800 mt-1">
                       {selectedTicket.serviceReport.materials_used}
                     </p>
@@ -476,20 +580,28 @@ const InstallationRequests = () => {
                 )}
 
                 {selectedTicket.serviceReport.customer_name_signed && (
-                  <p className="text-xs text-slate-300 pt-0.5">✍️ Signed by: <strong className="text-white">{selectedTicket.serviceReport.customer_name_signed}</strong></p>
+                  <p className="text-xs text-slate-300 pt-0.5">
+                    ✍️ Signed by:{' '}
+                    <strong className="text-white">
+                      {selectedTicket.serviceReport.customer_name_signed}
+                    </strong>
+                  </p>
                 )}
 
                 {/* Submitted Work Proof Photos & Signature */}
                 {(() => {
                   const report = selectedTicket.serviceReport;
-                  const photos = parseImageUrls(report.images_urls || report.imagesUrls || report.image_urls || report.images);
+                  const photos = parseImageUrls(
+                    report.images_urls || report.imagesUrls || report.image_urls || report.images
+                  );
                   if (photos.length === 0 && !report.signature_url) return null;
                   return (
                     <div className="pt-2 space-y-3 border-t border-slate-800/80">
                       {photos.length > 0 && (
                         <div className="space-y-1.5">
                           <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1.5">
-                            <Camera className="w-3.5 h-3.5 text-cyan-400" /> Installation Photos ({photos.length})
+                            <Camera className="w-3.5 h-3.5 text-cyan-400" /> Installation Photos (
+                            {photos.length})
                           </span>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                             {photos.map((url, i) => (
@@ -505,7 +617,8 @@ const InstallationRequests = () => {
                                   crossOrigin="anonymous"
                                   onError={(e) => {
                                     e.target.onerror = null;
-                                    e.target.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Unavailable%3C/text%3E%3C/svg%3E";
+                                    e.target.src =
+                                      "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f172a'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Crect x='130' y='90' width='140' height='100' rx='10'/%3E%3Ccircle cx='200' cy='140' r='25'/%3E%3C/g%3E%3Ctext x='200' y='220' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EPhoto Unavailable%3C/text%3E%3C/svg%3E";
                                   }}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                                 />
@@ -522,7 +635,9 @@ const InstallationRequests = () => {
 
                       {report.signature_url && (
                         <div className="space-y-1 pt-1">
-                          <span className="text-[11px] font-medium text-slate-400 block">Customer Signature:</span>
+                          <span className="text-[11px] font-medium text-slate-400 block">
+                            Customer Signature:
+                          </span>
                           <div
                             onClick={() => setFullscreenImage(getUploadUrl(report.signature_url))}
                             className="p-2 rounded-xl bg-slate-950 border border-slate-800 inline-block cursor-pointer hover:border-cyan-400 transition-colors"
@@ -540,10 +655,6 @@ const InstallationRequests = () => {
                 })()}
               </div>
             )}
-
-
-
-
           </div>
         )}
       </Modal>
@@ -555,7 +666,10 @@ const InstallationRequests = () => {
           onClick={() => setFullscreenImage(null)}
         >
           {/* Header controls */}
-          <div className="absolute top-4 right-4 flex items-center gap-3 z-10" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="absolute top-4 right-4 flex items-center gap-3 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <a
               href={fullscreenImage}
               target="_blank"
@@ -576,7 +690,10 @@ const InstallationRequests = () => {
           </div>
 
           {/* Image Container */}
-          <div className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
               src={fullscreenImage}
               alt="Enlarged View"
