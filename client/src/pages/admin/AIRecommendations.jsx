@@ -14,7 +14,7 @@ import Swal from 'sweetalert2';
 
 const typeConfig = {
   reassignment: {
-    label: 'Reassignment',
+    label: 'Smart Assignment',
     icon: UserCheck,
     color: 'text-blue-400',
     bg: 'bg-blue-500/10 border-blue-500/20',
