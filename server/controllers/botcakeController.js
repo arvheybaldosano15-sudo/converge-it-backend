@@ -3,6 +3,7 @@ const { classifyAndGenerateTicket } = require('../services/aiService');
 const { sendBotcakeMessage, updateBotcakeCustomerField } = require('../services/botcakeService');
 const { sendTextMessage } = require('../services/messengerService');
 const { emitToAdmins } = require('../services/socketService');
+const { notifyAdmins } = require('../services/notificationService');
 const logger = require('../config/logger');
 
 // Recent request log buffer for debugging live Botcake requests
@@ -245,6 +246,12 @@ exports.handleWebhook = async (req, res) => {
     // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
     emitToAdmins('ticket:created', { ticket: createdTicket });
     emitToAdmins('ticket_created', { ticket: createdTicket });
+    notifyAdmins({
+      type: 'ticket_created',
+      title: 'New Messenger Ticket',
+      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+    }).catch(err => logger.error('notifyAdmins error:', err));
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 
@@ -616,6 +623,12 @@ exports.createTicket = async (req, res) => {
     // Emit real-time socket events to Admin Dashboard
     emitToAdmins('ticket:created', { ticket: createdTicket });
     emitToAdmins('ticket_created', { ticket: createdTicket });
+    notifyAdmins({
+      type: 'ticket_created',
+      title: 'New Messenger Ticket',
+      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+    }).catch(err => logger.error('notifyAdmins error:', err));
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityEnum.toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 

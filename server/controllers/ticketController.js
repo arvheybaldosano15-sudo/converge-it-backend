@@ -2,7 +2,7 @@ const { query, getClient } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
 const { logAudit } = require('../services/auditService');
 const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyAdmins } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
   try {
@@ -132,6 +132,15 @@ exports.createTicket = async (req, res, next) => {
     );
     const ticket = result.rows[0];
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number });
+    
+    // Notify admins about the new ticket
+    await notifyAdmins({
+      type: 'ticket_created',
+      title: 'New Ticket Created',
+      body: `Ticket #${ticket.ticket_number} (${ticket.subject || ticket.description || 'New Issue'}) has been created.`,
+      data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number }
+    });
+
     if (assignedTo) {
       await createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } });
     }

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import ProfileDropdown from './ProfileDropdown';
-import { Bell, Sun, Moon, X, CheckCheck, Trash2, Clock, Menu } from 'lucide-react';
+import { Bell, Sun, Moon, X, CheckCheck, Trash2, Clock, Menu, ExternalLink } from 'lucide-react';
 import api from '../../utils/axios';
 import { formatDistanceToNow } from 'date-fns';
 
 const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMenuToggle }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { unreadNotifications, setUnreadNotifications } = useSocket();
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -73,6 +75,22 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
   const handleBellClick = () => {
     if (!notifOpen) fetchNotifications();
     setNotifOpen((prev) => !prev);
+  };
+
+  const handleNotifClick = (n) => {
+    if (!n.is_read) markOneRead(n.id);
+    setNotifOpen(false);
+    if (user?.role === 'admin') {
+      const titleLower = (n.title || '').toLowerCase();
+      const bodyLower = (n.body || n.message || '').toLowerCase();
+      if (titleLower.includes('installation') || bodyLower.includes('installation')) {
+        navigate('/admin/installation-requests');
+      } else {
+        navigate('/admin/tickets');
+      }
+    } else if (user?.role === 'technician') {
+      navigate('/technician/assigned');
+    }
   };
 
   // Close on outside click
@@ -145,7 +163,7 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
           >
             <Bell className={`w-4 h-4 ${notifOpen ? 'text-blue-400' : ''}`} />
             {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-rose-600 text-white font-extrabold text-[10px] rounded-full flex items-center justify-center animate-pulse border border-slate-950 px-1">
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
               </span>
             )}
@@ -188,7 +206,7 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                   notifications.map((n) => (
                     <div
                       key={n.id}
-                      onClick={() => !n.is_read && markOneRead(n.id)}
+                      onClick={() => handleNotifClick(n)}
                       className={`flex items-start gap-3 px-4 py-3 border-b border-slate-800/60 transition-colors cursor-pointer group ${
                         n.is_read ? 'opacity-60' : 'hover:bg-slate-800/40'
                       }`}
@@ -200,8 +218,8 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                         <p className={`text-xs font-semibold ${n.is_read ? 'text-slate-400' : 'text-slate-100'} leading-snug`}>
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{n.body}</p>
-                        <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-600">
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.body || n.message}</p>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
                           <Clock className="w-3 h-3" />
                           {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                         </div>
@@ -216,6 +234,19 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* Panel Footer */}
+              <div className="p-2.5 border-t border-slate-800 text-center bg-slate-900/60">
+                <button
+                  onClick={() => {
+                    setNotifOpen(false);
+                    navigate(user?.role === 'admin' ? '/admin/notifications' : '/technician/notifications');
+                  }}
+                  className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1.5"
+                >
+                  View All Notifications <ExternalLink className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           )}
