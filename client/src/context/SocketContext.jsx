@@ -66,22 +66,23 @@ export const SocketProvider = ({ children }) => {
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-sm text-cyan-300">{notification.title}</h4>
-            <p className="text-xs text-slate-300 mt-1">{notification.body}</p>
+            <p className="text-xs text-slate-300 mt-1">{notification.body || notification.message}</p>
           </div>
         </div>
       ));
-      setUnreadNotifications((prev) => prev + 1);
+      fetchUnreadCount();
     });
 
     newSocket.on('ticket:created', ({ ticket }) => {
       if (user.role === 'admin') {
-        toast.info(`New Ticket #${ticket.ticket_number} created`);
+        toast.info(`New Ticket #${ticket.ticket_number || ticket?.id} created`);
+        fetchUnreadCount();
       }
     });
 
-    newSocket.on('technician:new_pending', ({ fullName }) => {
+    newSocket.on('ticket_created', ({ ticket }) => {
       if (user.role === 'admin') {
-        toast.info(`New Technician application: ${fullName}`);
+        fetchUnreadCount();
       }
     });
 

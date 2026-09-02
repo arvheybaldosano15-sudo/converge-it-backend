@@ -247,7 +247,7 @@ exports.handleWebhook = async (req, res) => {
     emitToAdmins('ticket:created', { ticket: createdTicket });
     emitToAdmins('ticket_created', { ticket: createdTicket });
     notifyAdmins({
-      type: 'ticket_created',
+      type: 'ticket',
       title: 'New Messenger Ticket',
       body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
       data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
@@ -624,7 +624,7 @@ exports.createTicket = async (req, res) => {
     emitToAdmins('ticket:created', { ticket: createdTicket });
     emitToAdmins('ticket_created', { ticket: createdTicket });
     notifyAdmins({
-      type: 'ticket_created',
+      type: 'ticket',
       title: 'New Messenger Ticket',
       body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
       data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }

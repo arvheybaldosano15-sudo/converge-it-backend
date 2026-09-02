@@ -135,7 +135,7 @@ exports.createTicket = async (req, res, next) => {
     
     // Notify admins about the new ticket
     await notifyAdmins({
-      type: 'ticket_created',
+      type: 'ticket',
       title: 'New Ticket Created',
       body: `Ticket #${ticket.ticket_number} (${ticket.subject || ticket.description || 'New Issue'}) has been created.`,
       data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number }
