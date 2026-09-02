@@ -397,9 +397,9 @@ const TicketManagement = () => {
             className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
           >
             <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
-            <option value="low">Low</option>
           </select>
 
           {/* Category Filter */}
