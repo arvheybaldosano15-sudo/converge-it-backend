@@ -12,7 +12,7 @@ const isAIEnabled = () => process.env.AI_ENABLED !== 'false' && !!process.env.OP
 
 exports.classifyAndGenerateTicket = async (conversationHistory, customerInput) => {
   if (!isAIEnabled()) {
-    return { category: 'other', priority: 'medium', etaHours: 24, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
+    return { category: 'other', priority: 'medium', etaHours: 48, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
   }
   try {
     const client = getOpenAI();
@@ -34,7 +34,7 @@ Analyze the customer concern and respond ONLY with a valid JSON object:
   "reasoning": "<brief explanation>"
 }
 Priority: critical=service outage, high=major degradation, medium=partial/intermittent, low=minor/general.
-ETA: critical=2-4h, high=8-12h, medium=24-48h, low=48-72h, installation=24-72h.`
+ETA: critical=2-4h, high=8-12h, medium=48h, installation=24-72h.`
         },
         ...conversationHistory,
         { role: 'user', content: customerInput }
@@ -45,7 +45,7 @@ ETA: critical=2-4h, high=8-12h, medium=24-48h, low=48-72h, installation=24-72h.`
     return { ...JSON.parse(response.choices[0].message.content), aiEnabled: true };
   } catch (error) {
     logger.error('AI classification error:', error);
-    return { category: 'other', priority: 'medium', etaHours: 24, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
+    return { category: 'other', priority: 'medium', etaHours: 48, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
   }
 };
 

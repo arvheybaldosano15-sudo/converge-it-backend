@@ -440,7 +440,7 @@ BEGIN
         sla_hours := CASE NEW.priority
             WHEN 'critical' THEN 4
             WHEN 'high' THEN 8
-            WHEN 'medium' THEN 24
+            WHEN 'medium' THEN 48
             ELSE 72
         END;
     END IF;

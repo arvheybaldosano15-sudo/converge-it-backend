@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { Pool } = require('pg');
 const logger = require('./logger');
 
@@ -5,21 +7,37 @@ let pool;
 
 const getPool = () => {
   if (!pool) {
-    const config = process.env.DATABASE_URL
-      ? {
-          connectionString: process.env.DATABASE_URL,
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-          max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 2000
-        }
-      : {
-          host: process.env.DB_HOST || 'localhost',
-          port: parseInt(process.env.DB_PORT) || 5432,
-          database: process.env.DB_NAME || 'converge_ticketing',
-          user: process.env.DB_USER || 'postgres',
-          password: process.env.DB_PASSWORD,
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-          max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 2000
-        };
+    const dbUrl = process.env.DATABASE_URL;
+    let config;
+
+    if (dbUrl) {
+      config = {
+        connectionString: dbUrl,
+        ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
+      };
+    } else {
+      const host = process.env.DB_HOST || 'aws-0-ap-southeast-1.pooler.supabase.com';
+      const port = parseInt(process.env.DB_PORT) || 6543;
+      const user = process.env.DB_USER || 'postgres.fbgkvlttgcctiynpivix';
+      const password = process.env.DB_PASSWORD;
+      const database = process.env.DB_NAME || 'postgres';
+
+      config = {
+        host,
+        port,
+        user,
+        password,
+        database,
+        ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
+      };
+    }
+
     pool = new Pool(config);
     pool.on('error', (err) => logger.error('Unexpected database error:', err));
   }
@@ -31,7 +49,7 @@ const query = async (text, params) => {
   try {
     const result = await getPool().query(text, params);
     const duration = Date.now() - start;
-    if (duration > 1000) logger.warn('Slow query detected', { text, duration, rows: result.rowCount });
+    if (duration > 1000) logger.warn('Slow query detected', { text: text.substring(0, 100), duration, rows: result.rowCount });
     return result;
   } catch (error) {
     logger.error('Database query error:', { text: text.substring(0, 100), error: error.message });
@@ -51,11 +69,11 @@ const testConnection = async () => {
       CREATE OR REPLACE FUNCTION set_sla_due_date()
       RETURNS TRIGGER AS $$
       DECLARE
-          sla_hours INTEGER := 24;
+          sla_hours INTEGER := 48;
       BEGIN
           IF NEW.priority = 'critical' THEN sla_hours := 4;
           ELSIF NEW.priority = 'high' THEN sla_hours := 8;
-          ELSIF NEW.priority = 'medium' THEN sla_hours := 24;
+          ELSIF NEW.priority = 'medium' THEN sla_hours := 48;
           ELSE sla_hours := 72;
           END IF;
           
@@ -64,6 +82,11 @@ const testConnection = async () => {
       END;
       $$ LANGUAGE plpgsql;
     `);
+    await query(`
+      UPDATE tickets 
+      SET sla_deadline = created_at + INTERVAL '48 hours'
+      WHERE priority = 'medium' AND status NOT IN ('resolved', 'closed', 'cancelled')
+    `).catch(() => {});
     logger.info('✅ Database function set_sla_due_date updated/repaired successfully');
   } catch (err) {
     logger.warn('Could not auto-repair set_sla_due_date function:', err.message);
