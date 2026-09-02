@@ -14,22 +14,26 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get('/notifications/unread-count');
+      if (res && res.data) {
+        setUnreadNotifications(typeof res.data.count === 'number' ? res.data.count : parseInt(res.data.count || 0));
+      }
+    } catch (e) {
+      console.error('fetchUnreadCount error:', e);
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       setUnreadNotifications(0);
       return;
     }
-    const fetchUnreadCount = async () => {
-      try {
-        const res = await api.get('/notifications/unread-count');
-        if (res.success && res.data) {
-          setUnreadNotifications(res.data.count || 0);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
     fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 8000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
@@ -56,6 +60,7 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on('connect', () => {
       console.log('Socket connected:', newSocket.id);
+      fetchUnreadCount();
     });
 
     newSocket.on('notification:new', (notification) => {
@@ -70,18 +75,21 @@ export const SocketProvider = ({ children }) => {
           </div>
         </div>
       ));
+      setUnreadNotifications((prev) => prev + 1);
       fetchUnreadCount();
     });
 
     newSocket.on('ticket:created', ({ ticket }) => {
-      if (user.role === 'admin') {
-        toast.info(`New Ticket #${ticket.ticket_number || ticket?.id} created`);
+      if (user?.role === 'admin') {
+        toast.info(`New Ticket #${ticket?.ticket_number || ticket?.id} created`);
+        setUnreadNotifications((prev) => prev + 1);
         fetchUnreadCount();
       }
     });
 
     newSocket.on('ticket_created', ({ ticket }) => {
-      if (user.role === 'admin') {
+      if (user?.role === 'admin') {
+        setUnreadNotifications((prev) => prev + 1);
         fetchUnreadCount();
       }
     });
