@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMenuToggle }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { unreadNotifications, setUnreadNotifications } = useSocket();
+  const { socket, unreadNotifications, setUnreadNotifications } = useSocket();
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -34,17 +34,50 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     }
   };
 
-  const fetchNotifications = async () => {
-    setNotifLoading(true);
+  const fetchNotifications = async (showLoading = false) => {
+    if (showLoading) setNotifLoading(true);
     try {
       const res = await api.get('/notifications?limit=20');
       if (res.success) setNotifications(res.data || []);
     } catch (e) {
       console.error(e);
     } finally {
-      setNotifLoading(false);
+      if (showLoading) setNotifLoading(false);
     }
   };
+
+  // Initial load on mount
+  useEffect(() => {
+    if (user) {
+      fetchNotifications(true);
+    }
+  }, [user]);
+
+  // Auto-update notification dropdown list in real-time on socket event
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleNewNotification = (notification) => {
+      if (notification) {
+        setNotifications((prev) => [notification, ...prev.filter((n) => n.id !== notification.id)]);
+      }
+      fetchNotifications(false);
+    };
+
+    const handleTicketCreated = () => {
+      fetchNotifications(false);
+    };
+
+    socket.on('notification:new', handleNewNotification);
+    socket.on('ticket:created', handleTicketCreated);
+    socket.on('ticket_created', handleTicketCreated);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+      socket.off('ticket:created', handleTicketCreated);
+      socket.off('ticket_created', handleTicketCreated);
+    };
+  }, [socket]);
 
   const markAllRead = async () => {
     try {
