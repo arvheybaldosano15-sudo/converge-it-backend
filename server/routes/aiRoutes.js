@@ -38,10 +38,11 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
     const activeTickets = ticketsRes.rows;
     const technicians = techsRes.rows;
 
-    // Delete existing unapplied recommendations or recommendations for resolved/closed tickets
+    // Delete existing unapplied recommendations or recommendations for resolved/closed tickets or old escalation items
     await query(`
       DELETE FROM ai_recommendations 
-      WHERE (is_applied = FALSE AND type NOT IN ('priority_change', 'escalation'))
+      WHERE (is_applied = FALSE AND type != 'priority_change')
+         OR type = 'escalation'
          OR ticket_id IN (SELECT id FROM tickets WHERE status IN ('resolved', 'closed', 'cancelled'))
     `);
 
@@ -98,31 +99,15 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
         `, [ticket.id, type, suggestion, reasoning, confidence]);
         continue;
       }
-
-      // Rule 3: High Priority Delay -> Direct auto-escalation to critical
-      if (openDurationHours > 48 && ticket.priority === 'high') {
-        // Direct automatic update in database
-        await query(`UPDATE tickets SET priority = 'critical', updated_at = NOW() WHERE id = $1`, [ticket.id]);
-
-        const suggestion = `Escalate ticket ${ticket.ticket_number} to critical`;
-        const reasoning = `High priority ticket has been pending for over 48 hours. Priority automatically escalated to critical.`;
-        const type = 'escalation';
-        const confidence = 95.00;
-
-        await query(`
-          INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence, is_applied)
-          VALUES ($1, $2, $3, $4, $5, TRUE)
-        `, [ticket.id, type, suggestion, reasoning, confidence]);
-        continue;
-      }
     }
 
-    // Return recommendations strictly for unresolved tickets
+    // Return recommendations strictly for unresolved tickets (Reassignment & Priority Change only)
     const finalRecs = await query(`
       SELECT r.*, t.ticket_number 
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
-      WHERE (r.is_applied = FALSE OR r.type IN ('priority_change', 'escalation'))
+      WHERE (r.is_applied = FALSE OR r.type = 'priority_change')
+        AND r.type IN ('reassignment', 'priority_change')
         AND t.status NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY r.confidence DESC, r.created_at DESC
     `);

@@ -21,32 +21,11 @@ const typeConfig = {
     badge: 'primary',
   },
   priority_change: {
-    label: 'Priority Change',
+    label: 'High Priority (Priority Change)',
     icon: TrendingUp,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10 border-amber-500/20',
     badge: 'warning',
-  },
-  escalation: {
-    label: 'Escalation',
-    icon: AlertOctagon,
-    color: 'text-rose-400',
-    bg: 'bg-rose-500/10 border-rose-500/20',
-    badge: 'danger',
-  },
-  troubleshooting: {
-    label: 'Troubleshooting',
-    icon: Zap,
-    color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10 border-cyan-500/20',
-    badge: 'cyan',
-  },
-  similar_tickets: {
-    label: 'Similar Tickets',
-    icon: ArrowRightLeft,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10 border-purple-500/20',
-    badge: 'purple',
   },
 };
 
