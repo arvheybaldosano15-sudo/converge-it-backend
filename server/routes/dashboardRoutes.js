@@ -24,7 +24,7 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
           COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_tickets,
           COUNT(*) FILTER (WHERE status = 'closed') AS closed_tickets,
           COUNT(*) FILTER (WHERE assigned_technician_id IS NULL AND status NOT IN ('resolved','closed')) AS unassigned_tickets,
-          COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '4 hours' AND status NOT IN ('resolved','closed')) AS sla_at_risk,
+          COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '12 hours' AND status NOT IN ('resolved','closed')) AS sla_at_risk,
           COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS overdue_tickets,
           COUNT(*) FILTER (WHERE priority::text = 'critical') AS critical_tickets,
           COUNT(*) FILTER (WHERE priority::text = 'high') AS high_tickets,
@@ -90,8 +90,8 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
       // 8. SLA Performance Breakdown
       query(`
         SELECT
-          COUNT(*) FILTER (WHERE (sla_deadline IS NULL OR sla_deadline > NOW() + INTERVAL '4 hours') AND status NOT IN ('resolved','closed')) AS within_sla,
-          COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '4 hours' AND status NOT IN ('resolved','closed')) AS at_risk,
+          COUNT(*) FILTER (WHERE (sla_deadline IS NULL OR sla_deadline > NOW() + INTERVAL '12 hours') AND status NOT IN ('resolved','closed')) AS within_sla,
+          COUNT(*) FILTER (WHERE sla_deadline >= NOW() AND sla_deadline <= NOW() + INTERVAL '12 hours' AND status NOT IN ('resolved','closed')) AS at_risk,
           COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS breached
         FROM tickets
       `),

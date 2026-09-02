@@ -295,7 +295,7 @@ const TicketManagement = () => {
     if (diffMs < 0) {
       const overHours = Math.abs(Math.floor(diffHours));
       return { text: 'BREACHED', desc: `${overHours}h overdue`, variant: 'danger', color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/40' };
-    } else if (diffHours <= 4) {
+    } else if (diffHours <= 12) {
       const remHours = Math.max(1, Math.floor(diffHours));
       return { text: 'AT RISK', desc: `${remHours}h left`, variant: 'warning', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/40' };
     } else {
@@ -422,7 +422,7 @@ const TicketManagement = () => {
           >
             <option value="">All SLA Statuses</option>
             <option value="within">Within SLA</option>
-            <option value="at_risk">At Risk (&lt; 4h)</option>
+            <option value="at_risk">At Risk (&lt; 12h)</option>
             <option value="breached">SLA Breached</option>
           </select>
         </div>

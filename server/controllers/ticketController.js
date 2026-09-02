@@ -39,9 +39,9 @@ exports.getTickets = async (req, res, next) => {
     if (slaStatus === 'breached') {
       conditions.push(`(t.sla_deadline < NOW() AND t.status NOT IN ('resolved','closed'))`);
     } else if (slaStatus === 'at_risk') {
-      conditions.push(`(t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '4 hours' AND t.status NOT IN ('resolved','closed'))`);
+      conditions.push(`(t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '12 hours' AND t.status NOT IN ('resolved','closed'))`);
     } else if (slaStatus === 'within') {
-      conditions.push(`((t.sla_deadline IS NULL OR t.sla_deadline > NOW() + INTERVAL '4 hours') AND t.status NOT IN ('resolved','closed'))`);
+      conditions.push(`((t.sla_deadline IS NULL OR t.sla_deadline > NOW() + INTERVAL '12 hours') AND t.status NOT IN ('resolved','closed'))`);
     }
 
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
@@ -256,7 +256,7 @@ exports.getTicketStats = async (req, res, next) => {
              COUNT(*) FILTER (WHERE t.priority = 'critical') AS critical_count,
              COUNT(*) FILTER (WHERE t.priority = 'high') AS high_count,
              COUNT(*) FILTER (WHERE t.sla_deadline < NOW() AND t.status NOT IN ('resolved','closed')) AS sla_breached,
-             COUNT(*) FILTER (WHERE t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '4 hours' AND t.status NOT IN ('resolved','closed')) AS sla_at_risk,
+             COUNT(*) FILTER (WHERE t.sla_deadline >= NOW() AND t.sla_deadline <= NOW() + INTERVAL '12 hours' AND t.status NOT IN ('resolved','closed')) AS sla_at_risk,
              COUNT(*) FILTER (WHERE t.created_at >= NOW() - INTERVAL '24 hours') AS created_today,
              COUNT(*) FILTER (WHERE t.resolved_at >= NOW() - INTERVAL '24 hours') AS resolved_today,
              COUNT(*) AS total
