@@ -87,6 +87,7 @@ const Login = () => {
             <Input
               label="Password"
               type={showPassword ? 'text' : 'password'}
+              icon={Lock}
               placeholder="Enter your password"
               autoComplete="current-password"
               error={errors.password?.message}
