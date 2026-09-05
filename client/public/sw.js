@@ -28,6 +28,7 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: data.icon || '/logo.png',
     badge: data.badge || '/logo.png',
+    vibrate: [200, 100, 200],
     requireInteraction: true,
     data: {
       url: data.url || '/admin/tickets',

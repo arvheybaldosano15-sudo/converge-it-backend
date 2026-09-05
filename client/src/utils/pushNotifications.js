@@ -75,6 +75,7 @@ export const testLocalNotification = async () => {
         body: 'Success! Your mobile phone lock-screen push notifications are working for MTS-Converge.',
         icon: '/logo.png',
         badge: '/logo.png',
+        vibrate: [200, 100, 200],
         tag: 'test-push',
         renotify: true
       });
