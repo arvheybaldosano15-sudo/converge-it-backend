@@ -5,7 +5,7 @@ const logger = require('../config/logger');
 // Initialize Web Push VAPID credentials
 const publicKey = process.env.VAPID_PUBLIC_KEY;
 const privateKey = process.env.VAPID_PRIVATE_KEY;
-const subject = process.env.VAPID_SUBJECT || 'mailto:support@convergeit.com';
+const subject = process.env.VAPID_SUBJECT || process.env.VAPID_SUBJEC || 'mailto:support@convergeit.com';
 
 if (publicKey && privateKey) {
   try {

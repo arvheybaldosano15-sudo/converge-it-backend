@@ -89,6 +89,39 @@ export const SocketProvider = ({ children }) => {
       ));
       setUnreadNotifications((prev) => prev + 1);
       fetchUnreadCount();
+
+      // Trigger actual native mobile phone top pop-up notification banner
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const notifTitle = notification.title || 'Converge Support Alert';
+        const notifBody = notification.body || notification.message || 'You have a new support notification.';
+        const targetUrl = user?.role === 'technician' ? '/technician/assigned' : '/admin/tickets';
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(notifTitle, {
+              body: notifBody,
+              icon: '/logo.png',
+              badge: '/logo.png',
+              vibrate: [300, 100, 300, 100, 300],
+              requireInteraction: true,
+              renotify: true,
+              tag: notification.id ? `notif-${notification.id}` : `converge-${Date.now()}`,
+              data: { url: targetUrl, ticketId: notification.reference_id }
+            });
+          }).catch((e) => console.error('SW notification error:', e));
+        } else {
+          try {
+            new Notification(notifTitle, {
+              body: notifBody,
+              icon: '/logo.png',
+              badge: '/logo.png',
+              tag: notification.id ? `notif-${notification.id}` : `converge-${Date.now()}`
+            });
+          } catch (e) {
+            console.error('Local Notification error:', e);
+          }
+        }
+      }
     });
 
     newSocket.on('ticket:created', ({ ticket }) => {

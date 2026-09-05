@@ -260,14 +260,22 @@ const TechnicianProfile = () => {
               variant="secondary"
               size="sm"
               onClick={async () => {
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
+                  await Notification.requestPermission();
+                }
                 const result = await initPushNotifications();
                 if (result.success) {
                   await testLocalNotification();
                   toast.success('Mobile push notification sent to your phone!');
-                } else if (result.reason === 'denied') {
-                  toast.error('Notifications OFF in Android Settings. Please switch ON "All MTS-Converge notifications" in phone settings!');
                 } else {
-                  toast.error('Unable to initialize push on this device.');
+                  const localFired = await testLocalNotification();
+                  if (localFired) {
+                    toast.success('Mobile notification sent to phone! (VAPID push needs HTTPS)');
+                  } else if (result.reason === 'denied' || (typeof Notification !== 'undefined' && Notification.permission === 'denied')) {
+                    toast.error('Notifications OFF in Android Settings. Please turn ON "All MTS-Converge notifications" in phone settings!');
+                  } else {
+                    toast.error(result.error || 'Unable to initialize push on this device.');
+                  }
                 }
               }}
               icon={Bell}

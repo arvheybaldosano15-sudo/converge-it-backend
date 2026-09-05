@@ -13,7 +13,7 @@ self.addEventListener('push', (event) => {
     body: 'You have a new support ticket notification.',
     icon: '/logo.png',
     badge: '/logo.png',
-    url: '/admin/tickets'
+    url: '/technician/assigned'
   };
 
   if (event.data) {
@@ -28,16 +28,16 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: data.icon || '/logo.png',
     badge: data.badge || '/logo.png',
-    vibrate: [200, 100, 200],
+    vibrate: [300, 100, 300, 100, 300],
     requireInteraction: true,
     data: {
-      url: data.url || '/admin/tickets',
+      url: data.url || '/technician/assigned',
       ticketId: data.data?.ticketId
     },
     actions: [
       { action: 'open', title: '👁️ View Request' }
     ],
-    tag: data.data?.ticketId ? `ticket-${data.data.ticketId}` : 'converge-notification',
+    tag: data.data?.ticketId ? `ticket-${data.data.ticketId}` : `converge-notif-${Date.now()}`,
     renotify: true
   };
 
@@ -49,7 +49,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/admin/tickets';
+  const targetUrl = event.notification.data?.url || '/technician/assigned';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

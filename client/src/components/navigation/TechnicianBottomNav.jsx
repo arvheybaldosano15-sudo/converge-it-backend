@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import {
   LayoutDashboard,
   Ticket,
@@ -24,6 +25,7 @@ const rightItems = [
 const TechnicianBottomNav = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { unreadNotifications } = useSocket() || {};
 
   const handleLogout = async () => {
     await logout();
@@ -107,6 +109,11 @@ const TechnicianBottomNav = () => {
                     <>
                       <div className="relative">
                         <Icon className="w-[20px] h-[20px]" />
+                        {item.path === '/technician/notifications' && unreadNotifications > 0 && (
+                          <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white font-extrabold text-[9px] rounded-full w-4 h-4 flex items-center justify-center border border-slate-950 animate-pulse">
+                            {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                          </span>
+                        )}
                         {isActive && (
                           <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_6px_2px_rgba(96,165,250,0.6)]" />
                         )}
