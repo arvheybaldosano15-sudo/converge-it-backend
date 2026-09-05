@@ -35,8 +35,17 @@ export const SocketProvider = ({ children }) => {
     fetchUnreadCount();
     // Automatically prompt and register mobile push notifications for technician/admin
     initPushNotifications();
+
+    const handleFocus = () => {
+      initPushNotifications();
+    };
+
+    window.addEventListener('focus', handleFocus);
     const interval = setInterval(fetchUnreadCount, 8000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [user]);
 
   useEffect(() => {
