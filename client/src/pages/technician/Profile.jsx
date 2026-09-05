@@ -23,7 +23,7 @@ import {
   Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { initPushNotifications } from '../../utils/pushNotifications';
+import { initPushNotifications, testLocalNotification } from '../../utils/pushNotifications';
 
 const TechnicianProfile = () => {
   const { user, updateUserProfile } = useAuth();
@@ -260,9 +260,15 @@ const TechnicianProfile = () => {
               variant="secondary"
               size="sm"
               onClick={async () => {
-                const ok = await initPushNotifications();
-                if (ok) toast.success('Mobile push notifications enabled on this device!');
-                else toast.error('Notification permission denied. Please allow notifications in phone settings.');
+                const result = await initPushNotifications();
+                if (result.success) {
+                  await testLocalNotification();
+                  toast.success('Mobile push notification sent to your phone!');
+                } else if (result.reason === 'denied') {
+                  toast.error('Notifications OFF in Android Settings. Please switch ON "All MTS-Converge notifications" in phone settings!');
+                } else {
+                  toast.error('Unable to initialize push on this device.');
+                }
               }}
               icon={Bell}
               className="w-full text-xs"

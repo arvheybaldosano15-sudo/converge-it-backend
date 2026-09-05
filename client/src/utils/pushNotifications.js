@@ -20,7 +20,7 @@ function urlBase64ToUint8Array(base64String) {
 export const initPushNotifications = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('Push Notifications are not supported in this browser/environment.');
-    return false;
+    return { success: false, reason: 'unsupported' };
   }
 
   try {
@@ -31,15 +31,15 @@ export const initPushNotifications = async () => {
     // 2. Request Notification Permission
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.info('Notification permission denied by user.');
-      return false;
+      console.info('Notification permission denied by user or Android OS settings.');
+      return { success: false, reason: 'denied', permission };
     }
 
     // 3. Fetch VAPID Public Key from Backend
     const keyRes = await api.get('/notifications/vapid-key');
     if (!keyRes.success || !keyRes.publicKey) {
       console.warn('VAPID public key missing from server response.');
-      return false;
+      return { success: false, reason: 'missing_key' };
     }
 
     const applicationServerKey = urlBase64ToUint8Array(keyRes.publicKey);
@@ -57,9 +57,32 @@ export const initPushNotifications = async () => {
     const subJSON = subscription.toJSON();
     await api.post('/notifications/subscribe', subJSON);
     console.log('✅ Mobile push subscription registered successfully');
-    return true;
+
+    return { success: true, registration, subscription };
   } catch (error) {
     console.error('Failed to initialize push notifications:', error);
-    return false;
+    return { success: false, reason: 'error', error: error.message };
   }
+};
+
+// Trigger instant local test notification on phone
+export const testLocalNotification = async () => {
+  if (!('serviceWorker' in navigator)) return false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if (Notification.permission === 'granted') {
+      await registration.showNotification('📋 Real Mobile Push Alert', {
+        body: 'Success! Your mobile phone lock-screen push notifications are working for MTS-Converge.',
+        icon: '/logo.png',
+        badge: '/logo.png',
+        vibrate: [200, 100, 200, 100, 200],
+        tag: 'test-push',
+        renotify: true
+      });
+      return true;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return false;
 };
