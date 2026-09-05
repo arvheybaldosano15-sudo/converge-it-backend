@@ -73,7 +73,13 @@ exports.sendPushToUser = async (userId, payload) => {
       };
 
       try {
-        await webpush.sendNotification(pushSubscription, pushPayload);
+        await webpush.sendNotification(pushSubscription, pushPayload, {
+          TTL: 86400,
+          urgency: 'high',
+          headers: {
+            'Urgency': 'high'
+          }
+        });
       } catch (err) {
         // Clean up expired or unregistered subscriptions (404 Not Found / 410 Gone)
         if (err.statusCode === 404 || err.statusCode === 410) {
