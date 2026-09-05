@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { emitToUser } = require('./socketService');
+const { sendPushToUser, sendPushToAdmins } = require('./pushService');
 const logger = require('../config/logger');
 
 // Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
@@ -20,7 +21,15 @@ exports.createNotification = async ({ userId, type, title, body, message, data }
 
     const notification = result?.rows[0];
     if (notification) {
+      // 1. In-app WebSocket notification
       emitToUser(userId, 'notification:new', notification);
+
+      // 2. Real Mobile Device Push Notification (Lock-screen alert)
+      sendPushToUser(userId, {
+        title: title || 'Converge Support Notification',
+        body: content,
+        data: data || {}
+      }).catch(err => logger.error('Mobile Push error:', err.message));
     }
     return notification;
   } catch (error) {

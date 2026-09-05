@@ -5,6 +5,8 @@ const { authenticate } = require('../middleware/auth');
 
 router.get('/', authenticate, notificationController.getNotifications);
 router.get('/unread-count', authenticate, notificationController.getUnreadCount);
+router.get('/vapid-key', notificationController.getVapidKey);
+router.post('/subscribe', authenticate, notificationController.subscribePush);
 router.put('/read-all', authenticate, notificationController.markAllAsRead);
 router.put('/:id/read', authenticate, notificationController.markAsRead);
 router.delete('/:id', authenticate, notificationController.deleteNotification);

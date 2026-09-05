@@ -19,9 +19,11 @@ import {
   RotateCcw,
   CheckCircle2,
   Lock,
-  Building
+  Building,
+  Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { initPushNotifications } from '../../utils/pushNotifications';
 
 const TechnicianProfile = () => {
   const { user, updateUserProfile } = useAuth();
@@ -239,6 +241,34 @@ const TechnicianProfile = () => {
                 </Badge>
               </div>
             </div>
+          </div>
+
+          {/* Real Mobile Lock-Screen Push Alert Control */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Bell className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-white">Real Mobile Lock-Screen Push</span>
+              </div>
+              <Badge variant="info">Enabled</Badge>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-normal">
+              Receive instant lock-screen push notifications on your real mobile phone whenever a ticket is assigned to you.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                const ok = await initPushNotifications();
+                if (ok) toast.success('Mobile push notifications enabled on this device!');
+                else toast.error('Notification permission denied. Please allow notifications in phone settings.');
+              }}
+              icon={Bell}
+              className="w-full text-xs"
+            >
+              Test Phone Lock-Screen Push
+            </Button>
           </div>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">

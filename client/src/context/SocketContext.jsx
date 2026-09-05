@@ -6,6 +6,7 @@ import { Bell } from 'lucide-react';
 
 import { getAuthToken } from '../utils/authStorage';
 import api from '../utils/axios';
+import { initPushNotifications } from '../utils/pushNotifications';
 
 const SocketContext = createContext(null);
 
@@ -32,6 +33,8 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     fetchUnreadCount();
+    // Automatically prompt and register mobile push notifications for technician/admin
+    initPushNotifications();
     const interval = setInterval(fetchUnreadCount, 8000);
     return () => clearInterval(interval);
   }, [user]);

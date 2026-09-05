@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
+const pushService = require('../services/pushService');
 
 // Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
 
@@ -53,5 +54,26 @@ exports.deleteNotification = async (req, res, next) => {
     const result = await query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     if (result.rowCount === 0) throw createError('Notification not found', 404);
     res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) { next(error); }
+};
+
+// Return VAPID Public Key for Web Push client registration
+exports.getVapidKey = async (req, res, next) => {
+  try {
+    const publicKey = pushService.getPublicKey();
+    res.json({ success: true, publicKey });
+  } catch (error) { next(error); }
+};
+
+// Register client Push Subscription
+exports.subscribePush = async (req, res, next) => {
+  try {
+    const subscription = req.body;
+    if (!subscription || !subscription.endpoint) {
+      throw createError('Subscription object is required', 400);
+    }
+    const userAgent = req.headers['user-agent'] || '';
+    const record = await pushService.saveSubscription(req.user.id, subscription, userAgent);
+    res.status(201).json({ success: true, data: record, message: 'Mobile push subscription registered successfully' });
   } catch (error) { next(error); }
 };
