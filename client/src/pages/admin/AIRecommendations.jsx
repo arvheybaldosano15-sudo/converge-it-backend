@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
 import { useAiRecommendations, useApplyAiRecommendation } from '../../hooks/useAiRecommendations';
 import Card from '../../components/common/Card';
@@ -40,12 +41,15 @@ const ConfidenceBar = ({ confidence }) => {
 
 const AIRecommendations = () => {
   const [applying, setApplying] = useState(null);
+  const queryClient = useQueryClient();
 
-  // Use TanStack Query with 30-minute staleTime for expensive AI recommendations
   const { data: recommendations = [], isLoading: loading, isFetching: refreshing, refetch } = useAiRecommendations();
   const applyMutation = useApplyAiRecommendation();
 
-  const fetchRecs = () => refetch();
+  const fetchRecs = () => {
+    queryClient.invalidateQueries({ queryKey: ['ai-recommendations'] });
+    refetch();
+  };
 
   const handleApply = async (rec) => {
     const result = await Swal.fire({
@@ -183,6 +187,16 @@ const AIRecommendations = () => {
                           <Badge variant={cfg.badge}>
                             {cfg.label}
                           </Badge>
+                          {(rec.priority || rec.ticket_priority) && (() => {
+                            const p = String(rec.priority || rec.ticket_priority).toLowerCase();
+                            const label = p.charAt(0).toUpperCase() + p.slice(1);
+                            const variant = p === 'critical' ? 'danger' : p === 'high' ? 'warning' : p === 'medium' ? 'cyan' : 'default';
+                            return (
+                              <Badge variant={variant}>
+                                {label} Priority
+                              </Badge>
+                            );
+                          })()}
                           <div className="flex items-center gap-1 text-[10px] text-slate-400">
                             <Clock className="w-3 h-3" />
                             {rec.created_at

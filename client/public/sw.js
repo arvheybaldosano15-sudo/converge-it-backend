@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
     actions: [
       { action: 'open', title: '👁️ View Request' }
     ],
-    tag: data.data?.ticketId ? `ticket-${data.data.ticketId}` : `converge-notif-${Date.now()}`,
+    tag: `converge-alert-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     renotify: true
   };
 

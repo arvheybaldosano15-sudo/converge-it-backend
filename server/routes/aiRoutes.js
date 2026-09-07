@@ -66,7 +66,7 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
 
     // Return recommendations strictly for unresolved tickets (Smart Assignment only)
     const finalRecs = await query(`
-      SELECT r.*, t.ticket_number 
+      SELECT r.*, t.ticket_number, t.priority 
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
       WHERE r.is_applied = FALSE

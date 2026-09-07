@@ -10,11 +10,10 @@ export const useAiRecommendations = () => {
       const res = await api.get('/ai/recommendations');
       return res?.data || [];
     },
-    staleTime: 1000 * 60 * 30, // 30 minutes fresh cache for expensive AI recommendations
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours persistence retention
-    refetchOnMount: false,
+    staleTime: 1000 * 30, // 30 seconds fresh cache for AI recommendations
+    gcTime: 1000 * 60 * 60 * 24,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
-    placeholderData: (previousData) => previousData,
   });
 };
 
