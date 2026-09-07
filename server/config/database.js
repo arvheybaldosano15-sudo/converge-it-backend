@@ -90,7 +90,6 @@ const testConnection = async () => {
         WHEN 'medium' THEN INTERVAL '48 hours'
         ELSE INTERVAL '48 hours'
       END
-      WHERE status NOT IN ('resolved', 'closed', 'cancelled')
     `).catch(() => {});
     logger.info('✅ Database function set_sla_due_date updated/repaired successfully');
   } catch (err) {
