@@ -10,24 +10,55 @@ const getOpenAI = () => {
 };
 const isAIEnabled = () => process.env.AI_ENABLED !== 'false' && !!process.env.OPENAI_API_KEY;
 
-exports.classifyAndGenerateTicket = async (conversationHistory, customerInput) => {
-  const textLower = (customerInput || '').toLowerCase();
-  
-  // Rule: Physical line damage or total outage MUST ALWAYS be CRITICAL priority (15h ETA)
-  const isPhysicalDamageOrOutage = 
+const determinePriorityAndETA = (textLower) => {
+  // 1. CRITICAL (15 Hours): Physical cable/fiber cuts, total line damage, total outage, red light / LOS
+  const isCritical = 
     textLower.includes('putol') || 
     textLower.includes('cut') || 
     textLower.includes('nasira') || 
     textLower.includes('walang signal') || 
     textLower.includes('walang connection') ||
+    textLower.includes('no internet') ||
+    textLower.includes('no connection') ||
     textLower.includes('red light') ||
-    textLower.includes('los');
+    textLower.includes('los') ||
+    textLower.includes('outage');
+
+  if (isCritical) {
+    return { priority: 'critical', etaHours: 15 };
+  }
+
+  // 2. HIGH (24 Hours): Major service degradation, camera offline, hardware issue, intermittent disconnection
+  const isHigh = 
+    textLower.includes('mabagal') || 
+    textLower.includes('slow') || 
+    textLower.includes('camera offline') || 
+    textLower.includes('offline') || 
+    textLower.includes('restarting') ||
+    textLower.includes('reboot') ||
+    textLower.includes('disconnecting') ||
+    textLower.includes('napuputol') ||
+    textLower.includes('high ping') ||
+    textLower.includes('no display') ||
+    textLower.includes('black screen');
+
+  if (isHigh) {
+    return { priority: 'high', etaHours: 24 };
+  }
+
+  // 3. MEDIUM (48 Hours): Default priority for general inquiries, routine technical support
+  return { priority: 'medium', etaHours: 48 };
+};
+
+exports.classifyAndGenerateTicket = async (conversationHistory, customerInput) => {
+  const textLower = (customerInput || '').toLowerCase();
+  const ruleOverride = determinePriorityAndETA(textLower);
 
   if (!isAIEnabled()) {
     return { 
       category: 'other', 
-      priority: isPhysicalDamageOrOutage ? 'critical' : 'medium', 
-      etaHours: isPhysicalDamageOrOutage ? 15 : 48, 
+      priority: ruleOverride.priority, 
+      etaHours: ruleOverride.etaHours, 
       title: customerInput.substring(0, 100), 
       troubleshootingSteps: [], 
       confidence: 90, 
@@ -46,7 +77,7 @@ exports.classifyAndGenerateTicket = async (conversationHistory, customerInput) =
 Analyze the customer concern and respond ONLY with a valid JSON object:
 {
   "category": "starlink_internet" | "cctv_system" | "smart_devices" | "installation" | "other",
-  "priority": "critical" | "high" | "medium" | "low",
+  "priority": "critical" | "high" | "medium",
   "etaHours": <integer>,
   "title": "<concise ticket title>",
   "description": "<detailed description>",
@@ -54,8 +85,10 @@ Analyze the customer concern and respond ONLY with a valid JSON object:
   "confidence": <0-100>,
   "reasoning": "<brief explanation>"
 }
-CRITICAL RULES:
-- Any message mentioning "putol", "fiber optic putol", "cut wire", "walang signal", "walang connection" MUST ALWAYS HAVE priority="critical" and etaHours=15.`
+PRIORITY RULES:
+- CRITICAL (15h): Total outage, physical cable/fiber cuts ("putol", "cut wire", "nasira", "walang signal", "red light LOS").
+- HIGH (24h): Major service degradation ("mabagal", "camera offline", "restarting", "napuputol").
+- MEDIUM (48h): General support, inquiries, password change, routine questions.`
         },
         ...conversationHistory,
         { role: 'user', content: customerInput }
@@ -65,17 +98,17 @@ CRITICAL RULES:
     });
 
     const parsed = JSON.parse(response.choices[0].message.content);
-    if (isPhysicalDamageOrOutage) {
-      parsed.priority = 'critical';
-      parsed.etaHours = 15;
-    }
+    // Force exact priority and etaHours matching company rules
+    parsed.priority = ruleOverride.priority;
+    parsed.etaHours = ruleOverride.etaHours;
+
     return { ...parsed, aiEnabled: true };
   } catch (error) {
     logger.error('AI classification error:', error);
     return { 
       category: 'other', 
-      priority: isPhysicalDamageOrOutage ? 'critical' : 'medium', 
-      etaHours: isPhysicalDamageOrOutage ? 15 : 48, 
+      priority: ruleOverride.priority, 
+      etaHours: ruleOverride.etaHours, 
       title: customerInput.substring(0, 100), 
       troubleshootingSteps: [], 
       confidence: 0, 
