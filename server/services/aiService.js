@@ -11,9 +11,30 @@ const getOpenAI = () => {
 const isAIEnabled = () => process.env.AI_ENABLED !== 'false' && !!process.env.OPENAI_API_KEY;
 
 exports.classifyAndGenerateTicket = async (conversationHistory, customerInput) => {
+  const textLower = (customerInput || '').toLowerCase();
+  
+  // Rule: Physical line damage or total outage MUST ALWAYS be CRITICAL priority (15h ETA)
+  const isPhysicalDamageOrOutage = 
+    textLower.includes('putol') || 
+    textLower.includes('cut') || 
+    textLower.includes('nasira') || 
+    textLower.includes('walang signal') || 
+    textLower.includes('walang connection') ||
+    textLower.includes('red light') ||
+    textLower.includes('los');
+
   if (!isAIEnabled()) {
-    return { category: 'other', priority: 'medium', etaHours: 48, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
+    return { 
+      category: 'other', 
+      priority: isPhysicalDamageOrOutage ? 'critical' : 'medium', 
+      etaHours: isPhysicalDamageOrOutage ? 15 : 48, 
+      title: customerInput.substring(0, 100), 
+      troubleshootingSteps: [], 
+      confidence: 90, 
+      aiEnabled: false 
+    };
   }
+
   try {
     const client = getOpenAI();
     const response = await client.chat.completions.create({
@@ -33,13 +54,8 @@ Analyze the customer concern and respond ONLY with a valid JSON object:
   "confidence": <0-100>,
   "reasoning": "<brief explanation>"
 }
-Priority rules:
-- CRITICAL: Total service outage, physical cable/fiber cuts ("putol", "putol fiber optic", "cut wire", "nasira ang kable"), or total signal loss ("walang connection", "walang signal", "red light LOS"). Physical line damage MUST ALWAYS be CRITICAL.
-- HIGH: Major service degradation, main device malfunction ("mabagal", "camera offline", "restarting router").
-- MEDIUM: Partial/intermittent slowdowns, routine questions, wifi password change.
-- LOW: Minor inquiries or general questions.
-
-ETA rules: critical=15h, high=24h, medium=48h, installation=24-72h.`
+CRITICAL RULES:
+- Any message mentioning "putol", "fiber optic putol", "cut wire", "walang signal", "walang connection" MUST ALWAYS HAVE priority="critical" and etaHours=15.`
         },
         ...conversationHistory,
         { role: 'user', content: customerInput }
@@ -47,10 +63,24 @@ ETA rules: critical=15h, high=24h, medium=48h, installation=24-72h.`
       response_format: { type: 'json_object' },
       max_tokens: parseInt(process.env.OPENAI_MAX_TOKENS) || 1000
     });
-    return { ...JSON.parse(response.choices[0].message.content), aiEnabled: true };
+
+    const parsed = JSON.parse(response.choices[0].message.content);
+    if (isPhysicalDamageOrOutage) {
+      parsed.priority = 'critical';
+      parsed.etaHours = 15;
+    }
+    return { ...parsed, aiEnabled: true };
   } catch (error) {
     logger.error('AI classification error:', error);
-    return { category: 'other', priority: 'medium', etaHours: 48, title: customerInput.substring(0, 100), troubleshootingSteps: [], confidence: 0, aiEnabled: false };
+    return { 
+      category: 'other', 
+      priority: isPhysicalDamageOrOutage ? 'critical' : 'medium', 
+      etaHours: isPhysicalDamageOrOutage ? 15 : 48, 
+      title: customerInput.substring(0, 100), 
+      troubleshootingSteps: [], 
+      confidence: 0, 
+      aiEnabled: false 
+    };
   }
 };
 
