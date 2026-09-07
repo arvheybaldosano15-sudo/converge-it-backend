@@ -33,8 +33,13 @@ Analyze the customer concern and respond ONLY with a valid JSON object:
   "confidence": <0-100>,
   "reasoning": "<brief explanation>"
 }
-Priority: critical=service outage, high=major degradation, medium=partial/intermittent, low=minor/general.
-ETA: critical=15h, high=24h, medium=48h, installation=24-72h.`
+Priority rules:
+- CRITICAL: Total service outage, physical cable/fiber cuts ("putol", "putol fiber optic", "cut wire", "nasira ang kable"), or total signal loss ("walang connection", "walang signal", "red light LOS"). Physical line damage MUST ALWAYS be CRITICAL.
+- HIGH: Major service degradation, main device malfunction ("mabagal", "camera offline", "restarting router").
+- MEDIUM: Partial/intermittent slowdowns, routine questions, wifi password change.
+- LOW: Minor inquiries or general questions.
+
+ETA rules: critical=15h, high=24h, medium=48h, installation=24-72h.`
         },
         ...conversationHistory,
         { role: 'user', content: customerInput }
