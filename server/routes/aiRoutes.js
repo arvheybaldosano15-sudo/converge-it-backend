@@ -7,16 +7,7 @@ const aiService = require('../services/aiService');
 
 router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, async (req, res, next) => {
   try {
-    // 1. Auto-escalate tickets unresolved for > 48 hours directly to HIGH priority
-    await query(`
-      UPDATE tickets 
-      SET priority = 'high', updated_at = NOW() 
-      WHERE status NOT IN ('resolved', 'closed', 'cancelled') 
-        AND created_at <= NOW() - INTERVAL '48 hours'
-        AND priority IN ('low', 'medium')
-    `).catch(() => {});
-
-    // 2. Fetch active unresolved tickets
+    // 1. Fetch active unresolved tickets
     const ticketsRes = await query(`
       SELECT t.id, t.ticket_number, t.subject, t.priority, t.status, t.created_at, 
              t.assigned_technician_id, t.service_category_id, cat.name AS category_name
@@ -26,7 +17,7 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       ORDER BY t.created_at ASC
     `);
 
-    // 3. Fetch active technicians with workload
+    // 2. Fetch active technicians with workload
     const techsRes = await query(`
       SELECT u.id, u.full_name, u.specialization,
              (SELECT COUNT(*) FROM tickets t2 WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled')) AS workload
@@ -38,15 +29,15 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
     const activeTickets = ticketsRes.rows;
     const technicians = techsRes.rows;
 
-    // Delete existing unapplied recommendations or recommendations for resolved/closed tickets or old escalation items
+    // Clear old priority_change and escalation recommendations from database
     await query(`
       DELETE FROM ai_recommendations 
-      WHERE (is_applied = FALSE AND type != 'priority_change')
-         OR type = 'escalation'
+      WHERE type IN ('priority_change', 'escalation')
+         OR is_applied = FALSE 
          OR ticket_id IN (SELECT id FROM tickets WHERE status IN ('resolved', 'closed', 'cancelled'))
     `);
 
-    // Generate new recommendations for active unresolved tickets
+    // Generate Smart Assignment recommendations for active unassigned tickets
     for (const ticket of activeTickets) {
       // Rule 1: Ticket is Unassigned -> Suggest assignment
       if (!ticket.assigned_technician_id && technicians.length > 0) {
@@ -71,43 +62,15 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
         `, [ticket.id, type, suggestion, reasoning, confidence]);
         continue;
       }
-
-      // Rule 2: Ticket SLA / Delay warning -> Suggest priority change
-      const openDurationHours = (new Date() - new Date(ticket.created_at)) / (1000 * 60 * 60);
-      if (openDurationHours > 12 && ticket.priority === 'low') {
-        const suggestion = `Upgrade priority of ${ticket.ticket_number} to medium`;
-        const reasoning = `This ticket has been unresolved for ${Math.round(openDurationHours)} hours, exceeding the standard SLA target for low-priority tickets.`;
-        const type = 'priority_change';
-        const confidence = 85.00;
-
-        await query(`
-          INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
-          VALUES ($1, $2, $3, $4, $5)
-        `, [ticket.id, type, suggestion, reasoning, confidence]);
-        continue;
-      }
-
-      if (openDurationHours > 24 && ticket.priority === 'medium') {
-        const suggestion = `Upgrade priority of ${ticket.ticket_number} to high`;
-        const reasoning = `This medium-priority ticket has remained in progress for ${Math.round(openDurationHours)} hours. Upgrading priority will escalate response time.`;
-        const type = 'priority_change';
-        const confidence = 90.00;
-
-        await query(`
-          INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
-          VALUES ($1, $2, $3, $4, $5)
-        `, [ticket.id, type, suggestion, reasoning, confidence]);
-        continue;
-      }
     }
 
-    // Return recommendations strictly for unresolved tickets (Reassignment & Priority Change only)
+    // Return recommendations strictly for unresolved tickets (Smart Assignment only)
     const finalRecs = await query(`
       SELECT r.*, t.ticket_number 
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
-      WHERE (r.is_applied = FALSE OR r.type = 'priority_change')
-        AND r.type IN ('reassignment', 'priority_change')
+      WHERE r.is_applied = FALSE
+        AND r.type = 'reassignment'
         AND t.status NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY r.confidence DESC, r.created_at DESC
     `);
