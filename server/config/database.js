@@ -71,8 +71,8 @@ const testConnection = async () => {
       DECLARE
           sla_hours INTEGER := 48;
       BEGIN
-          IF NEW.priority = 'critical' THEN sla_hours := 4;
-          ELSIF NEW.priority = 'high' THEN sla_hours := 8;
+          IF NEW.priority = 'critical' THEN sla_hours := 15;
+          ELSIF NEW.priority = 'high' THEN sla_hours := 24;
           ELSIF NEW.priority = 'medium' THEN sla_hours := 48;
           ELSE sla_hours := 72;
           END IF;
@@ -84,8 +84,13 @@ const testConnection = async () => {
     `);
     await query(`
       UPDATE tickets 
-      SET sla_deadline = created_at + INTERVAL '48 hours'
-      WHERE priority = 'medium' AND status NOT IN ('resolved', 'closed', 'cancelled')
+      SET sla_deadline = created_at + CASE priority 
+        WHEN 'critical' THEN INTERVAL '15 hours'
+        WHEN 'high' THEN INTERVAL '24 hours'
+        WHEN 'medium' THEN INTERVAL '48 hours'
+        ELSE INTERVAL '48 hours'
+      END
+      WHERE status NOT IN ('resolved', 'closed', 'cancelled')
     `).catch(() => {});
     logger.info('✅ Database function set_sla_due_date updated/repaired successfully');
   } catch (err) {

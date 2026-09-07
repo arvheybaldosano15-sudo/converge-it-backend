@@ -438,8 +438,8 @@ BEGIN
     SELECT c.sla_hours INTO sla_hours FROM categories c WHERE c.id = NEW.category_id;
     IF sla_hours IS NULL THEN
         sla_hours := CASE NEW.priority
-            WHEN 'critical' THEN 4
-            WHEN 'high' THEN 8
+            WHEN 'critical' THEN 15
+            WHEN 'high' THEN 24
             WHEN 'medium' THEN 48
             ELSE 72
         END;

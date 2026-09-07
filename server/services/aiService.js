@@ -34,7 +34,7 @@ Analyze the customer concern and respond ONLY with a valid JSON object:
   "reasoning": "<brief explanation>"
 }
 Priority: critical=service outage, high=major degradation, medium=partial/intermittent, low=minor/general.
-ETA: critical=2-4h, high=8-12h, medium=48h, installation=24-72h.`
+ETA: critical=15h, high=24h, medium=48h, installation=24-72h.`
         },
         ...conversationHistory,
         { role: 'user', content: customerInput }
