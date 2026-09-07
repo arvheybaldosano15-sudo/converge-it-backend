@@ -125,10 +125,11 @@ exports.createTicket = async (req, res, next) => {
 
     const ticketNumber = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const priorityVal = (priority || 'medium').toLowerCase();
+    const defaultEta = priorityVal === 'critical' ? 15 : priorityVal === 'high' ? 24 : 48;
     const result = await query(
       `INSERT INTO tickets (ticket_number, customer_id, service_category_id, assigned_technician_id, priority, status, subject, description, ai_priority_recommendation, ai_estimated_resolution_hours)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [ticketNumber, customerId, categoryId || null, assignedTo || null, priorityVal, 'open', subject, description, (aiPriority || priorityVal), aiEtaHours || 24]
+      [ticketNumber, customerId, categoryId || null, assignedTo || null, priorityVal, 'open', subject, description, (aiPriority || priorityVal), aiEtaHours || defaultEta]
     );
     const ticket = result.rows[0];
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number });

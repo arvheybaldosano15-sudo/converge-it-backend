@@ -224,6 +224,7 @@ exports.handleWebhook = async (req, res) => {
     const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
     const validPriorities = ['low', 'medium', 'high', 'critical'];
     const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
+    const etaHoursVal = aiResult.etaHours || (priorityEnum === 'critical' ? 15 : priorityEnum === 'high' ? 24 : 48);
     const subjectVal = aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger';
     const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
@@ -233,7 +234,7 @@ exports.handleWebhook = async (req, res) => {
         `INSERT INTO tickets (
           ticket_number, customer_id, service_category_id, priority, status, subject, description, source, ai_priority_recommendation, ai_estimated_resolution_hours
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, messageText, 'messenger', priorityEnum, aiResult.etaHours || 24]
+        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, messageText, 'messenger', priorityEnum, etaHoursVal]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
@@ -603,13 +604,15 @@ exports.createTicket = async (req, res) => {
 
     const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
+    const etaHoursVal = aiResult.etaHours || (priorityEnum === 'critical' ? 15 : priorityEnum === 'high' ? 24 : 48);
+
     let createdTicket;
     try {
       const newTicket = await query(
         `INSERT INTO tickets (
           ticket_number, customer_id, service_category_id, priority, status, subject, description, source, ai_priority_recommendation, ai_estimated_resolution_hours
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, concernText, 'messenger', priorityEnum, aiResult.etaHours || 24]
+        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, concernText, 'messenger', priorityEnum, etaHoursVal]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
