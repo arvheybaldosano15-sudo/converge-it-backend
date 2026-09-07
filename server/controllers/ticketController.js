@@ -115,11 +115,11 @@ exports.createTicket = async (req, res, next) => {
     if (assignedTo) {
       const activeCheck = await query(
         `SELECT id, ticket_number FROM tickets 
-         WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed')`,
+         WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed', 'cancelled')`,
         [assignedTo]
       );
-      if (activeCheck.rows.length > 0) {
-        throw createError(`This technician is currently assigned to unresolved ticket ${activeCheck.rows[0].ticket_number} and cannot receive new assignments.`, 400);
+      if (activeCheck.rows.length >= 3) {
+        throw createError(`This technician currently has ${activeCheck.rows.length} active tickets and cannot receive more than 3 assignments.`, 400);
       }
     }
 
@@ -160,15 +160,15 @@ exports.updateTicket = async (req, res, next) => {
     if (!oldRes.rows[0]) throw createError('Ticket not found', 404);
     const old = oldRes.rows[0];
 
-    // Validate that technician does not have any other unresolved tickets
+    // Validate that technician does not have 3 or more unresolved tickets
     if (assignedTo && req.user.role === 'admin' && assignedTo !== old.assigned_technician_id) {
       const activeCheck = await client.query(
         `SELECT id, ticket_number FROM tickets 
-         WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed') AND id != $2`,
+         WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed', 'cancelled') AND id != $2`,
         [assignedTo, id]
       );
-      if (activeCheck.rows.length > 0) {
-        throw createError(`This technician is currently assigned to unresolved ticket ${activeCheck.rows[0].ticket_number} and cannot receive new assignments.`, 400);
+      if (activeCheck.rows.length >= 3) {
+        throw createError(`This technician currently has ${activeCheck.rows.length} active tickets and cannot receive more than 3 assignments.`, 400);
       }
     }
 

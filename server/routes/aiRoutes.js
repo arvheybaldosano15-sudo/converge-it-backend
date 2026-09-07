@@ -39,10 +39,11 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
 
     // Generate Smart Assignment recommendations for active unassigned tickets
     for (const ticket of activeTickets) {
-      // Rule 1: Ticket is Unassigned -> Suggest assignment
-      if (!ticket.assigned_technician_id && technicians.length > 0) {
-        let selectedTech = technicians[0];
-        const matchingTech = technicians.find(t => 
+      // Rule 1: Ticket is Unassigned -> Suggest assignment (only for techs with < 3 active tickets)
+      const availableTechs = technicians.filter(t => parseInt(t.workload, 10) < 3);
+      if (!ticket.assigned_technician_id && availableTechs.length > 0) {
+        let selectedTech = availableTechs[0];
+        const matchingTech = availableTechs.find(t => 
           t.specialization && 
           ticket.category_name && 
           t.specialization.toLowerCase().includes(ticket.category_name.toLowerCase())
@@ -102,27 +103,31 @@ const applyRecommendationHandler = async (req, res, next) => {
           const techId = techResult.rows[0].id;
           const activeCheck = await query(
             `SELECT ticket_number FROM tickets 
-             WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed') AND id != $2`,
+             WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed', 'cancelled') AND id != $2`,
             [techId, ticket.id]
           );
-          if (activeCheck.rows.length > 0) {
-            return next({ statusCode: 400, message: `This technician is currently assigned to unresolved ticket ${activeCheck.rows[0].ticket_number} and cannot receive new assignments.` });
+          if (activeCheck.rows.length >= 3) {
+            return next({ statusCode: 400, message: `This technician currently has ${activeCheck.rows.length} active tickets and cannot receive new assignments (limit: 3 active tickets).` });
           }
           await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [techId, ticket.id]);
         } else {
           const lowestTechResult = await query(`
             SELECT u.id FROM users u 
             WHERE u.role = 'technician' AND u.status = 'active'
-            AND NOT EXISTS (
-              SELECT 1 FROM tickets t2 
-              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed') AND t2.id != $1
-            )
+            AND (
+              SELECT COUNT(*) FROM tickets t2 
+              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
+            ) < 3
+            ORDER BY (
+              SELECT COUNT(*) FROM tickets t2 
+              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
+            ) ASC
             LIMIT 1
           `, [ticket.id]);
           if (lowestTechResult.rows[0]) {
             await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [lowestTechResult.rows[0].id, ticket.id]);
           } else {
-            return next({ statusCode: 400, message: 'All technicians are currently busy with unresolved tickets. Cannot assign.' });
+            return next({ statusCode: 400, message: 'All technicians currently have 3 active tickets and cannot receive new assignments.' });
           }
         }
       }
