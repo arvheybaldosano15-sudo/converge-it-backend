@@ -75,18 +75,44 @@ export const SocketProvider = ({ children }) => {
       fetchUnreadCount();
     });
 
+    const playNotificationChime = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch (e) {}
+    };
+
     newSocket.on('notification:new', (notification) => {
-      toast.custom((t) => (
-        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} glass-panel max-w-md w-full bg-slate-900/90 text-white p-4 rounded-xl shadow-glass border border-cyan-500/30 flex items-start space-x-3 pointer-events-auto`}>
-          <div className="bg-cyan-500/20 p-2 rounded-lg text-cyan-400">
-            <Bell className="w-4 h-4" />
+      playNotificationChime();
+      toast.custom(
+        (t) => (
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} fixed top-3 left-3 right-3 max-w-md mx-auto z-[9999] glass-panel bg-slate-950/95 text-white p-4 rounded-2xl shadow-2xl border-2 border-cyan-500/60 flex items-start space-x-3 pointer-events-auto backdrop-blur-xl`}>
+            <div className="bg-cyan-500/20 p-2.5 rounded-xl text-cyan-400 shrink-0 border border-cyan-500/40">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-cyan-300 font-display truncate">{notification.title}</h4>
+                <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-700/50">ALERT</span>
+              </div>
+              <p className="text-xs text-slate-200 mt-1 leading-snug line-clamp-2">{notification.body || notification.message}</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h4 className="font-semibold text-sm text-cyan-300">{notification.title}</h4>
-            <p className="text-xs text-slate-300 mt-1">{notification.body || notification.message}</p>
-          </div>
-        </div>
-      ));
+        ),
+        { position: 'top-center', duration: 6000 }
+      );
       setUnreadNotifications((prev) => prev + 1);
       fetchUnreadCount();
 
@@ -105,7 +131,7 @@ export const SocketProvider = ({ children }) => {
               vibrate: [300, 100, 300, 100, 300],
               requireInteraction: true,
               renotify: true,
-              tag: notification.id ? `notif-${notification.id}` : `converge-${Date.now()}`,
+              tag: `converge-alert-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
               data: { url: targetUrl, ticketId: notification.reference_id }
             });
           }).catch((e) => console.error('SW notification error:', e));
@@ -115,7 +141,7 @@ export const SocketProvider = ({ children }) => {
               body: notifBody,
               icon: '/logo.png',
               badge: '/logo.png',
-              tag: notification.id ? `notif-${notification.id}` : `converge-${Date.now()}`
+              tag: `converge-alert-${Date.now()}`
             });
           } catch (e) {
             console.error('Local Notification error:', e);
