@@ -34,6 +34,8 @@ import {
   Maximize2,
   ExternalLink,
   Trash2,
+  AlertCircle,
+  ShieldAlert,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,21 +61,41 @@ const InstallationRequests = () => {
   const [noteText, setNoteText] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
+  // Filters state
+  const [statusFilter, setStatusFilter] = useState('');
+  const [slaFilter, setSlaFilter] = useState('');
+
   // Pagination state (10 items per page)
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(tickets.length / itemsPerPage) || 1;
+
+  const filteredTickets = React.useMemo(() => {
+    return tickets.filter((t) => {
+      if (statusFilter === 'open' && t.status !== 'open') return false;
+      if (statusFilter === 'in_progress' && t.status !== 'in_progress') return false;
+      if (statusFilter === 'resolved' && t.status !== 'resolved' && t.status !== 'closed') return false;
+
+      if (slaFilter) {
+        const sla = getSlaStatus(t.sla_deadline, t.status);
+        if (slaFilter === 'at_risk' && sla.text !== 'AT RISK') return false;
+        if (slaFilter === 'breached' && sla.text !== 'BREACHED') return false;
+      }
+      return true;
+    });
+  }, [tickets, statusFilter, slaFilter]);
+
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage) || 1;
 
   useEffect(() => {
     if (page > totalPages) {
       setPage(Math.max(1, totalPages));
     }
-  }, [tickets.length, totalPages, page]);
+  }, [filteredTickets.length, totalPages, page]);
 
   const paginatedTickets = React.useMemo(() => {
     const start = (page - 1) * itemsPerPage;
-    return tickets.slice(start, start + itemsPerPage);
-  }, [tickets, page]);
+    return filteredTickets.slice(start, start + itemsPerPage);
+  }, [filteredTickets, page]);
 
   // Background auto-sync polling every 8 seconds (soft background refetch)
   useEffect(() => {
@@ -251,6 +273,96 @@ const InstallationRequests = () => {
     }
   };
 
+  const stats = React.useMemo(() => {
+    let pending = 0;
+    let inProgress = 0;
+    let resolved = 0;
+    let atRisk = 0;
+    let breached = 0;
+
+    tickets.forEach((t) => {
+      if (t.status === 'open') pending++;
+      else if (t.status === 'in_progress') inProgress++;
+      else if (t.status === 'resolved' || t.status === 'closed') resolved++;
+
+      const sla = getSlaStatus(t.sla_deadline, t.status);
+      if (sla.text === 'AT RISK') atRisk++;
+      if (sla.text === 'BREACHED') breached++;
+    });
+
+    return {
+      total: tickets.length,
+      pending,
+      inProgress,
+      resolved,
+      atRisk,
+      breached,
+    };
+  }, [tickets]);
+
+  const summaryCards = [
+    {
+      label: 'Total Requests',
+      count: stats.total,
+      icon: ClipboardList,
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/20',
+      border: 'border-amber-500',
+      active: !statusFilter && !slaFilter,
+      onClick: () => { setStatusFilter(''); setSlaFilter(''); setPage(1); }
+    },
+    {
+      label: 'Pending',
+      count: stats.pending,
+      icon: Clock,
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-500/20',
+      border: 'border-yellow-500',
+      active: statusFilter === 'open',
+      onClick: () => { setStatusFilter('open'); setSlaFilter(''); setPage(1); }
+    },
+    {
+      label: 'In Progress',
+      count: stats.inProgress,
+      icon: UserCheck,
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/20',
+      border: 'border-blue-500',
+      active: statusFilter === 'in_progress',
+      onClick: () => { setStatusFilter('in_progress'); setSlaFilter(''); setPage(1); }
+    },
+    {
+      label: 'Resolved',
+      count: stats.resolved,
+      icon: CheckCircle,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/20',
+      border: 'border-emerald-500',
+      active: statusFilter === 'resolved',
+      onClick: () => { setStatusFilter('resolved'); setSlaFilter(''); setPage(1); }
+    },
+    {
+      label: 'SLA At Risk',
+      count: stats.atRisk,
+      icon: AlertCircle,
+      color: 'text-orange-400',
+      bg: 'bg-orange-500/20',
+      border: 'border-orange-500',
+      active: slaFilter === 'at_risk',
+      onClick: () => { setSlaFilter('at_risk'); setStatusFilter(''); setPage(1); }
+    },
+    {
+      label: 'SLA Breached',
+      count: stats.breached,
+      icon: ShieldAlert,
+      color: 'text-rose-400',
+      bg: 'bg-rose-500/20',
+      border: 'border-rose-500',
+      active: slaFilter === 'breached',
+      onClick: () => { setSlaFilter('breached'); setStatusFilter(''); setPage(1); }
+    },
+  ];
+
   // Only render full screen loader if no cached tickets exist at all
   if (ticketsLoading && tickets.length === 0) {
     return <Loader text="Loading Installation Requests..." />;
@@ -289,6 +401,30 @@ const InstallationRequests = () => {
             Refresh
           </Button>
         </div>
+      </div>
+
+      {/* 6 Clickable Compact Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {summaryCards.map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <Card
+              key={idx}
+              onClick={card.onClick}
+              className={`flex items-center gap-3 p-3 transition-all duration-200 border-l-4 border-t-0 border-r-0 border-b-0 ${card.border} ${
+                card.active ? 'bg-slate-800/90 ring-1 ring-amber-500/50 brightness-110' : 'bg-slate-900/70 hover:bg-slate-800/60'
+              } cursor-pointer`}
+            >
+              <div className={`p-2 rounded-xl ${card.bg} ${card.color} shrink-0`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 className={`text-lg font-extrabold font-display leading-none ${card.color}`}>{card.count}</h3>
+                <p className="text-[11px] font-bold text-slate-200 mt-0.5 truncate">{card.label}</p>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Main Table */}
@@ -442,7 +578,7 @@ const InstallationRequests = () => {
       <Pagination
         currentPage={page}
         totalPages={totalPages}
-        totalItems={tickets.length}
+        totalItems={filteredTickets.length}
         itemsPerPage={10}
         onPageChange={setPage}
       />
