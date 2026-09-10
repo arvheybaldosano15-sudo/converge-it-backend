@@ -1,6 +1,8 @@
-/* Service Worker for Real Mobile Push Notifications */
+/* Service Worker for Real Mobile Push Notifications - v2.1.0 */
+const SW_VERSION = 'v2.1.0';
+
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  self.skipWaiting(); // Force immediate activation — no waiting
 });
 
 self.addEventListener('activate', (event) => {

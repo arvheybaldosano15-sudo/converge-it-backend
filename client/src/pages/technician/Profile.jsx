@@ -244,37 +244,58 @@ const TechnicianProfile = () => {
           </div>
 
           {/* Real Mobile Lock-Screen Push Alert Control */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2.5">
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Bell className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-bold text-white">Real Mobile Lock-Screen Push</span>
+                <span className="text-xs font-bold text-white">Mobile Push Notifications</span>
               </div>
-              <Badge variant="info">Enabled</Badge>
+              <Badge variant="success">Active</Badge>
             </div>
-            <p className="text-[11px] text-slate-400 leading-normal">
-              Receive instant lock-screen push notifications on your real mobile phone whenever a ticket is assigned to you.
-            </p>
+
+            {/* In-app alert status */}
+            <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-bold text-emerald-300">In-App Alerts: Active ✓</p>
+                <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
+                  When the app is open, you receive real-time ticket alerts with a banner and sound at the top of your screen.
+                </p>
+              </div>
+            </div>
+
+            {/* Lock-screen push guide */}
+            <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25">
+              <Bell className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-bold text-amber-300">Lock-Screen Banners: Use Chrome Browser</p>
+                <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
+                  Native lock-screen notifications require Chrome. Open the app URL in <span className="text-white font-bold">Chrome</span>, tap the menu (⋮) → <span className="text-white font-bold">Add to Home Screen</span>, then allow notifications.
+                </p>
+              </div>
+            </div>
+
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={async () => {
-                // Step 1: Directly fire native notification (works on all Android devices)
                 const directResult = await testDirectNotification();
                 if (directResult.success) {
                   toast.success('✅ Notification banner sent to your phone!');
-                  // Step 2: Try VAPID background subscription (for when app is closed)
                   initPushNotifications().catch(() => {});
+                } else if (directResult.error && directResult.error.includes('not supported')) {
+                  toast.error('Open this app in Chrome browser → tap ⋮ menu → Add to Home Screen → then re-test.');
+                } else if (directResult.error && directResult.error.includes('denied')) {
+                  toast.error('Notifications blocked. Go to Android Settings → Apps → Chrome → Notifications → Enable.');
                 } else {
-                  // Show the real error so user knows what to fix
-                  toast.error(directResult.error || 'Could not send notification. Check phone notification settings.');
+                  toast.error(directResult.error || 'Could not send notification. Open in Chrome browser.');
                 }
               }}
               icon={Bell}
               className="w-full text-xs"
             >
-              Test Phone Lock-Screen Push
+              Test Phone Notification
             </Button>
           </div>
 
