@@ -565,21 +565,13 @@ const TicketManagement = () => {
       </Card>
 
       {/* Pagination Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <p className="text-xs text-slate-400">
-          Showing <span className="font-bold text-white">{tickets.length > 0 ? (page - 1) * 10 + 1 : 0}</span> to{' '}
-          <span className="font-bold text-white">{Math.min(page * 10, totalItems)}</span> of{' '}
-          <span className="font-bold text-cyan-400">{totalItems}</span> automatically generated tickets
-        </p>
-
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={10}
-          onPageChange={setPage}
-        />
-      </div>
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={10}
+        onPageChange={setPage}
+      />
 
       {/* MODERN GLASSMORPHISM TICKET DETAILS MODAL */}
       <Modal

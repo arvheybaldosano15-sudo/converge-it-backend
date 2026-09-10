@@ -6,6 +6,7 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
 import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
+import Pagination from '../../components/common/Pagination';
 import { useSocket } from '../../context/SocketContext';
 import { useTechnicians } from '../../hooks/useTechnicians';
 import {
@@ -57,6 +58,22 @@ const InstallationRequests = () => {
   // Workflow action states
   const [noteText, setNoteText] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+
+  // Pagination state (10 items per page)
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(tickets.length / itemsPerPage) || 1;
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(Math.max(1, totalPages));
+    }
+  }, [tickets.length, totalPages, page]);
+
+  const paginatedTickets = React.useMemo(() => {
+    const start = (page - 1) * itemsPerPage;
+    return tickets.slice(start, start + itemsPerPage);
+  }, [tickets, page]);
 
   // Background auto-sync polling every 8 seconds (soft background refetch)
   useEffect(() => {
@@ -291,7 +308,7 @@ const InstallationRequests = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {tickets.length === 0 ? (
+              {paginatedTickets.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-slate-500">
                     <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-700" />
@@ -301,7 +318,7 @@ const InstallationRequests = () => {
                   </td>
                 </tr>
               ) : (
-                tickets.map((row) => {
+                paginatedTickets.map((row) => {
                   const slaInfo = getSlaStatus(row.sla_deadline, row.status);
                   return (
                     <tr
@@ -348,15 +365,11 @@ const InstallationRequests = () => {
                               ? 'warning'
                               : row.status === 'closed'
                               ? 'secondary'
-                              : 'danger'
+                              : 'default'
                           }
                           className="capitalize"
                         >
-                          {row.status
-                            ? row.status === 'open'
-                              ? 'pending'
-                              : row.status.replace('_', ' ')
-                            : 'pending'}
+                          {row.status === 'open' ? 'Pending' : row.status.replace('_', ' ')}
                         </Badge>
                       </td>
 
@@ -424,6 +437,15 @@ const InstallationRequests = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={tickets.length}
+        itemsPerPage={10}
+        onPageChange={setPage}
+      />
 
       {/* DETAIL MODAL */}
       <Modal
