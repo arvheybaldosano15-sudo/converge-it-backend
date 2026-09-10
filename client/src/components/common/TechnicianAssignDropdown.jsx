@@ -64,8 +64,8 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  const availableTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) === 0);
-  const busyTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) > 0);
+  const availableTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) < 3);
+  const busyTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) >= 3);
 
   const dropdownMenu = open ? (
     <div
@@ -74,8 +74,8 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         position: 'absolute',
         top: `${coords.top}px`,
         left: `${coords.left}px`,
-        minWidth: '180px',
-        width: `${Math.max(180, coords.width)}px`,
+        minWidth: '200px',
+        width: `${Math.max(200, coords.width)}px`,
       }}
       className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/80 overflow-hidden"
     >
@@ -83,44 +83,54 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         <p className="text-slate-500 text-[11px] px-3 py-2.5 text-center">No active technicians</p>
       ) : (
         <>
-          {/* Available technicians */}
+          {/* Available technicians (< 3 active tickets) */}
           {availableTechs.length > 0 && (
             <div>
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-3 pt-2.5 pb-1">
-                Available
+                Available (Up to 3 Tickets)
               </p>
-              {availableTechs.map((tech) => (
-                <button
-                  key={tech.id}
-                  type="button"
-                  onClick={() => {
-                    onAssign(tech.id);
-                    setOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-[12px] flex items-center gap-2 text-white hover:bg-slate-800 transition-colors"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate">{tech.full_name}</span>
-                </button>
-              ))}
+              {availableTechs.map((tech) => {
+                const count = parseInt(tech.active_tickets || 0);
+                return (
+                  <button
+                    key={tech.id}
+                    type="button"
+                    onClick={() => {
+                      onAssign(tech.id);
+                      setOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[12px] flex items-center justify-between gap-2 text-white hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">{tech.full_name}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0">
+                      {count}/3
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          {/* Busy technicians */}
+          {/* Busy technicians (3/3 active tickets) */}
           {busyTechs.length > 0 && (
             <div className={availableTechs.length > 0 ? 'border-t border-slate-800 mt-1 pt-1' : ''}>
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
-                Busy (Unavailable)
+                Max Capacity (3/3 Active)
               </p>
               {busyTechs.map((tech) => (
                 <div
                   key={tech.id}
-                  className="flex items-center gap-2 px-3 py-2 text-[12px] text-slate-500 cursor-not-allowed opacity-60"
+                  className="flex items-center justify-between gap-2 px-3 py-2 text-[12px] text-slate-500 cursor-not-allowed opacity-60"
                 >
-                  <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span className="truncate flex-1">{tech.full_name}</span>
-                  <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1 py-0.5 shrink-0">
-                    Busy
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">{tech.full_name}</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0">
+                    Full (3/3)
                   </span>
                 </div>
               ))}
@@ -129,7 +139,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
 
           {availableTechs.length === 0 && busyTechs.length > 0 && (
             <p className="text-amber-400/80 text-[11px] px-3 pb-2.5 text-center font-medium">
-              All technicians are currently busy
+              All technicians are at maximum capacity (3/3)
             </p>
           )}
         </>

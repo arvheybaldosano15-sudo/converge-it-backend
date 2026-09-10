@@ -41,13 +41,9 @@ exports.getTechnicians = async (req, res, next) => {
     // Having clause for workload filtering
     let havingClause = '';
     if (workload === 'available') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) <= 1`;
-    } else if (workload === 'normal') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) BETWEEN 1 AND 2`;
-    } else if (workload === 'busy') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) = 3`;
-    } else if (workload === 'overloaded') {
-      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) > 3`;
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed','cancelled')) < 3`;
+    } else if (workload === 'busy' || workload === 'overloaded') {
+      havingClause = `HAVING COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed','cancelled')) >= 3`;
     }
 
     let orderBy = 'u.created_at DESC';
