@@ -23,7 +23,7 @@ import {
   Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { initPushNotifications, testLocalNotification } from '../../utils/pushNotifications';
+import { initPushNotifications, testLocalNotification, testDirectNotification } from '../../utils/pushNotifications';
 
 const TechnicianProfile = () => {
   const { user, updateUserProfile } = useAuth();
@@ -260,22 +260,15 @@ const TechnicianProfile = () => {
               variant="secondary"
               size="sm"
               onClick={async () => {
-                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
-                  await Notification.requestPermission();
-                }
-                const result = await initPushNotifications();
-                if (result.success) {
-                  await testLocalNotification();
-                  toast.success('Mobile push notification sent to your phone!');
+                // Step 1: Directly fire native notification (works on all Android devices)
+                const directResult = await testDirectNotification();
+                if (directResult.success) {
+                  toast.success('✅ Notification banner sent to your phone!');
+                  // Step 2: Try VAPID background subscription (for when app is closed)
+                  initPushNotifications().catch(() => {});
                 } else {
-                  const localFired = await testLocalNotification();
-                  if (localFired) {
-                    toast.success('Mobile notification sent to phone! (VAPID push needs HTTPS)');
-                  } else if (result.reason === 'denied' || (typeof Notification !== 'undefined' && Notification.permission === 'denied')) {
-                    toast.error('Notifications OFF in Android Settings. Please turn ON "All MTS-Converge notifications" in phone settings!');
-                  } else {
-                    toast.error(result.error || 'Unable to initialize push on this device.');
-                  }
+                  // Show the real error so user knows what to fix
+                  toast.error(directResult.error || 'Could not send notification. Check phone notification settings.');
                 }
               }}
               icon={Bell}

@@ -101,3 +101,49 @@ export const testLocalNotification = async () => {
   }
   return false;
 };
+
+// Direct test: request permission + immediately fire native system notification banner
+// Works on Android regardless of HTTP/HTTPS or VAPID support
+export const testDirectNotification = async () => {
+  try {
+    // Step 1: Request permission if not already granted
+    if (!('Notification' in window)) {
+      return { success: false, error: 'Notifications not supported on this device/browser.' };
+    }
+
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== 'granted') {
+      return { success: false, error: 'Notification permission was denied. Please enable it in phone settings.' };
+    }
+
+    // Step 2: Fire notification via Service Worker (shows native top banner)
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification('📋 MTS-Converge Alert Test', {
+        body: 'Your mobile push notifications are active! Ticket alerts will pop up here.',
+        icon: '/logo.png',
+        badge: '/logo.png',
+        vibrate: [300, 100, 300, 100, 300],
+        tag: 'direct-test-' + Date.now(),
+        renotify: true,
+        requireInteraction: true,
+        data: { url: '/technician/assigned' }
+      });
+      return { success: true };
+    }
+
+    // Step 3: Fallback to basic Notification API (no SW)
+    new Notification('📋 MTS-Converge Alert Test', {
+      body: 'Your mobile push notifications are active! Ticket alerts will pop up here.',
+      icon: '/logo.png',
+    });
+    return { success: true };
+  } catch (e) {
+    console.error('testDirectNotification error:', e);
+    return { success: false, error: e.message || 'Unknown error triggering notification.' };
+  }
+};
