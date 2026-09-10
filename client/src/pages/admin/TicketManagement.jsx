@@ -44,8 +44,11 @@ const TicketManagement = () => {
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('DESC');
 
-  // Pagination
-  const [page, setPage] = useState(1);
+  // Server-side batch pagination (30 per batch) + client-side display (10 per page)
+  const BATCH_SIZE = 30;
+  const ITEMS_PER_PAGE = 10;
+  const [page, setPage] = useState(1);       // server batch page
+  const [clientPage, setClientPage] = useState(1); // client display page (1–3 within a batch)
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -70,7 +73,7 @@ const TicketManagement = () => {
     try {
       const params = {
         page,
-        limit: 10,
+        limit: BATCH_SIZE, // fetch 30 per server batch
         status: statusFilter,
         priority: priorityFilter,
         category: categoryFilter,
@@ -90,6 +93,7 @@ const TicketManagement = () => {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
+        setClientPage(1); // reset display page when new batch loads
       }
       if (statsRes.success) {
         setTicketStats(statsRes.data || {});
@@ -461,7 +465,7 @@ const TicketManagement = () => {
                   </td>
                 </tr>
               ) : (
-                tickets.map((row) => {
+                tickets.slice((clientPage - 1) * ITEMS_PER_PAGE, clientPage * ITEMS_PER_PAGE).map((row) => {
                   const slaInfo = getSlaStatus(row.sla_deadline, row.status);
 
                   return (
@@ -566,11 +570,22 @@ const TicketManagement = () => {
 
       {/* Pagination Bar */}
       <Pagination
-        currentPage={page}
-        totalPages={totalPages}
+        currentPage={clientPage}
+        totalPages={Math.ceil(tickets.length / ITEMS_PER_PAGE) || 1}
         totalItems={totalItems}
-        itemsPerPage={10}
-        onPageChange={setPage}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={(p) => {
+          const batchPages = Math.ceil(tickets.length / ITEMS_PER_PAGE);
+          if (p > batchPages) {
+            // load next server batch
+            setPage(prev => prev + 1);
+          } else if (p < 1 && page > 1) {
+            // load previous server batch
+            setPage(prev => prev - 1);
+          } else {
+            setClientPage(p);
+          }
+        }}
       />
 
       {/* MODERN GLASSMORPHISM TICKET DETAILS MODAL */}
