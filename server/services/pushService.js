@@ -1,4 +1,5 @@
 const webpush = require('web-push');
+const axios = require('axios');
 const { query } = require('../config/database');
 const logger = require('../config/logger');
 
@@ -19,6 +20,39 @@ if (publicKey && privateKey) {
 }
 
 exports.getPublicKey = () => publicKey;
+
+// OneSignal REST API push helper for Web2APK Pro APKs
+const sendOneSignalPush = async (userId, payload) => {
+  const appId = process.env.ONESIGNAL_APP_ID;
+  const apiKey = process.env.ONESIGNAL_REST_API_KEY;
+  if (!appId || !apiKey) return;
+
+  try {
+    await axios.post(
+      'https://onesignal.com/api/v1/notifications',
+      {
+        app_id: appId,
+        contents: { en: payload.body || payload.message || 'New ticket assignment alert' },
+        headings: { en: payload.title || 'Converge Support Notification' },
+        include_aliases: {
+          external_id: [userId]
+        },
+        target_channel: 'push',
+        data: payload.data || {},
+        priority: 10
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${apiKey}`
+        }
+      }
+    );
+    logger.info(`✅ OneSignal native push delivered to user ${userId}`);
+  } catch (err) {
+    logger.warn(`OneSignal push notice for user ${userId}:`, err.response?.data || err.message);
+  }
+};
 
 // Save or update push subscription for a user
 exports.saveSubscription = async (userId, subscription, userAgent = '') => {
@@ -44,8 +78,11 @@ exports.saveSubscription = async (userId, subscription, userAgent = '') => {
   }
 };
 
-// Send real mobile push notification to a specific user
+// Send real mobile push notification to a specific user (VAPID + OneSignal)
 exports.sendPushToUser = async (userId, payload) => {
+  // 1. Send OneSignal push if configured (for Web2APK Pro native lock-screen push)
+  sendOneSignalPush(userId, payload).catch((e) => logger.warn('OneSignal dispatch:', e.message));
+
   if (!publicKey || !privateKey) return;
   try {
     const res = await query('SELECT * FROM push_subscriptions WHERE user_id = $1', [userId]);
