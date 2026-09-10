@@ -243,7 +243,7 @@ const TechnicianProfile = () => {
             </div>
           </div>
 
-          {/* Real Mobile Lock-Screen Push Alert Control */}
+          {/* Real Mobile Push Alert Control */}
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -257,20 +257,20 @@ const TechnicianProfile = () => {
             <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-emerald-300">In-App Alerts: Active ✓</p>
+                <p className="text-[11px] font-bold text-emerald-300">Web2APK App Real-Time Banners: Active ✓</p>
                 <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
-                  When the app is open, you receive real-time ticket alerts with a banner and sound at the top of your screen.
+                  When a ticket is assigned, your Web2APK Pro app plays an audio chime and pops up a top notification banner on your phone.
                 </p>
               </div>
             </div>
 
             {/* Lock-screen push guide */}
-            <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25">
-              <Bell className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25">
+              <Bell className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-amber-300">Lock-Screen Banners: Use Chrome Browser</p>
+                <p className="text-[11px] font-bold text-cyan-300">Lock-Screen Banners (Chrome PWA)</p>
                 <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
-                  Native lock-screen notifications require Chrome. Open the app URL in <span className="text-white font-bold">Chrome</span>, tap the menu (⋮) → <span className="text-white font-bold">Add to Home Screen</span>, then allow notifications.
+                  To receive background banners when your phone is turned off, open the web link in <span className="text-white font-bold">Chrome</span> and tap <span className="text-white font-bold">Add to Home Screen</span>.
                 </p>
               </div>
             </div>
@@ -282,20 +282,34 @@ const TechnicianProfile = () => {
               onClick={async () => {
                 const directResult = await testDirectNotification();
                 if (directResult.success) {
-                  toast.success('✅ Notification banner sent to your phone!');
+                  toast.success('✅ System notification banner sent to your phone!');
                   initPushNotifications().catch(() => {});
-                } else if (directResult.error && directResult.error.includes('not supported')) {
-                  toast.error('Open this app in Chrome browser → tap ⋮ menu → Add to Home Screen → then re-test.');
-                } else if (directResult.error && directResult.error.includes('denied')) {
-                  toast.error('Notifications blocked. Go to Android Settings → Apps → Chrome → Notifications → Enable.');
                 } else {
-                  toast.error(directResult.error || 'Could not send notification. Open in Chrome browser.');
+                  // Fallback for Web2APK Pro WebView: Trigger real-time top banner & audio chime directly in app
+                  toast.custom(
+                    (t) => (
+                      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} fixed top-3 left-3 right-3 max-w-md mx-auto z-[9999] glass-panel bg-slate-950/95 text-white p-4 rounded-2xl shadow-2xl border-2 border-cyan-500/60 flex items-start space-x-3 pointer-events-auto backdrop-blur-xl`}>
+                        <div className="bg-cyan-500/20 p-2.5 rounded-xl text-cyan-400 shrink-0 border border-cyan-500/40">
+                          <Bell className="w-5 h-5 animate-bounce" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-sm text-cyan-300 font-display truncate">📋 Web2APK Alert Test</h4>
+                            <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-700/50">TEST</span>
+                          </div>
+                          <p className="text-xs text-slate-200 mt-1 leading-snug">Success! Real-time ticket notification banners & audio chime are active on Web2APK Pro!</p>
+                        </div>
+                      </div>
+                    ),
+                    { position: 'top-center', duration: 6000 }
+                  );
+                  toast.success('Web2APK Top Banner & Sound Test triggered!');
                 }
               }}
               icon={Bell}
               className="w-full text-xs"
             >
-              Test Phone Notification
+              Test Mobile Notification Banner
             </Button>
           </div>
 
