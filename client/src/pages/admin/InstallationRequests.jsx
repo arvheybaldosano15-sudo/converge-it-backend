@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -36,11 +37,14 @@ import {
   Trash2,
   AlertCircle,
   ShieldAlert,
+  Filter,
+  Search,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
 const InstallationRequests = () => {
+  const { searchQuery: globalSearch } = useOutletContext() || {};
   const socketContext = useSocket();
   const socket = socketContext?.socket;
   const queryClient = useQueryClient();
@@ -62,8 +66,22 @@ const InstallationRequests = () => {
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
   // Filters state
+  const [localSearch, setLocalSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
   const [slaFilter, setSlaFilter] = useState('');
+
+  const activeSearch = (localSearch || globalSearch || '').trim().toLowerCase();
+
+  const resetFilters = () => {
+    setLocalSearch('');
+    setStatusFilter('');
+    setPriorityFilter('');
+    setAssigneeFilter('');
+    setSlaFilter('');
+    setPage(1);
+  };
 
   // Pagination state (10 items per page)
   const [page, setPage] = useState(1);
@@ -71,18 +89,54 @@ const InstallationRequests = () => {
 
   const filteredTickets = React.useMemo(() => {
     return tickets.filter((t) => {
-      if (statusFilter === 'open' && t.status !== 'open') return false;
-      if (statusFilter === 'in_progress' && t.status !== 'in_progress') return false;
-      if (statusFilter === 'resolved' && t.status !== 'resolved' && t.status !== 'closed') return false;
+      // Search term filtering
+      if (activeSearch) {
+        const ticketNum = (t.ticket_number || '').toLowerCase();
+        const custName = (t.customer_name || '').toLowerCase();
+        const custContact = (t.customer_contact || '').toLowerCase();
+        const address = (t.customer_address || '').toLowerCase();
+        const title = (t.subject || t.title || '').toLowerCase();
+        const desc = (t.description || '').toLowerCase();
 
+        const matchSearch =
+          ticketNum.includes(activeSearch) ||
+          custName.includes(activeSearch) ||
+          custContact.includes(activeSearch) ||
+          address.includes(activeSearch) ||
+          title.includes(activeSearch) ||
+          desc.includes(activeSearch);
+
+        if (!matchSearch) return false;
+      }
+
+      // Status filter
+      if (statusFilter) {
+        if (statusFilter === 'open' && t.status !== 'open') return false;
+        if (statusFilter === 'in_progress' && t.status !== 'in_progress') return false;
+        if (statusFilter === 'resolved' && t.status !== 'resolved' && t.status !== 'closed') return false;
+        if (statusFilter === 'closed' && t.status !== 'closed') return false;
+      }
+
+      // Priority filter
+      if (priorityFilter && t.priority !== priorityFilter) return false;
+
+      // Assignee filter
+      if (assigneeFilter) {
+        const assignedId = t.assigned_to || t.assigned_technician_id;
+        if (assignedId !== assigneeFilter) return false;
+      }
+
+      // SLA filter
       if (slaFilter) {
         const sla = getSlaStatus(t.sla_deadline, t.status);
         if (slaFilter === 'at_risk' && sla.text !== 'AT RISK') return false;
         if (slaFilter === 'breached' && sla.text !== 'BREACHED') return false;
+        if (slaFilter === 'within' && sla.text !== 'WITHIN SLA') return false;
       }
+
       return true;
     });
-  }, [tickets, statusFilter, slaFilter]);
+  }, [tickets, activeSearch, statusFilter, priorityFilter, assigneeFilter, slaFilter]);
 
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage) || 1;
 
@@ -426,6 +480,107 @@ const InstallationRequests = () => {
           );
         })}
       </div>
+
+      {/* Search & Filter Engine Bar */}
+      <Card className="p-3 sm:p-4 border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center space-x-2 text-xs font-bold text-slate-300">
+            <Filter className="w-4 h-4 text-amber-400" />
+            <span>Search & Filter Engine</span>
+          </div>
+          {(statusFilter || priorityFilter || assigneeFilter || slaFilter || localSearch) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="text-xs text-rose-400 hover:text-rose-300"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Search Input */}
+          <div className="relative lg:col-span-1">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search Ticket ID, Customer, Address..."
+              value={localSearch}
+              onChange={(e) => {
+                setLocalSearch(e.target.value);
+                setPage(1);
+              }}
+              className="glass-input w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border-slate-700 bg-slate-900 text-white placeholder-slate-500"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
+          >
+            <option value="">All Statuses</option>
+            <option value="open">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => {
+              setPriorityFilter(e.target.value);
+              setPage(1);
+            }}
+            className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
+          >
+            <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          {/* Assignee Filter */}
+          <select
+            value={assigneeFilter}
+            onChange={(e) => {
+              setAssigneeFilter(e.target.value);
+              setPage(1);
+            }}
+            className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
+          >
+            <option value="">All Technicians</option>
+            {technicians.map((tech) => (
+              <option key={tech.id} value={tech.id}>
+                {tech.full_name || tech.name}
+              </option>
+            ))}
+          </select>
+
+          {/* SLA Filter */}
+          <select
+            value={slaFilter}
+            onChange={(e) => {
+              setSlaFilter(e.target.value);
+              setPage(1);
+            }}
+            className="glass-input text-xs rounded-xl py-1.5 px-3 border-slate-700 bg-slate-900 text-slate-200"
+          >
+            <option value="">All SLA Statuses</option>
+            <option value="within">Within SLA</option>
+            <option value="at_risk">At Risk (&lt; 4h)</option>
+            <option value="breached">SLA Breached</option>
+          </select>
+        </div>
+      </Card>
 
       {/* Main Table */}
       <div className="glass-panel overflow-hidden border border-slate-800 rounded-2xl">
