@@ -124,31 +124,11 @@ const AssignedTickets = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
 
-  // Track page navigation to pause background polling and avoid race conditions
-  const isNavigatingRef = React.useRef(false);
-  const navTimeoutRef = React.useRef(null);
-
-  const handleSupportPageChange = (newPage) => {
-    isNavigatingRef.current = true;
-    setSupportPage(newPage);
-    clearTimeout(navTimeoutRef.current);
-    navTimeoutRef.current = setTimeout(() => { isNavigatingRef.current = false; }, 1500);
-  };
-
-  const handleInstallPageChange = (newPage) => {
-    isNavigatingRef.current = true;
-    setInstallPage(newPage);
-    clearTimeout(navTimeoutRef.current);
-    navTimeoutRef.current = setTimeout(() => { isNavigatingRef.current = false; }, 1500);
-  };
-
-  // 5-second background auto-sync polling (paused during page navigation)
+  // Fast 1.5-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isNavigatingRef.current) {
-        refetch();
-      }
-    }, 5000);
+      refetch();
+    }, 1500);
     return () => clearInterval(interval);
   }, [refetch]);
 
@@ -712,7 +692,7 @@ const AssignedTickets = () => {
           emptyMessage="No assigned support tasks found matching your filter criteria."
         />
 
-        <Pagination currentPage={supportPage} totalPages={supportTotalPages} totalItems={supportTickets.length} itemsPerPage={itemsPerPage} onPageChange={handleSupportPageChange} />
+        <Pagination currentPage={supportPage} totalPages={supportTotalPages} totalItems={supportTickets.length} itemsPerPage={itemsPerPage} onPageChange={setSupportPage} />
       </div>
 
       {/* ── 5. TABLE 2: ASSIGNED INSTALLATION REQUESTS ── */}
@@ -736,7 +716,7 @@ const AssignedTickets = () => {
           emptyMessage="No assigned installation requests found matching your filter criteria."
         />
 
-        <Pagination currentPage={installPage} totalPages={installTotalPages} totalItems={installationTickets.length} itemsPerPage={itemsPerPage} onPageChange={handleInstallPageChange} />
+        <Pagination currentPage={installPage} totalPages={installTotalPages} totalItems={installationTickets.length} itemsPerPage={itemsPerPage} onPageChange={setInstallPage} />
       </div>
 
       {/* ── 6. ALL MODALS INTEGRATED ── */}

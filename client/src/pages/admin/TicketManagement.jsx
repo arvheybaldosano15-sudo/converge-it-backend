@@ -81,6 +81,7 @@ const TicketManagement = () => {
   };
 
   const fetchTickets = async (silent = false) => {
+    // Only show spinner on first-ever load OR explicit user actions (filter/page change)
     if (!silent && !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
@@ -89,12 +90,12 @@ const TicketManagement = () => {
         api.get('/tickets/stats'),
       ]);
 
-      if (ticketsRes?.success) {
+      if (ticketsRes.success) {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
       }
-      if (statsRes?.success) {
+      if (statsRes.success) {
         setTicketStats(statsRes.data || {});
       }
       hasLoaded.current = true;
@@ -134,30 +135,19 @@ const TicketManagement = () => {
     fetchAuxiliaryData();
   }, []);
 
-  // Track when user is navigating pages — pause polling to avoid race conditions
-  const isNavigatingRef = React.useRef(false);
-  const navTimeoutRef = React.useRef(null);
-
   useEffect(() => {
-    // Mark navigating, fetch immediately, then resume polling after 1.5s
-    isNavigatingRef.current = true;
+    // Immediate real-time fetch whenever page or filter moves
     fetchTickets(true);
-    clearTimeout(navTimeoutRef.current);
-    navTimeoutRef.current = setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 1500);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // Background auto-sync polling every 5s (paused during page navigation)
+  // Fast 1.5-second real-time auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isNavigatingRef.current) {
-        fetchTickets(true);
-        if (selectedTicket) {
-          refreshTicketDetail(selectedTicket.id);
-        }
+      fetchTickets(true);
+      if (selectedTicket) {
+        refreshTicketDetail(selectedTicket.id);
       }
-    }, 5000);
+    }, 1500);
     return () => clearInterval(interval);
   }, [selectedTicket]);
 

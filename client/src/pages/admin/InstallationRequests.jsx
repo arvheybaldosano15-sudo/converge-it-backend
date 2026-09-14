@@ -151,29 +151,14 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
-  // Track page navigation to pause background polling and avoid race conditions
-  const isNavigatingRef = React.useRef(false);
-  const navTimeoutRef = React.useRef(null);
-
-  const handlePageChange = (newPage) => {
-    isNavigatingRef.current = true;
-    setPage(newPage);
-    clearTimeout(navTimeoutRef.current);
-    navTimeoutRef.current = setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 1500);
-  };
-
-  // 5-second background auto-sync polling (paused during page navigation)
+  // Fast 1.5-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isNavigatingRef.current) {
-        refetch();
-        if (selectedTicket) {
-          refreshTicketDetail(selectedTicket.id);
-        }
+      refetch();
+      if (selectedTicket) {
+        refreshTicketDetail(selectedTicket.id);
       }
-    }, 5000);
+    }, 1500);
     return () => clearInterval(interval);
   }, [selectedTicket, refetch]);
 
@@ -750,7 +735,7 @@ const InstallationRequests = () => {
         totalPages={totalPages}
         totalItems={filteredTickets.length}
         itemsPerPage={10}
-        onPageChange={handlePageChange}
+        onPageChange={setPage}
       />
 
       {/* DETAIL MODAL */}
