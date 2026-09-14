@@ -112,18 +112,12 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
         className={`flex items-center h-20 shrink-0 ${collapsed ? 'justify-center px-2' : 'justify-between px-4'}`}
         style={{ borderBottom: '1px solid rgba(30,58,138,0.35)' }}
       >
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'}`}>
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start space-x-2'}`}>
           <img
             src="/CSiLogo.png"
             alt="Converge IT Solutions Logo"
-            className="w-10 h-10 object-contain shrink-0 drop-shadow-md transition-all"
+            className="h-14 w-auto max-w-[180px] object-contain shrink-0 drop-shadow-md transition-all py-1"
           />
-          {!collapsed && (
-            <div className="leading-tight">
-              <h1 className="font-display font-extrabold text-base tracking-wide" style={{ color: 'var(--sidebar-brand-text)' }}>CONVERGE IT</h1>
-              <p className="text-xs font-semibold" style={{ color: 'var(--sidebar-brand-sub)' }}>Ticketing System</p>
-            </div>
-          )}
         </div>
 
         {/* Close button — mobile only */}
