@@ -112,12 +112,12 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
         className={`flex items-center h-20 shrink-0 ${collapsed ? 'justify-center px-2' : 'justify-between px-4'}`}
         style={{ borderBottom: '1px solid rgba(30,58,138,0.35)' }}
       >
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start'}`}>
-          <div className="bg-white px-2.5 py-1 rounded-xl shadow-md border border-slate-200/50 flex items-center justify-center">
+        <div className={`flex items-center ${collapsed ? 'justify-center w-full' : 'justify-start'}`}>
+          <div className={`bg-white rounded-xl shadow-md border border-slate-200/50 flex items-center justify-center transition-all ${collapsed ? 'p-1 w-11 h-11 overflow-hidden' : 'px-2.5 py-1 max-w-[160px]'}`}>
             <img
               src="/CSiLogo.png"
               alt="Converge IT Solutions Logo"
-              className="h-9 w-auto max-w-[150px] object-contain shrink-0 transition-all"
+              className={`object-contain shrink-0 transition-all ${collapsed ? 'h-8 w-auto max-w-[36px]' : 'h-9 w-auto max-w-[145px]'}`}
             />
           </div>
         </div>
