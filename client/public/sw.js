@@ -6,11 +6,10 @@ const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/logo.jpg',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/maskable-icon-512x512.png',
-  '/CSiLogo.png',
-  '/logo.png'
+  '/maskable-icon-512x512.png'
 ];
 
 // Install Event — Pre-cache static assets & activate immediately
@@ -99,8 +98,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Converge Support Notification',
     body: 'You have a new support ticket notification.',
-    icon: '/CSiLogo.png',
-    badge: '/CSiLogo.png',
+    icon: '/logo.jpg',
+    badge: '/logo.jpg',
     url: '/technician/assigned'
   };
 

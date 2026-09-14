@@ -12,9 +12,15 @@ const InstallPwaButton = () => {
   const handleClick = async () => {
     if (hasNativePrompt) {
       const installed = await installApp();
-      if (!installed) {
-        setIsModalOpen(true);
-      }
+      if (installed) return;
+    }
+
+    const ua = navigator.userAgent || '';
+    const isAndroid = /android/i.test(ua);
+    if (isAndroid) {
+      // Direct launch to Chrome on Android if native prompt isn't immediately captured
+      const intentUrl = 'intent://' + window.location.host + window.location.pathname + window.location.search + '#Intent;scheme=https;package=com.android.chrome;end;';
+      window.location.href = intentUrl;
     } else {
       setIsModalOpen(true);
     }
@@ -73,8 +79,8 @@ const InstallPwaButton = () => {
         <div className="p-5 sm:p-6 text-slate-100 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
-                <Smartphone className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-500/40 shrink-0 bg-slate-800">
+                <img src="/logo.jpg" alt="Converge IT Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white font-display">Install Converge IT App</h3>

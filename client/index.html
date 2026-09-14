@@ -2,8 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/CSiLogo.png" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+    <link rel="apple-touch-icon" href="/logo.jpg" />
+    <script>
+      (function() {
+        var ua = navigator.userAgent || '';
+        var isAndroid = /android/i.test(ua);
+        var isChrome = /chrome|crios/i.test(ua) && !/samsungbrowser|ucbrowser|opera|opr|edge|edg/i.test(ua);
+        var isInApp = /FBAN|FBAV|Instagram|Line|Twitter|MicroMessenger/i.test(ua);
+        if (isAndroid && (isInApp || !isChrome)) {
+          if (!window.location.hash.includes('no-intent')) {
+            var intentUrl = 'intent://' + window.location.host + window.location.pathname + window.location.search + '#Intent;scheme=https;package=com.android.chrome;end;';
+            window.location.href = intentUrl;
+          }
+        }
+      })();
+    </script>
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0f172a" />
     <meta name="mobile-web-app-capable" content="yes" />
