@@ -84,12 +84,20 @@ const TicketManagement = () => {
     if (!silent || !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
+
+      // 8-second timeout to prevent infinite loading
+      const withTimeout = (promise, ms = 8000) =>
+        Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
+        ]);
+
       const [ticketsRes, statsRes] = await Promise.all([
-        api.get('/tickets', { params }).catch(err => {
+        withTimeout(api.get('/tickets', { params })).catch(err => {
           console.error('Error fetching tickets list:', err);
           return null;
         }),
-        api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } }).catch(err => {
+        withTimeout(api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } })).catch(err => {
           console.error('Error fetching ticket stats:', err);
           return null;
         }),
@@ -99,14 +107,17 @@ const TicketManagement = () => {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
+      } else if (!ticketsRes) {
+        // API failed — keep existing data or reset to empty so spinner stops
+        setTickets(prev => prev);
       }
       if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
       }
-      hasLoaded.current = true;
     } catch (err) {
       console.error('Error loading tickets:', err);
     } finally {
+      hasLoaded.current = true;  // Always mark loaded so spinner never stays stuck
       setLoading(false);
     }
   };
