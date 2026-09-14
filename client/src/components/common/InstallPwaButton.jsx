@@ -43,9 +43,9 @@ const InstallPwaButton = () => {
         {/* Glow effect overlay */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-        {/* Download Icon with subtle spin/pulse on hover */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-cyan-500/25 border border-cyan-400/50 text-cyan-300 group-hover:scale-110 transition-transform duration-300 shrink-0">
-          <Download className="w-4 h-4 text-cyan-300 group-hover:translate-y-0.5 transition-transform duration-300" />
+        {/* App Logo Icon with subtle zoom on hover */}
+        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-800 border border-cyan-400/50 overflow-hidden group-hover:scale-110 transition-transform duration-300 shrink-0">
+          <img src="/logo16.png" alt="Converge IT Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Text Details */}

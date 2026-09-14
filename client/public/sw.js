@@ -6,7 +6,7 @@ const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.jpg',
+  '/logo16.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/maskable-icon-512x512.png'
@@ -98,8 +98,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Converge Support Notification',
     body: 'You have a new support ticket notification.',
-    icon: '/logo.jpg',
-    badge: '/logo.jpg',
+    icon: '/logo16.png',
+    badge: '/logo16.png',
     url: '/technician/assigned'
   };
 
