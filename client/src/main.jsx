@@ -10,6 +10,34 @@ import { SocketProvider } from './context/SocketContext';
 import App from './App';
 import './index.css';
 
+// Suppress unhandled errors from browser extensions / Web Vitals scripts (e.g. reportAllChanges / VM scripts)
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'error',
+    (event) => {
+      if (
+        event.message?.includes("Cannot read properties of undefined (reading 'startTime')") ||
+        event.message?.includes('reportAllChanges') ||
+        (event.filename && (event.filename.includes('VM') || event.filename.includes('extension')))
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      }
+    },
+    true
+  );
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (
+      event.reason?.message?.includes("Cannot read properties of undefined (reading 'startTime')") ||
+      event.reason?.message?.includes('reportAllChanges')
+    ) {
+      event.preventDefault();
+    }
+  });
+}
+
 // Initialize theme state from localStorage (default to dark mode)
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme === 'light') {
