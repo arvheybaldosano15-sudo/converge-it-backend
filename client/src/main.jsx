@@ -38,6 +38,20 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Register Service Worker for PWA capabilities & push notifications
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('✅ Service Worker registered successfully:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('⚠️ Service Worker registration notice:', err);
+      });
+  });
+}
+
 // Initialize theme state from localStorage (default to dark mode)
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme === 'light') {

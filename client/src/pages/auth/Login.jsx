@@ -8,6 +8,7 @@ import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import InstallPwaButton from '../../components/common/InstallPwaButton';
 import TechnicianSignUp from './TechnicianSignUp';
 import TechnicianPinLogin from './TechnicianPinLogin';
 import { Mail, Lock, LogIn, Wrench, KeyRound, Eye, EyeOff } from 'lucide-react';
@@ -170,6 +171,8 @@ const Login = () => {
       >
         <TechnicianSignUp isModal onClose={() => setIsRegisterModalOpen(false)} />
       </Modal>
+      {/* Floating Install PWA Button */}
+      <InstallPwaButton />
     </>
   );
 };

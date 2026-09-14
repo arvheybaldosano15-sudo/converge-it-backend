@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import InstallPwaButton from '../../components/common/InstallPwaButton';
 import { KeyRound, ShieldAlert, Delete, ArrowRight, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -223,9 +224,12 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   }
 
   return (
-    <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-8 max-w-sm w-full mx-auto my-auto" glow>
-      {content}
-    </Card>
+    <>
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-8 max-w-sm w-full mx-auto my-auto" glow>
+        {content}
+      </Card>
+      <InstallPwaButton />
+    </>
   );
 };
 
