@@ -140,14 +140,14 @@ const TicketManagement = () => {
     fetchTickets(true);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // Fast 5-second background auto-sync polling
+  // Fast 1.5-second real-time auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTickets(true);
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 5000);
+    }, 1500);
     return () => clearInterval(interval);
   }, [selectedTicket]);
 

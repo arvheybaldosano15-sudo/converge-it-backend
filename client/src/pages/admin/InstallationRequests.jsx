@@ -151,14 +151,14 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
-  // Background auto-sync polling every 8 seconds (soft background refetch)
+  // Fast 1.5-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 8000);
+    }, 1500);
     return () => clearInterval(interval);
   }, [selectedTicket, refetch]);
 

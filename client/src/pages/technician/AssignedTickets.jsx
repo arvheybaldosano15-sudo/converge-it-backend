@@ -116,13 +116,21 @@ const AssignedTickets = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Query Backend tickets
-  const { data: ticketsData, isLoading: loading } = useTickets({
+  const { data: ticketsData, isLoading: loading, refetch } = useTickets({
     limit: 100,
     search: search ? search : undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
     priority: priorityFilter !== 'all' ? priorityFilter : undefined,
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
+
+  // Fast 1.5-second background auto-sync polling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const rawTickets = ticketsData?.data || ticketsData || [];
 
