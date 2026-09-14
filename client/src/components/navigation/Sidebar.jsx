@@ -109,10 +109,10 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
 
       {/* ── Brand Header ── */}
       <div
-        className={`flex items-center h-20 shrink-0 ${collapsed ? 'justify-center px-2' : 'justify-between px-4'}`}
+        className="flex items-center justify-center h-20 shrink-0 relative px-4"
         style={{ borderBottom: '1px solid rgba(30,58,138,0.35)' }}
       >
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start'}`}>
+        <div className="flex items-center justify-center">
           <div className="bg-white px-3 py-1.5 rounded-2xl shadow-lg border border-white/20 flex items-center justify-center">
             <img
               src="/CSiLogo.png"
@@ -126,7 +126,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
         {!collapsed && (
           <button
             onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
+            className="md:hidden absolute right-4 p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
             style={{ background: 'rgba(29,78,216,0.12)' }}
           >
             <X className="w-4 h-4" />
