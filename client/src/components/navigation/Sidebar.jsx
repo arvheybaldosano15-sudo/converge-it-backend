@@ -114,7 +114,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
       >
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'}`}>
           <img
-            src="/logo.png"
+            src="/CSiLogo.png"
             alt="Converge IT Solutions Logo"
             className="w-10 h-10 object-contain shrink-0 drop-shadow-md transition-all"
           />

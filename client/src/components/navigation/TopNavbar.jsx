@@ -154,7 +154,7 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
         {hideMobileMenu ? (
           <div className="md:hidden flex items-center space-x-2.5">
             <img
-              src="/logo.png"
+              src="/CSiLogo.png"
               alt="Converge Logo"
               className="w-8 h-8 object-contain drop-shadow-md"
             />
