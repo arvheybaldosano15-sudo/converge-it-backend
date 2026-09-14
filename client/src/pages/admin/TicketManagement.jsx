@@ -81,7 +81,7 @@ const TicketManagement = () => {
   };
 
   const fetchTickets = async (silent = false) => {
-    if (!silent || !hasLoaded.current) setLoading(true);
+    if (!silent && !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
       const [ticketsRes, statsRes] = await Promise.all([
@@ -141,7 +141,7 @@ const TicketManagement = () => {
   useEffect(() => {
     // Mark navigating, fetch immediately, then resume polling after 1.5s
     isNavigatingRef.current = true;
-    fetchTickets(hasLoaded.current);
+    fetchTickets(true);
     clearTimeout(navTimeoutRef.current);
     navTimeoutRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
