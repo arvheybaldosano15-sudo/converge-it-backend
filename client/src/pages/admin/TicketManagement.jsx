@@ -81,27 +81,31 @@ const TicketManagement = () => {
   };
 
   const fetchTickets = async (silent = false) => {
-    // Only show spinner on first-ever load OR explicit user actions (filter/page change)
-    if (!silent && !hasLoaded.current) setLoading(true);
+    if (!silent || !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
       const [ticketsRes, statsRes] = await Promise.all([
-        api.get('/tickets', { params }),
-        api.get('/tickets/stats'),
+        api.get('/tickets', { params }).catch(err => {
+          console.error('Error fetching tickets list:', err);
+          return null;
+        }),
+        api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } }).catch(err => {
+          console.error('Error fetching ticket stats:', err);
+          return null;
+        }),
       ]);
 
-      if (ticketsRes.success) {
+      if (ticketsRes && ticketsRes.success) {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
       }
-      if (statsRes.success) {
+      if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
       }
       hasLoaded.current = true;
     } catch (err) {
       console.error('Error loading tickets:', err);
-      if (!silent) toast.error('Failed to load support tickets');
     } finally {
       setLoading(false);
     }
@@ -137,7 +141,7 @@ const TicketManagement = () => {
 
   useEffect(() => {
     // Immediate real-time fetch whenever page or filter moves
-    fetchTickets(true);
+    fetchTickets(hasLoaded.current);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
   // Fast 1.5-second real-time auto-sync polling
