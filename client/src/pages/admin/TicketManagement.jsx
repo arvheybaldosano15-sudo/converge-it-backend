@@ -81,8 +81,7 @@ const TicketManagement = () => {
   };
 
   const fetchTickets = async (silent = false) => {
-    // Only show spinner on first-ever load OR explicit user actions (filter/page change)
-    if (!silent && !hasLoaded.current) setLoading(true);
+    if (!silent || !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
       const [ticketsRes, statsRes] = await Promise.all([
@@ -90,12 +89,12 @@ const TicketManagement = () => {
         api.get('/tickets/stats'),
       ]);
 
-      if (ticketsRes.success) {
+      if (ticketsRes?.success) {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
       }
-      if (statsRes.success) {
+      if (statsRes?.success) {
         setTicketStats(statsRes.data || {});
       }
       hasLoaded.current = true;
@@ -142,14 +141,14 @@ const TicketManagement = () => {
   useEffect(() => {
     // Mark navigating, fetch immediately, then resume polling after 1.5s
     isNavigatingRef.current = true;
-    fetchTickets(true);
+    fetchTickets(hasLoaded.current);
     clearTimeout(navTimeoutRef.current);
     navTimeoutRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
     }, 1500);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // 1-second background auto-sync polling (paused during page navigation)
+  // Background auto-sync polling every 5s (paused during page navigation)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isNavigatingRef.current) {
@@ -158,7 +157,7 @@ const TicketManagement = () => {
           refreshTicketDetail(selectedTicket.id);
         }
       }
-    }, 1000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [selectedTicket]);
 

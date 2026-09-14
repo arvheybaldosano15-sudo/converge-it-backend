@@ -164,7 +164,7 @@ const InstallationRequests = () => {
     }, 1500);
   };
 
-  // 1-second background auto-sync polling (paused during page navigation)
+  // 5-second background auto-sync polling (paused during page navigation)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isNavigatingRef.current) {
@@ -173,7 +173,7 @@ const InstallationRequests = () => {
           refreshTicketDetail(selectedTicket.id);
         }
       }
-    }, 1000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [selectedTicket, refetch]);
 
