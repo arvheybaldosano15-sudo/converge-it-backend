@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
 export const usePwaInstall = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [hasNativePrompt, setHasNativePrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(
+    typeof window !== 'undefined' ? window.deferredPwaPrompt : null
+  );
+  const [hasNativePrompt, setHasNativePrompt] = useState(
+    typeof window !== 'undefined' && Boolean(window.deferredPwaPrompt)
+  );
   const [isInstalled, setIsInstalled] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -23,6 +27,12 @@ export const usePwaInstall = () => {
 
     checkStandalone();
 
+    // Check if globally captured event is ready
+    if (window.deferredPwaPrompt) {
+      setDeferredPrompt(window.deferredPwaPrompt);
+      setHasNativePrompt(true);
+    }
+
     // Listen for display mode changes (e.g. user launches PWA)
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleMediaChange = (e) => {
@@ -38,6 +48,7 @@ export const usePwaInstall = () => {
     // Capture native beforeinstallprompt event
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
+      window.deferredPwaPrompt = e;
       setDeferredPrompt(e);
       setHasNativePrompt(true);
     };
@@ -47,6 +58,7 @@ export const usePwaInstall = () => {
       setIsInstalled(true);
       setHasNativePrompt(false);
       setDeferredPrompt(null);
+      window.deferredPwaPrompt = null;
       toast.success('App installed successfully.', {
         icon: '🎉',
         duration: 4000,
@@ -66,15 +78,17 @@ export const usePwaInstall = () => {
   }, []);
 
   const installApp = useCallback(async () => {
-    if (deferredPrompt) {
+    const activePrompt = deferredPrompt || window.deferredPwaPrompt;
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choiceResult = await activePrompt.userChoice;
 
-        if (choiceResult.outcome === 'accepted') {
+        if (choiceResult && choiceResult.outcome === 'accepted') {
           setIsInstalled(true);
           setHasNativePrompt(false);
           setDeferredPrompt(null);
+          window.deferredPwaPrompt = null;
           toast.success('App installed successfully.', {
             icon: '🎉',
             duration: 4000,
@@ -82,10 +96,12 @@ export const usePwaInstall = () => {
           return true;
         } else {
           setHasNativePrompt(false);
+          setDeferredPrompt(null);
+          window.deferredPwaPrompt = null;
           return false;
         }
       } catch (err) {
-        console.warn('PWA installation prompt notice:', err);
+        console.warn('PWA installation prompt error:', err);
         return false;
       }
     }

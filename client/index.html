@@ -6,6 +6,10 @@
     <link rel="apple-touch-icon" href="/logo.jpg" />
     <script>
       (function() {
+        window.addEventListener('beforeinstallprompt', function(e) {
+          e.preventDefault();
+          window.deferredPwaPrompt = e;
+        });
         var ua = navigator.userAgent || '';
         var isAndroid = /android/i.test(ua);
         var isChrome = /chrome|crios/i.test(ua) && !/samsungbrowser|ucbrowser|opera|opr|edge|edg/i.test(ua);

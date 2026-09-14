@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, Sparkles } from 'lucide-react';
+import toast from 'react-hot-toast';
 import usePwaInstall from '../../hooks/usePwaInstall';
 
 const InstallPwaButton = () => {
@@ -12,12 +13,18 @@ const InstallPwaButton = () => {
     const installed = await installApp();
     if (installed) return;
 
-    // Fallback for Android browsers: open directly in Chrome
     const ua = navigator.userAgent || '';
     const isAndroid = /android/i.test(ua);
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+
     if (isAndroid) {
+      toast('Redirecting to Google Chrome for direct app installation...', { icon: '🚀', id: 'pwa-android' });
       const intentUrl = 'intent://' + window.location.host + window.location.pathname + window.location.search + '#Intent;scheme=https;package=com.android.chrome;end;';
       window.location.href = intentUrl;
+    } else if (isIOS) {
+      toast('To install on iOS: Tap the Share button (⎋) below and select "Add to Home Screen".', { icon: '📱', duration: 5000, id: 'pwa-ios' });
+    } else {
+      toast('To install on Desktop: Click the Install icon (+) in your browser address bar or menu.', { icon: '🖥️', duration: 5000, id: 'pwa-desktop' });
     }
   };
 
