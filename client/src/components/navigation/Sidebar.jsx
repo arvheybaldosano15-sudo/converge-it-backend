@@ -112,12 +112,14 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
         className={`flex items-center h-20 shrink-0 ${collapsed ? 'justify-center px-2' : 'justify-between px-4'}`}
         style={{ borderBottom: '1px solid rgba(30,58,138,0.35)' }}
       >
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start space-x-2'}`}>
-          <img
-            src="/CSiLogo.png"
-            alt="Converge IT Solutions Logo"
-            className="h-14 w-auto max-w-[180px] object-contain shrink-0 drop-shadow-md transition-all py-1"
-          />
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start'}`}>
+          <div className="bg-white px-3 py-1.5 rounded-2xl shadow-lg border border-white/20 flex items-center justify-center">
+            <img
+              src="/CSiLogo.png"
+              alt="Converge IT Solutions Logo"
+              className="h-12 w-auto max-w-[190px] object-contain shrink-0 transition-all"
+            />
+          </div>
         </div>
 
         {/* Close button — mobile only */}
