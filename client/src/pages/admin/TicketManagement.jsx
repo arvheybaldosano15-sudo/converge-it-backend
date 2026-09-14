@@ -64,23 +64,27 @@ const TicketManagement = () => {
 
   const activeSearch = localSearch || globalSearch || '';
 
+  // Store live query parameters in ref to avoid stale closures in socket/polling callbacks
+  const paramsRef = React.useRef();
+  paramsRef.current = {
+    page,
+    limit: 10,
+    status: statusFilter,
+    priority: priorityFilter,
+    category: categoryFilter,
+    assignedTo: assigneeFilter,
+    slaStatus: slaFilter,
+    search: activeSearch,
+    sortBy,
+    sortOrder,
+    excludeCategoryName: 'Installation Request',
+  };
+
   const fetchTickets = async (silent = false) => {
     // Only show spinner on first-ever load OR explicit user actions (filter/page change)
     if (!silent && !hasLoaded.current) setLoading(true);
     try {
-      const params = {
-        page,
-        limit: 10,
-        status: statusFilter,
-        priority: priorityFilter,
-        category: categoryFilter,
-        assignedTo: assigneeFilter,
-        slaStatus: slaFilter,
-        search: activeSearch,
-        sortBy,
-        sortOrder,
-        excludeCategoryName: 'Installation Request',
-      };
+      const params = paramsRef.current;
       const [ticketsRes, statsRes] = await Promise.all([
         api.get('/tickets', { params }),
         api.get('/tickets/stats'),
@@ -132,8 +136,8 @@ const TicketManagement = () => {
   }, []);
 
   useEffect(() => {
-    // Use silent if already loaded (filter change), show spinner only on first mount
-    fetchTickets(!hasLoaded.current ? false : true);
+    // Immediate real-time fetch whenever page or filter moves
+    fetchTickets(true);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
   // Fast 5-second background auto-sync polling
@@ -145,7 +149,7 @@ const TicketManagement = () => {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder, selectedTicket]);
+  }, [selectedTicket]);
 
   // Real-time socket event listener
   useEffect(() => {
