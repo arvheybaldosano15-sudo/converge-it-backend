@@ -684,7 +684,7 @@ const AssignedTickets = () => {
           emptyMessage="No assigned support tasks found matching your filter criteria."
         />
 
-        <Pagination currentPage={supportPage} totalPages={supportTotalPages} itemsPerPage={itemsPerPage} onPageChange={setSupportPage} />
+        <Pagination currentPage={supportPage} totalPages={supportTotalPages} totalItems={supportTickets.length} itemsPerPage={itemsPerPage} onPageChange={setSupportPage} />
       </div>
 
       {/* ── 5. TABLE 2: ASSIGNED INSTALLATION REQUESTS ── */}
@@ -708,7 +708,7 @@ const AssignedTickets = () => {
           emptyMessage="No assigned installation requests found matching your filter criteria."
         />
 
-        <Pagination currentPage={installPage} totalPages={installTotalPages} itemsPerPage={itemsPerPage} onPageChange={setInstallPage} />
+        <Pagination currentPage={installPage} totalPages={installTotalPages} totalItems={installationTickets.length} itemsPerPage={itemsPerPage} onPageChange={setInstallPage} />
       </div>
 
       {/* ── 6. ALL MODALS INTEGRATED ── */}
