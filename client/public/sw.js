@@ -1,5 +1,5 @@
-/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.2.0 */
-const SW_VERSION = 'v2.2.0';
+/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.3.0 */
+const SW_VERSION = 'v2.3.0';
 const CACHE_NAME = `converge-pwa-cache-${SW_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -38,18 +38,22 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event — Network First with Cache Fallback (bypasses /api & /socket.io)
+// Fetch Event — Network First with Cache Fallback (bypasses /api, /socket.io, & dev HMR)
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // NEVER intercept API or Socket.IO or browser extension requests
+  // NEVER intercept API, Socket.IO, Vite dev server, extensions, or cross-origin requests
   if (
     url.pathname.startsWith('/api') ||
     url.pathname.startsWith('/socket.io') ||
-    url.protocol.startsWith('chrome-extension')
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.protocol.startsWith('chrome-extension') ||
+    url.origin !== self.location.origin
   ) {
     return;
   }
@@ -71,15 +75,24 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
+      .catch(async () => {
         // Network failed — fallback to cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          // Fallback for HTML navigation
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return null;
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Navigation fallback for SPA routes
+        if (event.request.mode === 'navigate') {
+          const indexPage = await caches.match('/index.html');
+          if (indexPage) return indexPage;
+        }
+
+        // Return a valid Response object (never return null or undefined to avoid TypeError)
+        return new Response('Network unavailable', {
+          status: 408,
+          statusText: 'Request Timeout',
+          headers: { 'Content-Type': 'text/plain' }
         });
       })
   );
