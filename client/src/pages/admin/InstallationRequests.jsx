@@ -151,14 +151,14 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
-  // Ultra-fast 0.5-second background auto-sync polling
+  // 1-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 500);
+    }, 1000);
     return () => clearInterval(interval);
   }, [selectedTicket, refetch]);
 

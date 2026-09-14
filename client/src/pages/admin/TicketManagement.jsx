@@ -147,7 +147,7 @@ const TicketManagement = () => {
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 500);
+    }, 1000);
     return () => clearInterval(interval);
   }, [selectedTicket]);
 
