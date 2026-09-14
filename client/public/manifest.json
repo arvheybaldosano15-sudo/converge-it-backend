@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Converge IT Solutions - Mobile Ticketing System",
   "short_name": "Converge IT",
   "description": "Mobile-Based Messenger Integrated Customer Support and Automated Ticketing System for Converge IT Solutions",
@@ -8,6 +9,7 @@
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
+  "prefer_related_applications": false,
   "categories": ["business", "utilities", "productivity"],
   "icons": [
     {

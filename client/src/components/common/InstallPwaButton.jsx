@@ -16,15 +16,19 @@ const InstallPwaButton = () => {
     const ua = navigator.userAgent || '';
     const isAndroid = /android/i.test(ua);
     const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isInApp = /FBAN|FBAV|Instagram|Line|Twitter|MicroMessenger/i.test(ua);
 
-    if (isAndroid) {
-      toast('Redirecting to Google Chrome for direct app installation...', { icon: '🚀', id: 'pwa-android' });
+    if (isAndroid && isInApp) {
+      // Only launch Chrome intent if opened inside Messenger or other in-app webviews
+      toast('Opening in Google Chrome for app installation...', { icon: '🚀', id: 'pwa-android-intent' });
       const intentUrl = 'intent://' + window.location.host + window.location.pathname + window.location.search + '#Intent;scheme=https;package=com.android.chrome;end;';
       window.location.href = intentUrl;
+    } else if (isAndroid) {
+      toast('Tap the browser menu (⋮) at top-right and select "Install App" or "Add to Home Screen".', { icon: '📱', duration: 6000, id: 'pwa-android-menu' });
     } else if (isIOS) {
-      toast('To install on iOS: Tap the Share button (⎋) below and select "Add to Home Screen".', { icon: '📱', duration: 5000, id: 'pwa-ios' });
+      toast('To install on iPhone/iPad: Tap Share (⎋) below, then select "Add to Home Screen".', { icon: '📱', duration: 6000, id: 'pwa-ios' });
     } else {
-      toast('To install on Desktop: Click the Install icon (+) in your browser address bar or menu.', { icon: '🖥️', duration: 5000, id: 'pwa-desktop' });
+      toast('To install on Desktop: Click the Install icon (+) in your browser address bar.', { icon: '🖥️', duration: 5000, id: 'pwa-desktop' });
     }
   };
 
