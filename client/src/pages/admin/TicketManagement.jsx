@@ -84,20 +84,12 @@ const TicketManagement = () => {
     if (!silent || !hasLoaded.current) setLoading(true);
     try {
       const params = paramsRef.current;
-
-      // 8-second timeout to prevent infinite loading
-      const withTimeout = (promise, ms = 8000) =>
-        Promise.race([
-          promise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
-        ]);
-
       const [ticketsRes, statsRes] = await Promise.all([
-        withTimeout(api.get('/tickets', { params })).catch(err => {
+        api.get('/tickets', { params }).catch(err => {
           console.error('Error fetching tickets list:', err);
           return null;
         }),
-        withTimeout(api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } })).catch(err => {
+        api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } }).catch(err => {
           console.error('Error fetching ticket stats:', err);
           return null;
         }),
@@ -107,9 +99,6 @@ const TicketManagement = () => {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
-      } else if (!ticketsRes) {
-        // API failed — keep existing data or reset to empty so spinner stops
-        setTickets(prev => prev);
       }
       if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
@@ -117,7 +106,7 @@ const TicketManagement = () => {
     } catch (err) {
       console.error('Error loading tickets:', err);
     } finally {
-      hasLoaded.current = true;  // Always mark loaded so spinner never stays stuck
+      hasLoaded.current = true; // Always mark loaded so spinner never stays stuck
       setLoading(false);
     }
   };
@@ -155,14 +144,14 @@ const TicketManagement = () => {
     fetchTickets(hasLoaded.current);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // Fast 1.5-second real-time auto-sync polling
+  // Reasonable 15-second background sync fallback (real-time driven by Socket.IO)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTickets(true);
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
-    }, 1500);
+    }, 15000);
     return () => clearInterval(interval);
   }, [selectedTicket]);
 

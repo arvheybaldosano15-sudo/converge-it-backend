@@ -24,7 +24,11 @@ const fetchInstallationRequests = async () => {
   try {
     localStorage.setItem(LOCAL_STORAGE_CACHE_KEY, JSON.stringify(data));
   } catch (e) {
-    console.warn('Failed to save installation requests to localStorage:', e);
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_CACHE_KEY);
+      } catch (_) {}
+    }
   }
 
   return data;
