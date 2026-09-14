@@ -113,13 +113,11 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
         style={{ borderBottom: '1px solid rgba(30,58,138,0.35)' }}
       >
         <div className="flex items-center justify-center">
-          <div className="bg-white px-4 py-2 rounded-2xl shadow-xl ring-1 ring-white/50 border border-slate-100 flex items-center justify-center transition-all hover:shadow-2xl">
-            <img
-              src="/CSiLogo.png"
-              alt="Converge IT Solutions Logo"
-              className="h-12 w-auto max-w-[195px] object-contain shrink-0 transition-all"
-            />
-          </div>
+          <img
+            src="/CSiLogo.png"
+            alt="Converge IT Solutions Logo"
+            className="h-10 w-auto max-w-[160px] object-contain shrink-0 drop-shadow-md transition-all"
+          />
         </div>
 
         {/* Close button — mobile only */}
