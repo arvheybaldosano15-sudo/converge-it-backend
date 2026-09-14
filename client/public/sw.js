@@ -1,5 +1,5 @@
-/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.3.0 */
-const SW_VERSION = 'v2.3.0';
+/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.4.0 */
+const SW_VERSION = 'v2.4.0';
 const CACHE_NAME = `converge-pwa-cache-${SW_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -38,14 +38,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event — Network First with Cache Fallback (bypasses /api, /socket.io, & dev HMR)
+// Fetch Event — Bulletproof Network First with Cache Fallback
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // NEVER intercept API, Socket.IO, Vite dev server, extensions, or cross-origin requests
+  // NEVER intercept API, Socket.IO, Vite dev server HMR, extensions, or cross-origin requests
   if (
     url.pathname.startsWith('/api') ||
     url.pathname.startsWith('/socket.io') ||
@@ -55,46 +55,42 @@ self.addEventListener('fetch', (event) => {
     url.protocol.startsWith('chrome-extension') ||
     url.origin !== self.location.origin
   ) {
-    return;
+    return; // Pass through directly to browser network engine
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // Cache successful responses for same-origin static assets
+    (async () => {
+      try {
+        const networkResponse = await fetch(event.request);
         if (
           networkResponse &&
           networkResponse.status === 200 &&
-          networkResponse.type === 'basic' &&
-          !url.pathname.startsWith('/api')
+          networkResponse.type === 'basic'
         ) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
-          });
+          }).catch(() => {});
         }
         return networkResponse;
-      })
-      .catch(async () => {
-        // Network failed — fallback to cache
+      } catch (err) {
         const cachedResponse = await caches.match(event.request);
         if (cachedResponse) {
           return cachedResponse;
         }
 
-        // Navigation fallback for SPA routes
         if (event.request.mode === 'navigate') {
           const indexPage = await caches.match('/index.html');
           if (indexPage) return indexPage;
         }
 
-        // Return a valid Response object (never return null or undefined to avoid TypeError)
         return new Response('Network unavailable', {
-          status: 408,
-          statusText: 'Request Timeout',
+          status: 503,
+          statusText: 'Service Unavailable',
           headers: { 'Content-Type': 'text/plain' }
         });
-      })
+      }
+    })()
   );
 });
 
