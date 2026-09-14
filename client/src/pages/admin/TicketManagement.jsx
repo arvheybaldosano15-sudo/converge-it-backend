@@ -135,17 +135,28 @@ const TicketManagement = () => {
     fetchAuxiliaryData();
   }, []);
 
+  // Track when user is navigating pages — pause polling to avoid race conditions
+  const isNavigatingRef = React.useRef(false);
+  const navTimeoutRef = React.useRef(null);
+
   useEffect(() => {
-    // Immediate real-time fetch whenever page or filter moves
+    // Mark navigating, fetch immediately, then resume polling after 1.5s
+    isNavigatingRef.current = true;
     fetchTickets(true);
+    clearTimeout(navTimeoutRef.current);
+    navTimeoutRef.current = setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1500);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // Ultra-fast 0.5-second real-time auto-sync polling
+  // 1-second background auto-sync polling (paused during page navigation)
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchTickets(true);
-      if (selectedTicket) {
-        refreshTicketDetail(selectedTicket.id);
+      if (!isNavigatingRef.current) {
+        fetchTickets(true);
+        if (selectedTicket) {
+          refreshTicketDetail(selectedTicket.id);
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
