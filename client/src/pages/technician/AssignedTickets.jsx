@@ -124,11 +124,11 @@ const AssignedTickets = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
 
-  // Fast 1.5-second background auto-sync polling
+  // Ultra-fast 0.5-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
-    }, 1500);
+    }, 500);
     return () => clearInterval(interval);
   }, [refetch]);
 
