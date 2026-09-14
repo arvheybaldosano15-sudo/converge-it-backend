@@ -124,6 +124,11 @@ const AssignedTickets = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
 
+  // Fetch fresh data from server on every page navigation
+  useEffect(() => {
+    refetch();
+  }, [supportPage, installPage]);
+
   // 1-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {

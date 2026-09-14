@@ -151,6 +151,11 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
+  // Fetch fresh data from server on every page navigation
+  useEffect(() => {
+    refetch();
+  }, [page]);
+
   // 1-second background auto-sync polling
   useEffect(() => {
     const interval = setInterval(() => {
