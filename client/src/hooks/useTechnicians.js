@@ -10,7 +10,8 @@ export const useTechnicians = (filters = {}) => {
       const res = await api.get('/technicians', { params: filters });
       return res.data || [];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
+    staleTime: 1000 * 5, // 5 seconds fresh cache for live workload accuracy
+    refetchOnMount: 'always',
   });
 };
 
