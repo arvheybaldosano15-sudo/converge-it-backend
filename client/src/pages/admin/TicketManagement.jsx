@@ -171,16 +171,7 @@ const TicketManagement = () => {
     fetchTickets(hasLoaded.current);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
 
-  // Reasonable 15-second background sync fallback (real-time driven by Socket.IO)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchTickets(true);
-      if (selectedTicket) {
-        refreshTicketDetail(selectedTicket.id);
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [selectedTicket]);
+
 
   // Real-time socket event listener
   useEffect(() => {
