@@ -79,7 +79,12 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
       }}
       className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/80 overflow-hidden"
     >
-      {technicians.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 text-slate-400 text-[11px] px-3 py-2.5">
+          <Loader className="w-3.5 h-3.5 animate-spin text-purple-400" />
+          <span>Loading technicians...</span>
+        </div>
+      ) : technicians.length === 0 ? (
         <p className="text-slate-500 text-[11px] px-3 py-2.5 text-center">No active technicians</p>
       ) : (
         <>

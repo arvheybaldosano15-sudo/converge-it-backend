@@ -51,7 +51,7 @@ const InstallationRequests = () => {
 
   // Instant Zero-Loading Caching Hooks
   const { data: tickets = [], isLoading: ticketsLoading, isFetching, refetch } = useInstallationRequests();
-  const { data: technicians = [] } = useTechnicians({ status: 'active', limit: 100 });
+  const { data: technicians = [], isLoading: techsLoading } = useTechnicians({ status: 'active', limit: 100 });
 
   const assignTechnicianMutation = useAssignTechnician();
   const updateStatusMutation = useUpdateInstallationStatus();
@@ -682,6 +682,7 @@ const InstallationRequests = () => {
                         ) : (
                           <TechnicianAssignDropdown
                             technicians={technicians}
+                            loading={techsLoading}
                             onAssign={(techId) => handleAssignTechnician(row.id, techId)}
                           />
                         )}
