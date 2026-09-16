@@ -5,55 +5,88 @@ const logger = require('./logger');
 
 let pool;
 
+const createPool = () => {
+  const dbUrl = process.env.DATABASE_URL;
+  let config;
+
+  if (dbUrl) {
+    config = {
+      connectionString: dbUrl,
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+    };
+  } else {
+    const host = process.env.DB_HOST || 'aws-0-ap-southeast-1.pooler.supabase.com';
+    const port = parseInt(process.env.DB_PORT) || 6543;
+    const user = process.env.DB_USER || 'postgres.fbgkvlttgcctiynpivix';
+    const password = process.env.DB_PASSWORD;
+    const database = process.env.DB_NAME || 'postgres';
+
+    config = {
+      host,
+      port,
+      user,
+      password,
+      database,
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+    };
+  }
+
+  const p = new Pool(config);
+  p.on('error', (err) => {
+    logger.error('Unexpected database pool error:', err.message);
+  });
+  return p;
+};
+
 const getPool = () => {
   if (!pool) {
-    const dbUrl = process.env.DATABASE_URL;
-    let config;
-
-    if (dbUrl) {
-      config = {
-        connectionString: dbUrl,
-        ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000
-      };
-    } else {
-      const host = process.env.DB_HOST || 'aws-0-ap-southeast-1.pooler.supabase.com';
-      const port = parseInt(process.env.DB_PORT) || 6543;
-      const user = process.env.DB_USER || 'postgres.fbgkvlttgcctiynpivix';
-      const password = process.env.DB_PASSWORD;
-      const database = process.env.DB_NAME || 'postgres';
-
-      config = {
-        host,
-        port,
-        user,
-        password,
-        database,
-        ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000
-      };
-    }
-
-    pool = new Pool(config);
-    pool.on('error', (err) => logger.error('Unexpected database error:', err));
+    pool = createPool();
   }
   return pool;
 };
 
-const query = async (text, params) => {
+const query = async (text, params, retries = 2) => {
   const start = Date.now();
-  try {
-    const result = await getPool().query(text, params);
-    const duration = Date.now() - start;
-    if (duration > 1000) logger.warn('Slow query detected', { text: text.substring(0, 100), duration, rows: result.rowCount });
-    return result;
-  } catch (error) {
-    logger.error('Database query error:', { text: text.substring(0, 100), error: error.message });
-    throw error;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const result = await getPool().query(text, params);
+      const duration = Date.now() - start;
+      if (duration > 1000) {
+        logger.warn('Slow query detected', { text: text.substring(0, 100), duration, rows: result.rowCount });
+      }
+      return result;
+    } catch (error) {
+      const isConnError =
+        error.message?.includes('Connection terminated') ||
+        error.message?.includes('connection closed') ||
+        error.message?.includes('Client has encountered a connection error') ||
+        error.message?.includes('ECONNRESET') ||
+        error.code === '57P01' ||
+        error.code === '57P02' ||
+        error.code === '57P03';
+
+      if (isConnError && attempt < retries) {
+        logger.warn(`Database connection dropped (attempt ${attempt}/${retries}). Re-establishing connection...`);
+        if (pool) {
+          pool.end().catch(() => {});
+          pool = null;
+        }
+        await new Promise((r) => setTimeout(r, 300));
+        continue;
+      }
+      logger.error('Database query error:', { text: text.substring(0, 100), error: error.message });
+      throw error;
+    }
   }
 };
 

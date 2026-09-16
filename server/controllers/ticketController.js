@@ -57,6 +57,8 @@ exports.getTickets = async (req, res, next) => {
     const validSort = ['created_at','updated_at','priority','status','ticket_number','sla_deadline'];
     const col = validSort.includes(sortBy) ? sortBy : 'created_at';
     const ord = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const limitIdx = idx++;
+    const offsetIdx = idx++;
     const dataParams = [...params, parseInt(limit), offset];
     const [data, count] = await Promise.all([
       query(`SELECT t.id, t.ticket_number, t.subject, t.description, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
@@ -68,7 +70,7 @@ exports.getTickets = async (req, res, next) => {
              LEFT JOIN customers c ON t.customer_id = c.id
              LEFT JOIN service_categories cat ON t.service_category_id = cat.id
              LEFT JOIN users u ON t.assigned_technician_id = u.id
-             ${where} ORDER BY t.${col} ${ord} LIMIT $${idx++} OFFSET $${idx}`, dataParams),
+             ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
       query(`SELECT COUNT(*) FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN service_categories cat ON t.service_category_id = cat.id ${where}`, params)
     ]);
     res.json({ success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } });

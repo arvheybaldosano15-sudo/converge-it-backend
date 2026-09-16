@@ -80,6 +80,8 @@ const TicketManagement = () => {
     excludeCategoryName: 'Installation Request',
   };
 
+  const [fetchError, setFetchError] = useState(false);
+
   const fetchTickets = async (silent = false) => {
     if (!silent || !hasLoaded.current) setLoading(true);
     try {
@@ -99,12 +101,17 @@ const TicketManagement = () => {
         setTickets(ticketsRes.data || []);
         setTotalPages(ticketsRes.pagination?.totalPages || 1);
         setTotalItems(ticketsRes.pagination?.total || 0);
+        setFetchError(false);
+      } else if (!ticketsRes) {
+        setFetchError(true);
       }
+
       if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
+      setFetchError(true);
     } finally {
       hasLoaded.current = true; // Always mark loaded so spinner never stays stuck
       setLoading(false);
@@ -459,6 +466,22 @@ const TicketManagement = () => {
                 <tr>
                   <td colSpan="9" className="p-8 text-center">
                     <Loader text="Fetching system support tickets..." />
+                  </td>
+                </tr>
+              ) : fetchError ? (
+                <tr>
+                  <td colSpan="9" className="p-8 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                      <AlertCircle className="w-8 h-8 text-amber-400 animate-bounce" />
+                      <p className="text-sm font-semibold text-slate-300">Unable to connect to the tickets database.</p>
+                      <p className="text-xs text-slate-500">Re-establishing database connection...</p>
+                      <button
+                        onClick={() => fetchTickets(false)}
+                        className="mt-2 px-4 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Retry Loading
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : tickets.length === 0 ? (
