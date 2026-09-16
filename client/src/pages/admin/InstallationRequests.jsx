@@ -169,6 +169,7 @@ const InstallationRequests = () => {
     const handleUpdate = () => {
       refetch();
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }

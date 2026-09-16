@@ -68,6 +68,7 @@ export const useAssignTechnician = () => {
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['tickets', variables.ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => {
@@ -88,6 +89,7 @@ export const useUpdateInstallationStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['tickets', variables.ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => {
@@ -107,6 +109,7 @@ export const useDeleteInstallationRequest = () => {
       toast.success('Installation request deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => {

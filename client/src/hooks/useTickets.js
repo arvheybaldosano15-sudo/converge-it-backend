@@ -41,6 +41,7 @@ export const useCreateTicket = () => {
     onSuccess: () => {
       toast.success('Ticket created successfully!');
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
@@ -62,6 +63,7 @@ export const useUpdateTicket = () => {
       toast.success('Ticket updated!');
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['tickets', variables.ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },

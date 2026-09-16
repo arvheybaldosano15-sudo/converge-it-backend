@@ -125,20 +125,23 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1">
                 Max Capacity (3/3 Active)
               </p>
-              {busyTechs.map((tech) => (
-                <div
-                  key={tech.id}
-                  className="flex items-center justify-between gap-2 px-3 py-2 text-[12px] text-slate-500 cursor-not-allowed opacity-60"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="truncate">{tech.full_name}</span>
+              {busyTechs.map((tech) => {
+                const count = parseInt(tech.active_tickets || 0);
+                return (
+                  <div
+                    key={tech.id}
+                    className="flex items-center justify-between gap-2 px-3 py-2 text-[12px] text-slate-500 cursor-not-allowed opacity-60"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span className="truncate">{tech.full_name}</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0">
+                      Full ({count}/3)
+                    </span>
                   </div>
-                  <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0">
-                    Full (3/3)
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
