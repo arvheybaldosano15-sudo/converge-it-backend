@@ -51,6 +51,12 @@ exports.getTickets = async (req, res, next) => {
     const limitIdx = idx++;
     const offsetIdx = idx++;
     const dataParams = [...params, parseInt(limit), offset];
+
+    const countJoins = [
+      search ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
+      (req.query.excludeCategoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
+    ].filter(Boolean).join(' ');
+
     const [data, count] = await Promise.all([
       query(`SELECT t.id, t.ticket_number, t.subject, t.description, t.status, t.priority, t.ai_priority_recommendation, t.ai_estimated_resolution_hours,
              t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
@@ -62,7 +68,7 @@ exports.getTickets = async (req, res, next) => {
              LEFT JOIN service_categories cat ON t.service_category_id = cat.id
              LEFT JOIN users u ON t.assigned_technician_id = u.id
              ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
-      query(`SELECT COUNT(*) FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN service_categories cat ON t.service_category_id = cat.id ${where}`, params)
+      query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
     res.json({ success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } });
   } catch (error) { next(error); }
