@@ -21,6 +21,27 @@ const typeConfig = {
     bg: 'bg-blue-500/10 border-blue-500/20',
     badge: 'primary',
   },
+  workload_balancing: {
+    label: 'Workload Balancing',
+    icon: ArrowRightLeft,
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/10 border-cyan-500/20',
+    badge: 'cyan',
+  },
+  priority_change: {
+    label: 'Priority Adjustment',
+    icon: Zap,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10 border-amber-500/20',
+    badge: 'warning',
+  },
+  escalation: {
+    label: 'Critical Escalation',
+    icon: AlertOctagon,
+    color: 'text-rose-400',
+    bg: 'bg-rose-500/10 border-rose-500/20',
+    badge: 'danger',
+  },
 };
 
 const ConfidenceBar = ({ confidence }) => {

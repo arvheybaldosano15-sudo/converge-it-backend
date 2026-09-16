@@ -7,12 +7,19 @@ const aiService = require('../services/aiService');
 
 router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, async (req, res, next) => {
   try {
-    // 1. Fetch active unresolved tickets
+    // 1. Fetch active unresolved tickets with customer & technician details
     const ticketsRes = await query(`
-      SELECT t.id, t.ticket_number, t.subject, t.priority, t.status, t.created_at, 
-             t.assigned_technician_id, t.service_category_id, cat.name AS category_name
+      SELECT t.id, t.ticket_number, t.subject, t.description, t.priority, t.status, t.created_at, t.sla_deadline,
+             t.assigned_technician_id, t.service_category_id, cat.name AS category_name,
+             u.full_name AS assignee_name,
+             (
+               SELECT COUNT(*) FROM tickets t2 
+               WHERE t2.assigned_technician_id = t.assigned_technician_id 
+                 AND t2.status NOT IN ('resolved', 'closed', 'cancelled')
+             ) AS assignee_workload
       FROM tickets t 
       LEFT JOIN service_categories cat ON t.service_category_id = cat.id 
+      LEFT JOIN users u ON t.assigned_technician_id = u.id
       WHERE t.status NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY t.created_at ASC
     `);
@@ -29,18 +36,18 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
     const activeTickets = ticketsRes.rows;
     const technicians = techsRes.rows;
 
-    // Clear old priority_change and escalation recommendations from database
+    // Clear old unapplied recommendations for resolved/closed tickets
     await query(`
       DELETE FROM ai_recommendations 
-      WHERE type IN ('priority_change', 'escalation')
-         OR is_applied = FALSE 
+      WHERE is_applied = FALSE 
          OR ticket_id IN (SELECT id FROM tickets WHERE status IN ('resolved', 'closed', 'cancelled'))
     `);
 
-    // Generate Smart Assignment recommendations for active unassigned tickets
+    // Evaluate rules for each active ticket
     for (const ticket of activeTickets) {
-      // Rule 1: Ticket is Unassigned -> Suggest assignment (only for techs with < 3 active tickets)
       const availableTechs = technicians.filter(t => parseInt(t.workload, 10) < 3);
+
+      // Rule 1: Ticket is Unassigned -> Suggest Smart Assignment
       if (!ticket.assigned_technician_id && availableTechs.length > 0) {
         let selectedTech = availableTechs[0];
         const matchingTech = availableTechs.find(t => 
@@ -48,30 +55,80 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
           ticket.category_name && 
           t.specialization.toLowerCase().includes(ticket.category_name.toLowerCase())
         );
-        if (matchingTech) {
-          selectedTech = matchingTech;
-        }
+        if (matchingTech) selectedTech = matchingTech;
 
         const suggestion = `Assign ticket ${ticket.ticket_number} to ${selectedTech.full_name}`;
-        const reasoning = `Ticket is currently unassigned. ${selectedTech.full_name} has matching specialization or the lowest workload (${selectedTech.workload} active tickets).`;
+        const reasoning = `Ticket is currently unassigned. ${selectedTech.full_name} has matching specialization or lowest workload (${selectedTech.workload} active tickets).`;
         const type = 'reassignment';
-        const confidence = matchingTech ? 95.00 : 80.00;
+        const confidence = matchingTech ? 95.00 : 85.00;
 
         await query(`
           INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
           VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT DO NOTHING
+        `, [ticket.id, type, suggestion, reasoning, confidence]);
+        continue;
+      }
+
+      // Rule 2: Overloaded Technician -> Suggest Workload Rebalancing
+      const currentWorkload = parseInt(ticket.assignee_workload || 0, 10);
+      if (ticket.assigned_technician_id && currentWorkload >= 3 && availableTechs.length > 0) {
+        const lighterTech = availableTechs.find(t => t.id !== ticket.assigned_technician_id && parseInt(t.workload, 10) <= 1);
+        if (lighterTech) {
+          const suggestion = `Reassign ticket ${ticket.ticket_number} from ${ticket.assignee_name} to ${lighterTech.full_name}`;
+          const reasoning = `${ticket.assignee_name} is at maximum capacity (3 active tickets). ${lighterTech.full_name} has lower workload (${lighterTech.workload} active tickets).`;
+          const type = 'workload_balancing';
+          const confidence = 90.00;
+
+          await query(`
+            INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT DO NOTHING
+          `, [ticket.id, type, suggestion, reasoning, confidence]);
+          continue;
+        }
+      }
+
+      // Rule 3: SLA Breach Risk -> Suggest Urgent Escalation
+      const isBreachedOrNear = ticket.sla_deadline && new Date(ticket.sla_deadline) <= new Date(Date.now() + 6 * 3600 * 1000);
+      if (isBreachedOrNear && ticket.priority !== 'critical') {
+        const suggestion = `Escalate ticket ${ticket.ticket_number} priority to Critical`;
+        const reasoning = `Ticket SLA deadline is nearing or breached. Immediate critical escalation recommended for swift resolution.`;
+        const type = 'escalation';
+        const confidence = 92.00;
+
+        await query(`
+          INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT DO NOTHING
+        `, [ticket.id, type, suggestion, reasoning, confidence]);
+        continue;
+      }
+
+      // Rule 4: Priority Adjustment for High-Severity Issues
+      const textContent = `${ticket.subject || ''} ${ticket.description || ''}`.toLowerCase();
+      const isHighSeverity = textContent.includes('outage') || textContent.includes('offline') || textContent.includes('no internet') || textContent.includes('no display');
+      if (isHighSeverity && (ticket.priority === 'low' || ticket.priority === 'medium')) {
+        const suggestion = `Escalate ticket ${ticket.ticket_number} priority to High`;
+        const reasoning = `Ticket contains urgent failure indicators ("${textContent.includes('outage') ? 'outage' : 'offline'}"). High priority upgrade recommended.`;
+        const type = 'priority_change';
+        const confidence = 88.00;
+
+        await query(`
+          INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT DO NOTHING
         `, [ticket.id, type, suggestion, reasoning, confidence]);
         continue;
       }
     }
 
-    // Return recommendations strictly for unresolved tickets (Smart Assignment only)
+    // Return recommendations strictly for unresolved tickets
     const finalRecs = await query(`
-      SELECT r.*, t.ticket_number, t.priority 
+      SELECT r.*, t.ticket_number, t.priority, t.created_at AS ticket_created_at
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
       WHERE r.is_applied = FALSE
-        AND r.type = 'reassignment'
         AND t.status NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY r.confidence DESC, r.created_at DESC
     `);
