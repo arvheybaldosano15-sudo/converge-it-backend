@@ -417,10 +417,7 @@ const InstallationRequests = () => {
     },
   ];
 
-  // Only render full screen loader if no cached tickets exist at all
-  if (ticketsLoading && tickets.length === 0) {
-    return <Loader text="Loading Installation Requests..." />;
-  }
+  // Page renders layout directly on mount/refresh
 
   return (
     <div className="space-y-6">
@@ -599,7 +596,13 @@ const InstallationRequests = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {paginatedTickets.length === 0 ? (
+              {ticketsLoading && paginatedTickets.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
+                    <Loader text="Loading installation requests..." />
+                  </td>
+                </tr>
+              ) : paginatedTickets.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-slate-500">
                     <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-700" />
