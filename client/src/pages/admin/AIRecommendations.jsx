@@ -14,40 +14,12 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
 const typeConfig = {
-  urgent_critical: {
-    label: 'Critical Priority Alert',
-    icon: AlertOctagon,
-    color: 'text-red-400',
-    bg: 'bg-red-500/10 border-red-500/20',
-    badge: 'danger',
-  },
-  urgent_high: {
-    label: 'High Priority Action',
-    icon: ShieldAlert,
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10 border-amber-500/20',
-    badge: 'warning',
-  },
   reassignment: {
     label: 'Smart Assignment',
     icon: UserCheck,
     color: 'text-blue-400',
     bg: 'bg-blue-500/10 border-blue-500/20',
     badge: 'primary',
-  },
-  escalation: {
-    label: 'SLA Escalation',
-    icon: Zap,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10 border-purple-500/20',
-    badge: 'cyan',
-  },
-  other: {
-    label: 'AI Recommendation',
-    icon: Bot,
-    color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10 border-cyan-500/20',
-    badge: 'cyan',
   },
 };
 
@@ -108,7 +80,7 @@ const AIRecommendations = () => {
   if (loading) return <Loader text="Analyzing AI recommendation models..." />;
 
   const grouped = recommendations.reduce((acc, rec) => {
-    const t = rec.type && typeConfig[rec.type] ? rec.type : 'other';
+    const t = rec.type || 'other';
     if (!acc[t]) acc[t] = [];
     acc[t].push(rec);
     return acc;
@@ -215,8 +187,8 @@ const AIRecommendations = () => {
                           <Badge variant={cfg.badge}>
                             {cfg.label}
                           </Badge>
-                          {(rec.ticket_priority || rec.priority) && (() => {
-                            const p = String(rec.ticket_priority || rec.priority).toLowerCase();
+                          {(rec.priority || rec.ticket_priority) && (() => {
+                            const p = String(rec.priority || rec.ticket_priority).toLowerCase();
                             const label = p.charAt(0).toUpperCase() + p.slice(1);
                             const variant = p === 'critical' ? 'danger' : p === 'high' ? 'warning' : p === 'medium' ? 'cyan' : 'default';
                             return (
@@ -225,44 +197,15 @@ const AIRecommendations = () => {
                               </Badge>
                             );
                           })()}
-                        </div>
-
-                        {/* Date & Time Badges */}
-                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-0.5">
-                          <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/50">
-                            <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="text-slate-400 font-medium">Ticket Created:</span>
-                            <span className="font-bold text-slate-200">
-                              {rec.ticket_created_at || rec.created_at
-                                ? new Date(rec.ticket_created_at || rec.created_at).toLocaleString([], {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })
-                                : 'Just now'}
-                            </span>
+                          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            {rec.created_at
+                              ? new Date(rec.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : 'Just now'}
                           </div>
-
-                          {rec.ticket_sla_deadline && (
-                            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
-                              <AlertOctagon className="w-3.5 h-3.5 text-amber-400" />
-                              <span className="text-amber-400/90 font-medium">SLA Due:</span>
-                              <span className="font-bold text-amber-300">
-                                {new Date(rec.ticket_sla_deadline).toLocaleString([], {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </span>
-                            </div>
-                          )}
                         </div>
 
-                        <h4 className="text-sm font-bold text-white leading-snug pt-1">{rec.suggestion}</h4>
+                        <h4 className="text-sm font-bold text-white leading-snug">{rec.suggestion}</h4>
                         <p className="text-xs text-slate-400 leading-relaxed">{rec.reasoning}</p>
                       </div>
 
