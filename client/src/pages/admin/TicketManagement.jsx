@@ -262,13 +262,24 @@ const TicketManagement = () => {
 
   const handleDeleteTicket = async () => {
     if (!ticketToDelete) return;
+    const deletedId = ticketToDelete.id;
     try {
-      const res = await api.delete(`/tickets/${ticketToDelete.id}`);
+      const res = await api.delete(`/tickets/${deletedId}`);
       if (res.success) {
         toast.success('Ticket deleted successfully');
         setIsDeleteConfirmOpen(false);
         setTicketToDelete(null);
-        fetchTickets();
+
+        // Instant local removal without showing full loading spinner
+        setTickets(prev => prev.filter(t => t.id !== deletedId));
+        setTotalItems(prev => Math.max(0, prev - 1));
+
+        // If deleting the last item on current page, step back one page
+        if (tickets.length <= 1 && page > 1) {
+          setPage(prev => prev - 1);
+        } else {
+          fetchTickets(true); // Silent background sync
+        }
       }
     } catch (err) {
       toast.error('Failed to delete ticket');
