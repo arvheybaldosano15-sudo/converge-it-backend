@@ -151,23 +151,27 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
-  // Fast 1.5-second background auto-sync polling
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-      if (selectedTicket) {
-        refreshTicketDetail(selectedTicket.id);
-      }
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [selectedTicket, refetch]);
-
-  // Real-time socket event listener to update cache instantly
+  // Real-time socket event listener — instant table update on new ticket, no polling needed
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleUpdate = () => {
-      refetch();
+    // New ticket created via Messenger → prepend directly to cache (zero latency)
+    const handleCreated = ({ ticket } = {}) => {
+      if (ticket) {
+        queryClient.setQueryData(['installation-requests'], (old = []) => {
+          // Avoid duplicates if socket fires twice
+          const exists = old.some((t) => t.id === ticket.id);
+          if (exists) return old;
+          return [ticket, ...old];
+        });
+      }
+      // Also do a background refetch to get fully-populated data (with customer name, etc.)
+      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
+    };
+
+    // Ticket updated (status/assign) → just invalidate to get fresh data
+    const handleUpdated = () => {
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       queryClient.invalidateQueries({ queryKey: ['technicians'] });
       if (selectedTicket) {
@@ -175,20 +179,20 @@ const InstallationRequests = () => {
       }
     };
 
-    socket.on('ticket:created', handleUpdate);
-    socket.on('ticket_created', handleUpdate);
-    socket.on('ticket:updated', handleUpdate);
-    socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket:created', handleCreated);
+    socket.on('ticket_created', handleCreated);
+    socket.on('ticket:updated', handleUpdated);
+    socket.on('ticket_updated', handleUpdated);
 
     return () => {
       if (typeof socket.off === 'function') {
-        socket.off('ticket:created', handleUpdate);
-        socket.off('ticket_created', handleUpdate);
-        socket.off('ticket:updated', handleUpdate);
-        socket.off('ticket_updated', handleUpdate);
+        socket.off('ticket:created', handleCreated);
+        socket.off('ticket_created', handleCreated);
+        socket.off('ticket:updated', handleUpdated);
+        socket.off('ticket_updated', handleUpdated);
       }
     };
-  }, [socket, selectedTicket, refetch, queryClient]);
+  }, [socket, selectedTicket, queryClient]);
 
   const refreshTicketDetail = async (ticketId) => {
     try {

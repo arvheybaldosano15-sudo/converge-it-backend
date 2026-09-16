@@ -177,24 +177,41 @@ const TicketManagement = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleUpdate = () => {
+    // New ticket created → instantly prepend to current list, then background-sync
+    const handleCreated = ({ ticket } = {}) => {
+      if (ticket) {
+        setTickets((prev) => {
+          const exists = prev.some((t) => t.id === ticket.id);
+          if (exists) return prev;
+          const updated = [ticket, ...prev];
+          ticketMemoryCache.tickets = updated;
+          return updated;
+        });
+        setTotalItems((prev) => prev + 1);
+      }
+      // Background sync to get fully populated data
+      fetchTickets(true);
+    };
+
+    // Ticket updated → background-sync to refresh status/assignee
+    const handleUpdated = () => {
       fetchTickets(true);
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
     };
 
-    socket.on('ticket:created', handleUpdate);
-    socket.on('ticket_created', handleUpdate);
-    socket.on('ticket:updated', handleUpdate);
-    socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket:created', handleCreated);
+    socket.on('ticket_created', handleCreated);
+    socket.on('ticket:updated', handleUpdated);
+    socket.on('ticket_updated', handleUpdated);
 
     return () => {
       if (typeof socket.off === 'function') {
-        socket.off('ticket:created', handleUpdate);
-        socket.off('ticket_created', handleUpdate);
-        socket.off('ticket:updated', handleUpdate);
-        socket.off('ticket_updated', handleUpdate);
+        socket.off('ticket:created', handleCreated);
+        socket.off('ticket_created', handleCreated);
+        socket.off('ticket:updated', handleUpdated);
+        socket.off('ticket_updated', handleUpdated);
       }
     };
   }, [socket, selectedTicket]);
