@@ -20,19 +20,27 @@ import {
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
+// Persistent memory cache across page tab navigation
+let ticketMemoryCache = {
+  tickets: null,
+  stats: null,
+  totalPages: 1,
+  totalItems: 0,
+};
+
 const TicketManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
   const socketContext = useSocket();
   const socket = socketContext?.socket;
 
-  // Data States
-  const [tickets, setTickets] = useState([]);
-  const [ticketStats, setTicketStats] = useState({});
+  // Data States initialized from persistent memory cache
+  const [tickets, setTickets] = useState(() => ticketMemoryCache.tickets || []);
+  const [ticketStats, setTicketStats] = useState(() => ticketMemoryCache.stats || {});
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const hasLoaded = React.useRef(false);
+  const [loading, setLoading] = useState(() => !ticketMemoryCache.tickets);
+  const hasLoaded = React.useRef(ticketMemoryCache.tickets !== null);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -46,8 +54,8 @@ const TicketManagement = () => {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(() => ticketMemoryCache.totalPages || 1);
+  const [totalItems, setTotalItems] = useState(() => ticketMemoryCache.totalItems || 0);
 
   // Modals & Drawers
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -83,7 +91,9 @@ const TicketManagement = () => {
   const [fetchError, setFetchError] = useState(false);
 
   const fetchTickets = async (silent = false) => {
-    if (!silent || !hasLoaded.current) setLoading(true);
+    const isSilent = silent || ticketMemoryCache.tickets !== null;
+    if (!isSilent) setLoading(true);
+
     try {
       const params = paramsRef.current;
       const [ticketsRes, statsRes] = await Promise.all([
@@ -98,20 +108,30 @@ const TicketManagement = () => {
       ]);
 
       if (ticketsRes && ticketsRes.success) {
-        setTickets(ticketsRes.data || []);
-        setTotalPages(ticketsRes.pagination?.totalPages || 1);
-        setTotalItems(ticketsRes.pagination?.total || 0);
+        const freshTickets = ticketsRes.data || [];
+        const freshPages = ticketsRes.pagination?.totalPages || 1;
+        const freshTotal = ticketsRes.pagination?.total || 0;
+
+        setTickets(freshTickets);
+        setTotalPages(freshPages);
+        setTotalItems(freshTotal);
         setFetchError(false);
-      } else if (!ticketsRes) {
+
+        // Update persistent memory cache
+        ticketMemoryCache.tickets = freshTickets;
+        ticketMemoryCache.totalPages = freshPages;
+        ticketMemoryCache.totalItems = freshTotal;
+      } else if (!ticketsRes && !ticketMemoryCache.tickets) {
         setFetchError(true);
       }
 
       if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
+        ticketMemoryCache.stats = statsRes.data || {};
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
-      setFetchError(true);
+      if (!ticketMemoryCache.tickets) setFetchError(true);
     } finally {
       hasLoaded.current = true; // Always mark loaded so spinner never stays stuck
       setLoading(false);
