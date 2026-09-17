@@ -4,30 +4,7 @@ const { logAudit } = require('../services/auditService');
 const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
 
-// In-memory server RAM cache layer for tickets and stats to handle Supabase egress limits
-const serverTicketCache = new Map();
-const SERVER_CACHE_TTL_MS = 60000; // 60 seconds TTL
-
-const getCached = (key) => {
-  const item = serverTicketCache.get(key);
-  if (!item) return null;
-  if (Date.now() - item.timestamp > SERVER_CACHE_TTL_MS) {
-    serverTicketCache.delete(key);
-    return null;
-  }
-  return item.data;
-};
-
-const setCached = (key, data) => {
-  serverTicketCache.set(key, { data, timestamp: Date.now() });
-};
-
-const invalidateServerCache = () => {
-  serverTicketCache.clear();
-};
-
 exports.getTickets = async (req, res, next) => {
-  const cacheKey = `tickets:${JSON.stringify(req.query)}:${req.user.id}:${req.user.role}`;
   try {
     const { page = 1, limit = 10, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -93,28 +70,8 @@ exports.getTickets = async (req, res, next) => {
              ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
       query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
-
-    const responseObj = {
-      success: true,
-      data: data.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: parseInt(count.rows[0].count),
-        totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit))
-      }
-    };
-
-    setCached(cacheKey, responseObj);
-    res.json(responseObj);
-  } catch (error) {
-    // If Supabase query fails or hits egress limit, serve cached response gracefully
-    const cachedData = getCached(cacheKey);
-    if (cachedData) {
-      return res.json({ ...cachedData, isCached: true });
-    }
-    next(error);
-  }
+    res.json({ success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } });
+  } catch (error) { next(error); }
 };
 
 exports.getTicketById = async (req, res, next) => {
@@ -275,7 +232,6 @@ exports.deleteTicket = async (req, res, next) => {
 };
 
 exports.getTicketStats = async (req, res, next) => {
-  const cacheKey = `stats:${JSON.stringify(req.query)}:${req.user.id}:${req.user.role}`;
   try {
     const isTech = req.user.role === 'technician';
     let baseWhere = isTech ? 'WHERE assigned_technician_id = $1' : '';
@@ -307,14 +263,6 @@ exports.getTicketStats = async (req, res, next) => {
       FROM tickets t ${baseWhere}`,
       params
     );
-    const responseObj = { success: true, data: result.rows[0] };
-    setCached(cacheKey, responseObj);
-    res.json(responseObj);
-  } catch (error) {
-    const cachedData = getCached(cacheKey);
-    if (cachedData) {
-      return res.json({ ...cachedData, isCached: true });
-    }
-    next(error);
-  }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) { next(error); }
 };
