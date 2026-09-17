@@ -388,8 +388,8 @@ exports.deleteTechnician = async (req, res, next) => {
     // 6. Delete refresh tokens
     await query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
 
-    // 7. Nullify audit_logs performed_by
-    await query('UPDATE audit_logs SET performed_by = NULL WHERE performed_by = $1', [id]);
+    // 7. Nullify audit_logs performed_by (if audit_logs table exists)
+    try { await query('UPDATE audit_logs SET performed_by = NULL WHERE performed_by = $1', [id]); } catch (e) {}
 
     // 8. Nullify customers created_by
     await query('UPDATE customers SET created_by = NULL WHERE created_by = $1', [id]);

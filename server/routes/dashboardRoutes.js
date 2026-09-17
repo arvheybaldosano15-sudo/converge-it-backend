@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const { query } = require('../config/database');
+const { getAuditMemoryLogs } = require('../services/auditService');
 
 router.get('/admin', authenticate, authorize('admin'), async (req, res, next) => {
   try {
@@ -49,14 +50,8 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
       `),
       // 3. Pending Technician Approvals Count
       query(`SELECT COUNT(*) AS count FROM users WHERE role = 'technician' AND status = 'pending'`),
-      // 4. Audit Log Activity Stream
-      query(`
-        SELECT al.action, u.full_name AS actor_name, al.entity_type AS target_type, al.created_at, al.entity_id AS target_description
-        FROM audit_logs al 
-        LEFT JOIN users u ON al.performed_by = u.id 
-        ORDER BY al.created_at DESC 
-        LIMIT 15
-      `),
+      // 4. Audit Log Activity Stream (Local memory, 0 Supabase DB egress)
+      Promise.resolve({ rows: getAuditMemoryLogs().slice(0, 15) }),
       // 5. Category Breakdown
       query(`
         SELECT cat.name, cat.color_code AS color, COUNT(t.id) AS total 
