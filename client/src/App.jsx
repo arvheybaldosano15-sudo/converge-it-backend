@@ -58,9 +58,10 @@ const CustomerKnowledgeBase = lazy(() => import('./pages/customer/KnowledgeBase'
 // Code-Split Error Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'));
 
-// Helper for port 5174 technician portal default redirect
+// Helper for secondary port (e.g. 5175/5174) technician portal default redirect
 const DefaultRootRedirect = () => {
-  const isTechPort = typeof window !== 'undefined' && window.location.port === '5174';
+  const port = typeof window !== 'undefined' ? window.location.port : '';
+  const isTechPort = port && port !== '5173';
   return <Navigate to={isTechPort ? '/technician-login' : '/login'} replace />;
 };
 
