@@ -4,7 +4,7 @@
   "description": "Mobile-Based Messenger Integrated Customer Support and Automated Ticketing System for Converge IT Solutions",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:admin\" \"npm run dev:tech\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "dev:admin": "cd client && npm run dev:admin",
