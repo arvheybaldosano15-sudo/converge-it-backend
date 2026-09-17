@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:admin": "vite --port 5173",
-    "dev:tech": "vite --port 3030",
+    "dev:admin": "vite --port 5173 --open",
+    "dev:tech": "vite --port 3030 --open /technician-login",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
