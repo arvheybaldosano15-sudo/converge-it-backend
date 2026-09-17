@@ -2,9 +2,27 @@ const { query } = require('../config/database');
 const { classifyAndGenerateTicket } = require('../services/aiService');
 const { sendBotcakeMessage, updateBotcakeCustomerField } = require('../services/botcakeService');
 const { sendTextMessage } = require('../services/messengerService');
-const { emitToAdmins } = require('../services/socketService');
+const { emitToAdmins, emitToAll } = require('../services/socketService');
 const { notifyAdmins } = require('../services/notificationService');
 const logger = require('../config/logger');
+
+const fetchFullTicket = async (ticketId) => {
+  try {
+    const res = await query(
+      `SELECT t.*, c.full_name AS customer_name, c.contact_number AS customer_contact,
+              c.complete_address AS customer_address, c.messenger_psid,
+              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color
+       FROM tickets t
+       LEFT JOIN customers c ON t.customer_id = c.id
+       LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+       WHERE t.id = $1`,
+      [ticketId]
+    );
+    return res.rows[0] || null;
+  } catch (e) {
+    return null;
+  }
+};
 
 // Recent request log buffer for debugging live Botcake requests
 const recentVerifyRequests = [];
@@ -244,9 +262,13 @@ exports.handleWebhook = async (req, res) => {
 
     logger.info(`✅ Ticket created successfully: ${createdTicket.ticket_number}`);
 
+    const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
+
     // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
-    emitToAdmins('ticket:created', { ticket: createdTicket });
-    emitToAdmins('ticket_created', { ticket: createdTicket });
+    emitToAdmins('ticket:created', { ticket: fullTicketPayload });
+    emitToAdmins('ticket_created', { ticket: fullTicketPayload });
+    emitToAll('ticket:created', { ticket: fullTicketPayload });
+    emitToAll('ticket_created', { ticket: fullTicketPayload });
     notifyAdmins({
       type: 'ticket',
       title: 'New Messenger Ticket',
@@ -623,9 +645,13 @@ exports.createTicket = async (req, res) => {
 
     logger.info(`✅ Ticket created successfully via endpoint: ${createdTicket.ticket_number}`);
 
+    const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
+
     // Emit real-time socket events to Admin Dashboard
-    emitToAdmins('ticket:created', { ticket: createdTicket });
-    emitToAdmins('ticket_created', { ticket: createdTicket });
+    emitToAdmins('ticket:created', { ticket: fullTicketPayload });
+    emitToAdmins('ticket_created', { ticket: fullTicketPayload });
+    emitToAll('ticket:created', { ticket: fullTicketPayload });
+    emitToAll('ticket_created', { ticket: fullTicketPayload });
     notifyAdmins({
       type: 'ticket',
       title: 'New Messenger Ticket',

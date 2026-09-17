@@ -39,7 +39,8 @@ export const useInstallationRequests = () => {
   return useQuery({
     queryKey: ['installation-requests'],
     queryFn: fetchInstallationRequests,
-    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
+    staleTime: 5000, // 5 seconds fresh cache for immediate live socket updates
+    refetchOnMount: 'always',
     gcTime: 1000 * 60 * 60 * 24, // 24 hours retention in storage
     initialData: () => {
       try {

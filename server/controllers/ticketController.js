@@ -145,6 +145,10 @@ exports.createTicket = async (req, res, next) => {
       await createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } });
     }
     emitToAdmins('ticket:created', { ticket });
+    emitToAdmins('ticket_created', { ticket });
+    const { emitToAll } = require('../services/socketService');
+    emitToAll('ticket:created', { ticket });
+    emitToAll('ticket_created', { ticket });
     res.status(201).json({ success: true, data: ticket, message: 'Ticket created successfully' });
   } catch (error) { next(error); }
 };
