@@ -7,7 +7,16 @@ let io;
 const initializeSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5180,http://127.0.0.1:5173,http://127.0.0.1:5180').split(','),
+      origin: (origin, callback) => {
+        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+          return callback(null, true);
+        }
+        const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim());
+        if (allowed.includes('*') || allowed.includes(origin)) {
+          return callback(null, true);
+        }
+        callback(null, true);
+      },
       methods: ['GET', 'POST'],
       credentials: true
     }
