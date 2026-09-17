@@ -20,7 +20,9 @@ import {
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
-// Persistent memory cache across page tab navigation
+const LOCAL_STORAGE_KEY = 'CONVERGE_TICKETS_CACHE_V1';
+
+// Persistent memory & localStorage cache across page tab navigation and browser refreshes
 let ticketMemoryCache = {
   tickets: null,
   stats: null,
@@ -28,19 +30,44 @@ let ticketMemoryCache = {
   totalItems: 0,
 };
 
+const loadInitialCache = () => {
+  if (ticketMemoryCache.tickets && ticketMemoryCache.tickets.length > 0) {
+    return ticketMemoryCache;
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.tickets) && parsed.tickets.length > 0) {
+        ticketMemoryCache = parsed;
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return ticketMemoryCache;
+};
+
+const saveCacheToLocalStorage = (cacheObj) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cacheObj));
+  } catch (e) {}
+};
+
 const TicketManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
   const socketContext = useSocket();
   const socket = socketContext?.socket;
 
-  // Data States initialized from persistent memory cache
-  const [tickets, setTickets] = useState(() => ticketMemoryCache.tickets || []);
-  const [ticketStats, setTicketStats] = useState(() => ticketMemoryCache.stats || {});
+  const initialCache = loadInitialCache();
+
+  // Data States initialized from persistent memory/localStorage cache
+  const [tickets, setTickets] = useState(() => initialCache.tickets || []);
+  const [ticketStats, setTicketStats] = useState(() => initialCache.stats || {});
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(() => !ticketMemoryCache.tickets);
-  const hasLoaded = React.useRef(ticketMemoryCache.tickets !== null);
+  const [loading, setLoading] = useState(() => !(initialCache.tickets && initialCache.tickets.length > 0));
+  const hasLoaded = React.useRef(initialCache.tickets !== null);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -117,10 +144,11 @@ const TicketManagement = () => {
         setTotalItems(freshTotal);
         setFetchError(false);
 
-        // Update persistent memory cache
+        // Update persistent memory & localStorage cache
         ticketMemoryCache.tickets = freshTickets;
         ticketMemoryCache.totalPages = freshPages;
         ticketMemoryCache.totalItems = freshTotal;
+        saveCacheToLocalStorage(ticketMemoryCache);
       } else if (!ticketsRes && !ticketMemoryCache.tickets) {
         setFetchError(true);
       }
@@ -128,6 +156,7 @@ const TicketManagement = () => {
       if (statsRes && statsRes.success) {
         setTicketStats(statsRes.data || {});
         ticketMemoryCache.stats = statsRes.data || {};
+        saveCacheToLocalStorage(ticketMemoryCache);
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
