@@ -58,6 +58,12 @@ const CustomerKnowledgeBase = lazy(() => import('./pages/customer/KnowledgeBase'
 // Code-Split Error Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'));
 
+// Helper for port 5174 technician portal default redirect
+const DefaultRootRedirect = () => {
+  const isTechPort = typeof window !== 'undefined' && window.location.port === '5174';
+  return <Navigate to={isTechPort ? '/technician-login' : '/login'} replace />;
+};
+
 function App() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -70,6 +76,9 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/technician-login" element={<TechnicianPinLogin />} />
+          <Route path="/pin-login" element={<TechnicianPinLogin />} />
+          <Route path="/pin" element={<TechnicianPinLogin />} />
+          <Route path="/technician/login" element={<TechnicianPinLogin />} />
           <Route path="/register-technician" element={<TechnicianSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
@@ -113,8 +122,8 @@ function App() {
           </Route>
         </Route>
 
-        {/* Redirect Root to Login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Redirect Root based on Port (Port 5174 defaults to Technician Pin Login) */}
+        <Route path="/" element={<DefaultRootRedirect />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
