@@ -7,7 +7,7 @@ const LOCAL_STORAGE_CACHE_KEY = 'CONVERGE_INSTALLATION_REQUESTS_CACHE';
 // ─── Helper: Fetch Installation Requests ────────────────────────────────────
 const fetchInstallationRequests = async () => {
   const ticketsRes = await api.get('/tickets', {
-    params: { categoryName: 'Installation Request', limit: 100 },
+    params: { categoryName: 'Installation Request', limit: 50 },
   });
 
   if (!ticketsRes.success) throw new Error('Failed to fetch installation requests');
@@ -31,8 +31,8 @@ export const useInstallationRequests = () => {
   return useQuery({
     queryKey: ['installation-requests'],
     queryFn: fetchInstallationRequests,
-    staleTime: 5000, // 5 seconds fresh cache for immediate live socket updates
-    refetchOnMount: 'always',
+    staleTime: 1000 * 60 * 3, // 3 min fresh — Socket.IO handles live updates; no need to re-fetch on every mount
+    refetchOnMount: false,     // localStorage initialData shows instantly; background refetch only when stale
     gcTime: 1000 * 60 * 60 * 24, // 24 hours retention in storage
     initialData: () => {
       try {
