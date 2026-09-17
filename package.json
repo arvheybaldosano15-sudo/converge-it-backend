@@ -4,11 +4,11 @@
   "description": "Mobile-Based Messenger Integrated Customer Support and Automated Ticketing System for Converge IT Solutions",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently \"npm run dev:server\" \"cd client && npm run dev:admin\" \"cd client && npm run dev:tech\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "dev:admin": "cd client && npm run dev:admin",
     "dev:tech": "cd client && npm run dev:tech",
-    "dev:all": "concurrently \"npm run dev:server\" \"cd client && npm run dev:admin\" \"cd client && npm run dev:tech\"",
     "build": "cd client && npm run build",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "start": "cd server && npm start"

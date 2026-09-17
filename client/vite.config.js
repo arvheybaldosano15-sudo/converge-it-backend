@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    open: true, // Automatically opens default browser on dev launch
+    open: false,
     proxy: {
       // REST API
       '/api': {
