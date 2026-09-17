@@ -96,8 +96,15 @@ const testConnection = async () => {
   const result = await query('SELECT NOW() as current_time');
   logger.info('Database time:', result.rows[0].current_time);
 
-  // Auto-repair set_sla_due_date PostgreSQL function if it has invalid table/column references
   try {
+    // Ensure high-performance composite indexes exist for sub-100ms queries
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets (created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_tickets_category_created ON tickets (service_category_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_tickets_status_created ON tickets (status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_service_categories_name ON service_categories (name);
+    `).catch(() => {});
+
     await query(`
       CREATE OR REPLACE FUNCTION set_sla_due_date()
       RETURNS TRIGGER AS $$
@@ -115,6 +122,7 @@ const testConnection = async () => {
       END;
       $$ LANGUAGE plpgsql;
     `);
+
     await query(`
       UPDATE tickets 
       SET sla_deadline = created_at + CASE priority 
@@ -123,6 +131,7 @@ const testConnection = async () => {
         WHEN 'medium' THEN INTERVAL '48 hours'
         ELSE INTERVAL '48 hours'
       END
+      WHERE sla_deadline IS NULL
     `).catch(() => {});
     logger.info('✅ Database function set_sla_due_date updated/repaired successfully');
   } catch (err) {

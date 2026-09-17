@@ -20,9 +20,18 @@ import {
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
-// Persistent memory cache across page tab navigation
+const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
+
+// Persistent memory cache across page tab navigation & browser reloads
 let ticketMemoryCache = {
-  tickets: null,
+  tickets: (() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_TICKETS_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  })(),
   stats: null,
   totalPages: 1,
   totalItems: 0,
@@ -120,10 +129,13 @@ const TicketManagement = () => {
         setTotalItems(freshTotal);
         setFetchError(false);
 
-        // Update persistent memory cache
+        // Update persistent memory cache & storage
         ticketMemoryCache.tickets = freshTickets;
         ticketMemoryCache.totalPages = freshPages;
         ticketMemoryCache.totalItems = freshTotal;
+        try {
+          localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(freshTickets));
+        } catch (e) {}
       } else if (!ticketsRes) {
         if (retryCount < 2) {
           // Automatic quiet retry after 500ms on transient connection hiccup

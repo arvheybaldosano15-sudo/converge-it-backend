@@ -37,8 +37,11 @@ exports.getTickets = async (req, res, next) => {
 
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
-    if (search) { conditions.push(`(t.ticket_number ILIKE $${idx} OR t.subject ILIKE $${idx} OR c.full_name ILIKE $${idx})`); params.push(`%${search}%`); idx++; }
-    
+    if (req.query.categoryName) {
+      conditions.push(`cat.name ILIKE $${idx++}`);
+      params.push(`%${req.query.categoryName}%`);
+    }
+
     if (req.query.excludeCategoryName) {
       conditions.push(`(cat.name IS NULL OR cat.name NOT ILIKE $${idx++})`);
       params.push(`%${req.query.excludeCategoryName}%`);
@@ -54,7 +57,7 @@ exports.getTickets = async (req, res, next) => {
 
     const countJoins = [
       search ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
-      (req.query.excludeCategoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
+      (req.query.excludeCategoryName || req.query.categoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
     ].filter(Boolean).join(' ');
 
     const [data, count] = await Promise.all([

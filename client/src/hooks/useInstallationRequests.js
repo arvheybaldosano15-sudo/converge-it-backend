@@ -6,16 +6,8 @@ const LOCAL_STORAGE_CACHE_KEY = 'CONVERGE_INSTALLATION_REQUESTS_CACHE';
 
 // ─── Helper: Fetch Installation Requests ────────────────────────────────────
 const fetchInstallationRequests = async () => {
-  const catRes = await api.get('/categories');
-  if (!catRes.success) throw new Error('Failed to fetch categories');
-
-  const installCat = catRes.data.find((c) =>
-    c.name.toLowerCase().includes('installation request')
-  );
-  if (!installCat) return [];
-
   const ticketsRes = await api.get('/tickets', {
-    params: { category: installCat.id, limit: 100 },
+    params: { categoryName: 'Installation Request', limit: 100 },
   });
 
   if (!ticketsRes.success) throw new Error('Failed to fetch installation requests');
