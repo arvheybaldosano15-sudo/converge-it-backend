@@ -48,8 +48,8 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(() => !ticketMemoryCache.tickets);
-  const hasLoaded = React.useRef(ticketMemoryCache.tickets !== null);
+  const [loading, setLoading] = useState(() => !Array.isArray(ticketMemoryCache.tickets) || ticketMemoryCache.tickets.length === 0);
+  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');

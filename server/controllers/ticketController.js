@@ -238,19 +238,33 @@ exports.deleteTicket = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+let cachedInstallationCategoryId = null;
+
+const getInstallationCategoryId = async () => {
+  if (cachedInstallationCategoryId) return cachedInstallationCategoryId;
+  try {
+    const res = await query(`SELECT id FROM service_categories WHERE name ILIKE '%Installation Request%' LIMIT 1`);
+    if (res.rows[0]) cachedInstallationCategoryId = res.rows[0].id;
+  } catch (e) {}
+  return cachedInstallationCategoryId;
+};
+
 exports.getTicketStats = async (req, res, next) => {
   try {
     const isTech = req.user.role === 'technician';
-    let baseWhere = isTech ? 'WHERE assigned_technician_id = $1' : '';
+    let baseWhere = isTech ? 'WHERE t.assigned_technician_id = $1' : '';
     let params = isTech ? [req.user.id] : [];
     
     if (req.query.excludeCategoryName) {
-      if (baseWhere === '') {
-        baseWhere = 'WHERE t.service_category_id NOT IN (SELECT id FROM service_categories WHERE name ILIKE $1)';
-        params.push(`%${req.query.excludeCategoryName}%`);
-      } else {
-        baseWhere += ' AND t.service_category_id NOT IN (SELECT id FROM service_categories WHERE name ILIKE $2)';
-        params.push(`%${req.query.excludeCategoryName}%`);
+      const installCatId = await getInstallationCategoryId();
+      if (installCatId) {
+        const paramIdx = params.length + 1;
+        if (baseWhere === '') {
+          baseWhere = `WHERE (t.service_category_id != $${paramIdx} OR t.service_category_id IS NULL)`;
+        } else {
+          baseWhere += ` AND (t.service_category_id != $${paramIdx} OR t.service_category_id IS NULL)`;
+        }
+        params.push(installCatId);
       }
     }
 
