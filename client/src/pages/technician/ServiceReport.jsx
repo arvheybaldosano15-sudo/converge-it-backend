@@ -191,19 +191,24 @@ const ServiceReport = () => {
 
   const handleDeleteConfirm = async () => {
     if (!deletingReport) return;
+    const deletedId = deletingReport.id;
     setDeleteLoading(true);
     try {
-      const res = await api.delete(`/service-reports/${deletingReport.id}`);
+      // Instant local state filter
+      setReports((prev) => prev.filter((r) => r.id !== deletedId));
+      if (selectedReport && selectedReport.id === deletedId) {
+        setSelectedReport(null);
+      }
+      setDeletingReport(null);
+
+      const res = await api.delete(`/service-reports/${deletedId}`);
       if (res.success) {
         toast.success('Service report deleted successfully');
-        if (selectedReport && selectedReport.id === deletingReport.id) {
-          setSelectedReport(null);
-        }
-        setDeletingReport(null);
         fetchReports();
       }
     } catch (err) {
       toast.error(err.message || 'Failed to delete service report');
+      fetchReports();
     } finally {
       setDeleteLoading(false);
     }

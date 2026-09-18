@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -266,18 +267,47 @@ const TechnicianManagement = () => {
     }
   };
 
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleDeleted = ({ id } = {}) => {
+      if (id) {
+        setTechnicians((prev) => prev.filter((t) => t.id !== id));
+      }
+      fetchTechnicians();
+    };
+
+    socket.on('technician:deleted', handleDeleted);
+    socket.on('technician_deleted', handleDeleted);
+
+    return () => {
+      if (typeof socket.off === 'function') {
+        socket.off('technician:deleted', handleDeleted);
+        socket.off('technician_deleted', handleDeleted);
+      }
+    };
+  }, [socket]);
+
   const handleDelete = async () => {
     if (!techToDelete) return;
+    const deletedId = techToDelete.id;
     try {
-      const res = await api.delete(`/technicians/${techToDelete.id}`);
+      // Instant local state update without needing refresh
+      setTechnicians(prev => prev.filter(t => t.id !== deletedId));
+      setIsDeleteModalOpen(false);
+      setTechToDelete(null);
+
+      const res = await api.delete(`/technicians/${deletedId}`);
       if (res.success) {
         toast.success('Technician record removed');
-        setIsDeleteModalOpen(false);
-        setTechToDelete(null);
         fetchTechnicians();
       }
     } catch (e) {
       toast.error('Failed to remove technician');
+      fetchTechnicians();
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import DataTable from '../../components/common/DataTable';
@@ -264,18 +265,49 @@ const CustomerManagement = () => {
     }
   };
 
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleDeleted = ({ id } = {}) => {
+      if (id) {
+        setCustomers((prev) => prev.filter((c) => c.id !== id));
+        setTotalItems((prev) => Math.max(0, prev - 1));
+      }
+      fetchCustomers();
+    };
+
+    socket.on('customer:deleted', handleDeleted);
+    socket.on('customer_deleted', handleDeleted);
+
+    return () => {
+      if (typeof socket.off === 'function') {
+        socket.off('customer:deleted', handleDeleted);
+        socket.off('customer_deleted', handleDeleted);
+      }
+    };
+  }, [socket]);
+
   const handleDeleteCustomer = async () => {
     if (!customerToDelete) return;
+    const deletedId = customerToDelete.id;
     try {
-      const res = await api.delete(`/customers/${customerToDelete.id}`);
+      // Instant local removal without full refresh
+      setCustomers(prev => prev.filter(c => c.id !== deletedId));
+      setTotalItems(prev => Math.max(0, prev - 1));
+      setIsDeleteConfirmOpen(false);
+      setCustomerToDelete(null);
+
+      const res = await api.delete(`/customers/${deletedId}`);
       if (res.success) {
         toast.success('Customer deleted successfully');
-        setIsDeleteConfirmOpen(false);
-        setCustomerToDelete(null);
         fetchCustomers();
       }
     } catch (err) {
       toast.error(err.message || 'Failed to delete customer');
+      fetchCustomers();
     }
   };
 

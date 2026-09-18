@@ -61,6 +61,7 @@ const KnowledgeBase = () => {
 
   const handleDelete = async (id) => {
     try {
+      setArticles((prev) => prev.filter((a) => a.id !== id));
       const res = await api.delete(`/knowledge-base/${id}`);
       if (res.success) {
         toast.success('Article deleted');
@@ -68,6 +69,7 @@ const KnowledgeBase = () => {
       }
     } catch (e) {
       toast.error('Failed to delete article');
+      fetchArticles();
     }
   };
 
