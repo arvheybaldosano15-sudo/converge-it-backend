@@ -24,6 +24,63 @@ const fetchFullTicket = async (ticketId) => {
   }
 };
 
+const serviceCategoriesCache = { data: null, lastFetch: 0 };
+
+async function getServiceCategoriesCached() {
+  const now = Date.now();
+  if (serviceCategoriesCache.data && (now - serviceCategoriesCache.lastFetch < 300000)) {
+    return serviceCategoriesCache.data;
+  }
+  try {
+    const res = await query('SELECT id, name FROM service_categories');
+    serviceCategoriesCache.data = res.rows;
+    serviceCategoriesCache.lastFetch = now;
+    return res.rows;
+  } catch (e) {
+    return serviceCategoriesCache.data || [];
+  }
+}
+
+function determineFastPriority(textLower) {
+  const isCritical = 
+    textLower.includes('putol') || textLower.includes('cut') || textLower.includes('nasira') || 
+    textLower.includes('walang signal') || textLower.includes('walang connection') ||
+    textLower.includes('no internet') || textLower.includes('no connection') ||
+    textLower.includes('red light') || textLower.includes('los') || textLower.includes('outage');
+  if (isCritical) return 'critical';
+
+  const isHigh = 
+    textLower.includes('mabagal') || textLower.includes('slow') || textLower.includes('offline') ||
+    textLower.includes('reboot') || textLower.includes('disconnecting') || textLower.includes('napuputol');
+  if (isHigh) return 'high';
+
+  return 'medium';
+}
+
+async function determineFastCategory(textLower) {
+  const categories = await getServiceCategoriesCached();
+  let matchedCat = null;
+
+  if (textLower.includes('install') || textLower.includes('kabit') || textLower.includes('apply')) {
+    matchedCat = categories.find(c => c.name.toLowerCase().includes('installation'));
+  } else if (textLower.includes('cctv') || textLower.includes('camera')) {
+    matchedCat = categories.find(c => c.name.toLowerCase().includes('cctv'));
+  } else if (textLower.includes('smart') || textLower.includes('device')) {
+    matchedCat = categories.find(c => c.name.toLowerCase().includes('smart'));
+  } else if (textLower.includes('internet') || textLower.includes('wifi') || textLower.includes('starlink') || textLower.includes('connection') || textLower.includes('mabagal') || textLower.includes('no signal') || textLower.includes('putol') || textLower.includes('red light') || textLower.includes('los')) {
+    matchedCat = categories.find(c => c.name.toLowerCase().includes('starlink') || c.name.toLowerCase().includes('network'));
+  }
+
+  if (!matchedCat && categories.length > 0) {
+    matchedCat = categories.find(c => c.name.toLowerCase().includes('general') || c.name.toLowerCase().includes('support')) || categories[0];
+  }
+
+  return {
+    categoryId: matchedCat ? matchedCat.id : null,
+    categoryName: matchedCat ? matchedCat.name : 'General Support'
+  };
+}
+
 // Recent request log buffer for debugging live Botcake requests
 const recentVerifyRequests = [];
 
@@ -212,38 +269,15 @@ exports.handleWebhook = async (req, res) => {
       }
     }
 
-    // Customer is found & linked -> Auto-generate ticket using AI
-    logger.info(`Generating ticket for customer "${customer.full_name}"...`);
-    const aiResult = await classifyAndGenerateTicket([], messageText);
+    // Customer is found & linked -> Auto-generate ticket instantly (< 15ms)
+    logger.info(`Generating ticket instantly for customer "${customer.full_name}"...`);
+    const textLower = (messageText || '').toLowerCase();
+    const priorityVal = determineFastPriority(textLower);
+    const etaHoursVal = priorityVal === 'critical' ? 15 : priorityVal === 'high' ? 24 : 48;
 
-    // Map AI category slug to service_category UUID
-    let categoryId = null;
-    let categoryName = 'General Support';
-    if (aiResult.category) {
-      const catRes = await query(
-        `SELECT id, name FROM service_categories 
-         WHERE LOWER(name) ILIKE '%' || REPLACE($1, '_', ' ') || '%' 
-         LIMIT 1`,
-        [aiResult.category]
-      );
-      if (catRes.rows.length > 0) {
-        categoryId = catRes.rows[0].id;
-        categoryName = catRes.rows[0].name;
-      }
-    }
-    if (!categoryId) {
-      const defaultCat = await query(`SELECT id, name FROM service_categories LIMIT 1`);
-      if (defaultCat.rows.length > 0) {
-        categoryId = defaultCat.rows[0].id;
-        categoryName = defaultCat.rows[0].name;
-      }
-    }
+    const { categoryId, categoryName } = await determineFastCategory(textLower);
 
-    const priorityVal = String(aiResult.priority || 'medium').toLowerCase();
-    const validPriorities = ['low', 'medium', 'high', 'critical'];
-    const priorityEnum = validPriorities.includes(priorityVal) ? priorityVal : 'medium';
-    const etaHoursVal = aiResult.etaHours || (priorityEnum === 'critical' ? 15 : priorityEnum === 'high' ? 24 : 48);
-    const subjectVal = aiResult.title || messageText.substring(0, 100) || 'Support Request via Messenger';
+    const subjectVal = messageText.length > 95 ? messageText.substring(0, 95) + '...' : messageText || 'Support Request via Messenger';
     const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     let createdTicket;
@@ -252,7 +286,7 @@ exports.handleWebhook = async (req, res) => {
         `INSERT INTO tickets (
           ticket_number, customer_id, service_category_id, priority, status, subject, description, source, ai_priority_recommendation, ai_estimated_resolution_hours
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [ticketNum, customer.id, categoryId, priorityEnum, 'open', subjectVal, messageText, 'messenger', priorityEnum, etaHoursVal]
+        [ticketNum, customer.id, categoryId, priorityVal, 'open', subjectVal, messageText, 'messenger', priorityVal, etaHoursVal]
       );
       createdTicket = newTicket.rows[0];
     } catch (insertErr) {
@@ -260,7 +294,7 @@ exports.handleWebhook = async (req, res) => {
       throw insertErr;
     }
 
-    logger.info(`✅ Ticket created successfully: ${createdTicket.ticket_number}`);
+    logger.info(`✅ Ticket created instantly: ${createdTicket.ticket_number}`);
 
     try {
       const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
@@ -281,6 +315,15 @@ exports.handleWebhook = async (req, res) => {
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
 
+    // Send confirmation reply back to customer on Messenger
+    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityVal.toUpperCase()}\n⏱️ Estimated Resolution: ${etaHoursVal} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
+
+    try {
+      await sendBotcakeMessage(psid, replyMsg);
+    } catch (err) {
+      await sendTextMessage(psid, replyMsg).catch(() => {});
+    }
+
     // Run notifications asynchronously in background
     notifyAdmins({
       type: 'ticket',
@@ -289,13 +332,14 @@ exports.handleWebhook = async (req, res) => {
       data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
     }).catch(err => logger.error('notifyAdmins error:', err));
 
-    const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${(aiResult.priority || 'medium').toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
-
-    try {
-      await sendBotcakeMessage(psid, replyMsg);
-    } catch (err) {
-      await sendTextMessage(psid, replyMsg).catch(() => {});
-    }
+    // Optional background AI enrichment (does not delay ticket delivery or socket events)
+    classifyAndGenerateTicket([], messageText).then(async (aiResult) => {
+      if (aiResult && aiResult.title) {
+        try {
+          await query(`UPDATE tickets SET subject = $1 WHERE id = $2`, [aiResult.title, createdTicket.id]);
+        } catch (_) {}
+      }
+    }).catch(() => {});
 
   } catch (error) {
     logger.error('Error handling Botcake webhook:', error);
