@@ -58,21 +58,8 @@ const CustomerKnowledgeBase = lazy(() => import('./pages/customer/KnowledgeBase'
 // Code-Split Error Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'));
 
-// Helper for secondary port (3030) technician portal default redirect
 const DefaultRootRedirect = () => {
-  const port = typeof window !== 'undefined' ? window.location.port : '';
-  const isTechPort = port === '3030' || (port && port !== '5173');
-  return <Navigate to={isTechPort ? '/technician-login' : '/login'} replace />;
-};
-
-// Route guard: technician-login is disabled on Admin port 5173 (redirects to /login) and active on Technician port 3030
-const TechnicianLoginRoute = () => {
-  const port = typeof window !== 'undefined' ? window.location.port : '';
-  const isAdminPort = port === '5173';
-  if (isAdminPort) {
-    return <Navigate to="/login" replace />;
-  }
-  return <TechnicianPinLogin />;
+  return <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -86,10 +73,10 @@ function App() {
         {/* Auth Pages */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
-          <Route path="/technician-login" element={<TechnicianLoginRoute />} />
-          <Route path="/pin-login" element={<TechnicianLoginRoute />} />
-          <Route path="/pin" element={<TechnicianLoginRoute />} />
-          <Route path="/technician/login" element={<TechnicianLoginRoute />} />
+          <Route path="/technician-login" element={<TechnicianPinLogin />} />
+          <Route path="/pin-login" element={<TechnicianPinLogin />} />
+          <Route path="/pin" element={<TechnicianPinLogin />} />
+          <Route path="/technician/login" element={<TechnicianPinLogin />} />
           <Route path="/register-technician" element={<TechnicianSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
@@ -133,7 +120,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* Redirect Root based on Port (Port 5174 defaults to Technician Pin Login) */}
+        {/* Redirect Root to Login */}
         <Route path="/" element={<DefaultRootRedirect />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="*" element={<NotFound />} />
