@@ -12,7 +12,12 @@ const cacheTicketList = (req, res, next) => {
   next();
 };
 
-router.get('/stats', authenticate, cacheTicketList, ticketController.getTicketStats);
+const noCache = (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+};
+
+router.get('/stats', authenticate, noCache, ticketController.getTicketStats);
 router.get('/', authenticate, cacheTicketList, ticketController.getTickets);
 router.get('/:id', authenticate, ticketController.getTicketById);
 router.post('/', authenticate, authorize('admin'), ticketController.createTicket);

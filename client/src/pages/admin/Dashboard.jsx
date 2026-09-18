@@ -44,12 +44,20 @@ const Dashboard = () => {
     const handleUpdate = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     };
 
     socket.on('ticket:created', handleUpdate);
     socket.on('ticket_created', handleUpdate);
     socket.on('ticket:updated', handleUpdate);
     socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket:deleted', handleUpdate);
+    socket.on('ticket_deleted', handleUpdate);
+    socket.on('customer:deleted', handleUpdate);
+    socket.on('customer_deleted', handleUpdate);
+    socket.on('technician:deleted', handleUpdate);
+    socket.on('technician_deleted', handleUpdate);
 
     return () => {
       if (typeof socket.off === 'function') {
@@ -57,6 +65,12 @@ const Dashboard = () => {
         socket.off('ticket_created', handleUpdate);
         socket.off('ticket:updated', handleUpdate);
         socket.off('ticket_updated', handleUpdate);
+        socket.off('ticket:deleted', handleUpdate);
+        socket.off('ticket_deleted', handleUpdate);
+        socket.off('customer:deleted', handleUpdate);
+        socket.off('customer_deleted', handleUpdate);
+        socket.off('technician:deleted', handleUpdate);
+        socket.off('technician_deleted', handleUpdate);
       }
     };
   }, [socket, queryClient]);
