@@ -254,10 +254,12 @@ exports.deleteTicket = async (req, res, next) => {
       if (!checkResult.rows[0]) throw createError('Ticket not found or not authorised to delete', 403);
     }
     
-    // Clean up notifications referencing this ticket
-    try {
-      await query('DELETE FROM notifications WHERE reference_id = $1', [ticketId]);
-    } catch (e) {}
+    // Clean up dependent child records referencing this ticket to prevent foreign key constraint violations
+    try { await query('DELETE FROM notifications WHERE reference_id = $1', [ticketId]); } catch (e) {}
+    try { await query('DELETE FROM ticket_updates WHERE ticket_id = $1', [ticketId]); } catch (e) {}
+    try { await query('DELETE FROM ticket_attachments WHERE ticket_id = $1', [ticketId]); } catch (e) {}
+    try { await query('DELETE FROM ticket_comments WHERE ticket_id = $1', [ticketId]); } catch (e) {}
+    try { await query('DELETE FROM ticket_feedbacks WHERE ticket_id = $1', [ticketId]); } catch (e) {}
 
     // Delete ticket from Supabase
     const result = await query('DELETE FROM tickets WHERE id = $1 RETURNING ticket_number', [ticketId]);
@@ -271,7 +273,7 @@ exports.deleteTicket = async (req, res, next) => {
       targetType: 'ticket',
       targetId: ticketId,
       targetDescription: result.rows[0].ticket_number
-    });
+    }).catch(() => {});
 
     // Real-time socket emissions to notify all connected clients immediately
     if (typeof emitToAll === 'function') emitToAll('ticket:deleted', { id: ticketId });

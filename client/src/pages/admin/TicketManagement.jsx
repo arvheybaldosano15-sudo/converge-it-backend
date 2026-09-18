@@ -136,14 +136,14 @@ const TicketManagement = () => {
         setTickets((prev) => {
           const freshIds = new Set(freshTickets.map((t) => t.id));
           const now = Date.now();
-          // Preserve recently prepended tickets (< 60s old) if DB read hasn't caught up yet
-          const recentPending = (Array.isArray(prev) ? prev : []).filter((t) => {
-            if (!t || !t.id || freshIds.has(t.id)) return false;
+          // Preserve only explicitly tagged socket prepends (_isSocketPrepend === true) < 15s old if DB read pool hasn't updated yet
+          const pendingSocketPrepends = (Array.isArray(prev) ? prev : []).filter((t) => {
+            if (!t || !t.id || !t._isSocketPrepend || freshIds.has(t.id)) return false;
             const createdAt = t.created_at ? new Date(t.created_at).getTime() : now;
-            return (now - createdAt) < 60000;
+            return (now - createdAt) < 15000;
           });
 
-          const merged = [...recentPending, ...freshTickets];
+          const merged = [...pendingSocketPrepends, ...freshTickets];
 
           // Update persistent memory cache & storage
           ticketMemoryCache.tickets = merged;
@@ -261,7 +261,8 @@ const TicketManagement = () => {
             const list = Array.isArray(prev) ? prev : [];
             const exists = list.some((t) => t.id === ticket.id);
             if (exists) return list;
-            const updated = [ticket, ...list];
+            const prependedTicket = { ...ticket, _isSocketPrepend: true };
+            const updated = [prependedTicket, ...list];
             ticketMemoryCache.tickets = updated;
             try {
               localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(updated));
