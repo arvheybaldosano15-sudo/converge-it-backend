@@ -213,19 +213,28 @@ const TicketManagement = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    // New ticket created → instantly prepend to current list, then background-sync
-    const handleCreated = ({ ticket } = {}) => {
-      if (ticket) {
-        setTickets((prev) => {
-          const exists = prev.some((t) => t.id === ticket.id);
-          if (exists) return prev;
-          const updated = [ticket, ...prev];
-          ticketMemoryCache.tickets = updated;
-          return updated;
-        });
-        setTotalItems((prev) => prev + 1);
+    // New ticket created → instantly prepend to current list, save to storage, then background-sync
+    const handleCreated = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
+      if (ticket && ticket.id) {
+        const catName = (ticket.category_name || '').toLowerCase();
+        const isInstallation = catName.includes('installation');
+        if (!isInstallation) {
+          setTickets((prev) => {
+            const list = Array.isArray(prev) ? prev : [];
+            const exists = list.some((t) => t.id === ticket.id);
+            if (exists) return list;
+            const updated = [ticket, ...list];
+            ticketMemoryCache.tickets = updated;
+            try {
+              localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+          setTotalItems((prev) => prev + 1);
+        }
       }
-      // Background sync to get fully populated data
+      // Background sync to get fully populated data & updated card stats
       fetchTickets(true);
     };
 
@@ -241,7 +250,7 @@ const TicketManagement = () => {
     const handleDeleted = ({ id } = {}) => {
       if (id) {
         setTickets((prev) => {
-          const updated = prev.filter((t) => t.id !== id);
+          const updated = (Array.isArray(prev) ? prev : []).filter((t) => t.id !== id);
           ticketMemoryCache.tickets = updated;
           try {
             localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(updated));
