@@ -38,8 +38,14 @@ exports.getTickets = async (req, res, next) => {
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     if (req.query.categoryName) {
-      conditions.push(`cat.name ILIKE $${idx++}`);
-      params.push(`%${req.query.categoryName}%`);
+      const catId = await getCategoryIdByName(req.query.categoryName);
+      if (catId) {
+        conditions.push(`t.service_category_id = $${idx++}`);
+        params.push(catId);
+      } else {
+        conditions.push(`cat.name ILIKE $${idx++}`);
+        params.push(`%${req.query.categoryName}%`);
+      }
     }
 
     if (req.query.excludeCategoryName) {
@@ -261,6 +267,27 @@ exports.deleteTicket = async (req, res, next) => {
 };
 
 let cachedInstallationCategoryId = null;
+
+const categoryCache = new Map();
+
+const getCategoryIdByName = async (categoryName) => {
+  if (!categoryName) return null;
+  const cacheKey = categoryName.trim().toLowerCase();
+  if (categoryCache.has(cacheKey)) {
+    return categoryCache.get(cacheKey);
+  }
+  try {
+    const res = await query(
+      `SELECT id FROM service_categories WHERE name ILIKE $1 LIMIT 1`,
+      [`%${categoryName}%`]
+    );
+    if (res.rows[0]) {
+      categoryCache.set(cacheKey, res.rows[0].id);
+      return res.rows[0].id;
+    }
+  } catch (e) {}
+  return null;
+};
 
 const getInstallationCategoryId = async () => {
   if (cachedInstallationCategoryId) return cachedInstallationCategoryId;

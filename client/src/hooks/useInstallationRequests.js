@@ -31,8 +31,9 @@ export const useInstallationRequests = () => {
   return useQuery({
     queryKey: ['installation-requests'],
     queryFn: fetchInstallationRequests,
-    staleTime: 1000 * 60 * 3, // 3 min fresh — Socket.IO handles live updates; no need to re-fetch on every mount
-    refetchOnMount: false,     // localStorage initialData shows instantly; background refetch only when stale
+    staleTime: 1000 * 60 * 10, // 10 minutes fresh — Socket.IO handles live updates in real-time
+    refetchOnMount: false,      // Use instant localStorage cache on hard refresh
+    refetchOnWindowFocus: false, // Don't trigger refetch on window focus
     gcTime: 1000 * 60 * 60 * 24, // 24 hours retention in storage
     initialData: () => {
       try {
@@ -42,6 +43,7 @@ export const useInstallationRequests = () => {
         return undefined;
       }
     },
+    initialDataUpdatedAt: () => Date.now(), // Marks localStorage initialData as fresh so it loads instantly without background delay
     placeholderData: (previousData) => previousData,
   });
 };
