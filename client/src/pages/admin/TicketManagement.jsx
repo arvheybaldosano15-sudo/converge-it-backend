@@ -49,6 +49,7 @@ const TicketManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
   const socketContext = useSocket();
   const socket = socketContext?.socket;
+  const unreadNotifications = socketContext?.unreadNotifications ?? 0;
 
   // Data States initialized from persistent memory cache
   const [tickets, setTickets] = useState(() => ticketMemoryCache.tickets || []);
@@ -210,6 +211,18 @@ const TicketManagement = () => {
     // Immediate real-time fetch whenever page or filter moves
     fetchTickets(hasLoaded.current);
   }, [page, statusFilter, priorityFilter, categoryFilter, assigneeFilter, slaFilter, activeSearch, sortBy, sortOrder]);
+
+  // 🔑 GUARANTEED fallback: badge count is proven to update when tickets arrive.
+  // Watch it here so even if the socket listener below has any issue, the table still refreshes.
+  const prevUnreadRef = React.useRef(unreadNotifications);
+  useEffect(() => {
+    if (unreadNotifications > prevUnreadRef.current && hasLoaded.current) {
+      prevUnreadRef.current = unreadNotifications;
+      fetchTicketsRef.current(true);
+    } else {
+      prevUnreadRef.current = unreadNotifications;
+    }
+  }, [unreadNotifications]);
 
 
 
