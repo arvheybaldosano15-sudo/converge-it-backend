@@ -18,7 +18,7 @@ const noCache = (req, res, next) => {
 };
 
 router.get('/stats', authenticate, noCache, ticketController.getTicketStats);
-router.get('/', authenticate, cacheTicketList, ticketController.getTickets);
+router.get('/', authenticate, noCache, ticketController.getTickets);
 router.get('/:id', authenticate, ticketController.getTicketById);
 router.post('/', authenticate, authorize('admin'), ticketController.createTicket);
 router.put('/:id', authenticate, ticketController.updateTicket);
