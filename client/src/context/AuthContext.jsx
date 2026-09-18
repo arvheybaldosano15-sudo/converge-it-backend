@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 import { getAuthToken, getCachedUser, setAuthSession, clearAuthSession } from '../utils/authStorage';
+import { prefetchAdminData, prefetchTechData } from '../utils/prefetch';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -62,6 +63,8 @@ export const AuthProvider = ({ children }) => {
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
       toast.success(`Welcome back, ${userData.fullName}!`);
+      // Pre-warm all page caches in the background so first navigation is instant
+      if (userData.role === 'admin') prefetchAdminData();
       return userData;
     }
   };
@@ -74,6 +77,8 @@ export const AuthProvider = ({ children }) => {
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
       toast.success(`Welcome back, ${userData.fullName || 'Technician'}!`);
+      // Pre-warm technician dashboard cache
+      prefetchTechData();
       return userData;
     }
   };

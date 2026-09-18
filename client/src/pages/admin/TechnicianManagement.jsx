@@ -113,14 +113,30 @@ const TechnicianForm = ({ formData, onChange, onSubmit, onCancel, submitLabel, i
   </form>
 );
 
+const TECH_CACHE_KEY       = 'CONVERGE_TECHNICIANS_CACHE';
+const TECH_STATS_CACHE_KEY = 'CONVERGE_TECHNICIANS_STATS_CACHE';
+
 const TechnicianManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
   const navigate = useNavigate();
 
-  // Data States
-  const [technicians, setTechnicians] = useState([]);
-  const [stats, setStats] = useState({});
-  const [loading, setLoading] = useState(true);
+  // Data States — initialised from localStorage so first render is instant
+  const [technicians, setTechnicians] = useState(() => {
+    try {
+      const cached = localStorage.getItem(TECH_CACHE_KEY);
+      return cached ? (JSON.parse(cached).data || []) : [];
+    } catch (_) { return []; }
+  });
+  const [stats, setStats] = useState(() => {
+    try {
+      const cached = localStorage.getItem(TECH_STATS_CACHE_KEY);
+      return cached ? JSON.parse(cached) : {};
+    } catch (_) { return {}; }
+  });
+  // Only show spinner if there is no cached data at all
+  const [loading, setLoading] = useState(() => {
+    try { return !localStorage.getItem(TECH_CACHE_KEY); } catch (_) { return true; }
+  });
 
   // Search & Filters
   const [localSearch, setLocalSearch] = useState('');
@@ -158,7 +174,9 @@ const TechnicianManagement = () => {
   const activeSearch = localSearch || globalSearch || '';
 
   const fetchTechnicians = async () => {
-    setLoading(true);
+    // Only show full spinner when there is NO cached data (first-ever load)
+    const hasCache = !!localStorage.getItem(TECH_CACHE_KEY);
+    if (!hasCache) setLoading(true);
     try {
       const [techRes, statsRes] = await Promise.all([
         api.get('/technicians', {
@@ -177,16 +195,25 @@ const TechnicianManagement = () => {
       ]);
 
       if (techRes.success) {
-        setTechnicians(techRes.data || []);
+        const data = techRes.data || [];
+        setTechnicians(data);
         setTotalPages(techRes.pagination?.totalPages || 1);
         setTotalItems(techRes.pagination?.total || 0);
+        // Persist to localStorage so next visit is instant
+        try {
+          localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+            data,
+            pagination: techRes.pagination || {},
+          }));
+        } catch (_) {}
       }
       if (statsRes && statsRes.success) {
         setStats(statsRes.data || {});
+        try { localStorage.setItem(TECH_STATS_CACHE_KEY, JSON.stringify(statsRes.data || {})); } catch (_) {}
       }
     } catch (e) {
       console.error('Failed to load technicians:', e);
-      toast.error('Failed to load technician roster');
+      if (!hasCache) toast.error('Failed to load technician roster');
     } finally {
       setLoading(false);
     }

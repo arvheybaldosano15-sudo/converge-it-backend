@@ -21,6 +21,7 @@ import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
 const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
+const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
 
 // Persistent memory cache across page tab navigation & browser reloads
 let ticketMemoryCache = {
@@ -32,7 +33,14 @@ let ticketMemoryCache = {
       return null;
     }
   })(),
-  stats: null,
+  stats: (() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_TICKETS_STATS_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  })(),
   totalPages: 1,
   totalItems: 0,
 };
@@ -148,8 +156,10 @@ const TicketManagement = () => {
       }
 
       if (statsRes && statsRes.success) {
-        setTicketStats(statsRes.data || {});
-        ticketMemoryCache.stats = statsRes.data || {};
+        const statsData = statsRes.data || {};
+        setTicketStats(statsData);
+        ticketMemoryCache.stats = statsData;
+        try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(statsData)); } catch (_) {}
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
