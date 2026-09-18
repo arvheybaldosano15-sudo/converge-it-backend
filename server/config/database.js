@@ -55,7 +55,7 @@ const getPool = () => {
   return pool;
 };
 
-const query = async (text, params, retries = 2) => {
+const query = async (text, params, retries = 3) => {
   const start = Date.now();
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -66,14 +66,22 @@ const query = async (text, params, retries = 2) => {
       }
       return result;
     } catch (error) {
+      const msg = (error.message || '').toLowerCase();
+      const code = error.code || '';
       const isConnError =
-        error.message?.includes('Connection terminated') ||
-        error.message?.includes('connection closed') ||
-        error.message?.includes('Client has encountered a connection error') ||
-        error.message?.includes('ECONNRESET') ||
-        error.code === '57P01' ||
-        error.code === '57P02' ||
-        error.code === '57P03';
+        msg.includes('connection terminated') ||
+        msg.includes('connection closed') ||
+        msg.includes('client has encountered a connection error') ||
+        msg.includes('econnreset') ||
+        msg.includes('etimedout') ||
+        msg.includes('503') ||
+        msg.includes('service unavailable') ||
+        msg.includes('timeout') ||
+        code === '57P01' ||
+        code === '57P02' ||
+        code === '57P03' ||
+        code === '53300' ||
+        code === '503';
 
       if (isConnError && attempt < retries) {
         logger.warn(`Database connection dropped (attempt ${attempt}/${retries}). Re-establishing connection...`);
@@ -81,7 +89,7 @@ const query = async (text, params, retries = 2) => {
           pool.end().catch(() => {});
           pool = null;
         }
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 400 * attempt));
         continue;
       }
       logger.error('Database query error:', { text: text.substring(0, 100), error: error.message });

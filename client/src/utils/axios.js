@@ -36,11 +36,20 @@ api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     const originalRequest = error.config || {};
-    
+    const status = error.response?.status;
+
+    // Automatic quiet retry for 502, 503, 504 server hiccups or temporary connection drops
+    const isRetryableStatus = status === 502 || status === 503 || status === 504 || !error.response;
+    if (isRetryableStatus && (!originalRequest._retryCount || originalRequest._retryCount < 2)) {
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+      await new Promise((r) => setTimeout(r, 400 * originalRequest._retryCount));
+      return api(originalRequest);
+    }
+
     // Don't intercept 401 if it's already a retry or if URL is login/refresh-token
     const isAuthUrl = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token');
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthUrl) {
+    if (status === 401 && !originalRequest._retry && !isAuthUrl) {
       originalRequest._retry = true;
       const refreshToken = getRefreshToken();
       
