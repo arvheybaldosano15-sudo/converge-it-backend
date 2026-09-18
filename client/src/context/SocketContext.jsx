@@ -20,7 +20,8 @@ export const SocketProvider = ({ children }) => {
     try {
       const res = await api.get('/notifications/unread-count');
       if (res && res.data) {
-        setUnreadNotifications(typeof res.data.count === 'number' ? res.data.count : parseInt(res.data.count || 0));
+        const freshCount = typeof res.data.count === 'number' ? res.data.count : parseInt(res.data.count || 0);
+        setUnreadNotifications((prev) => Math.max(prev, freshCount));
       }
     } catch (e) {
       // Quiet catch for transient network/auth status
@@ -148,20 +149,19 @@ export const SocketProvider = ({ children }) => {
       }
     });
 
-    newSocket.on('ticket:created', ({ ticket }) => {
+    const handleCreatedNotification = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
       if (user?.role === 'admin') {
-        toast.info(`New Ticket #${ticket?.ticket_number || ticket?.id} created`);
+        if (ticket?.ticket_number) {
+          toast.info(`New Ticket #${ticket.ticket_number} created`);
+        }
         setUnreadNotifications((prev) => prev + 1);
-        fetchUnreadCount();
+        setTimeout(fetchUnreadCount, 1000);
       }
-    });
+    };
 
-    newSocket.on('ticket_created', ({ ticket }) => {
-      if (user?.role === 'admin') {
-        setUnreadNotifications((prev) => prev + 1);
-        fetchUnreadCount();
-      }
-    });
+    newSocket.on('ticket:created', handleCreatedNotification);
+    newSocket.on('ticket_created', handleCreatedNotification);
 
     setSocket(newSocket);
 
