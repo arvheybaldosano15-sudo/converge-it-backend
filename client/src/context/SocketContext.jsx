@@ -23,7 +23,7 @@ export const SocketProvider = ({ children }) => {
         setUnreadNotifications(typeof res.data.count === 'number' ? res.data.count : parseInt(res.data.count || 0));
       }
     } catch (e) {
-      console.error('fetchUnreadCount error:', e);
+      // Quiet catch for transient network/auth status
     }
   };
 
@@ -38,13 +38,12 @@ export const SocketProvider = ({ children }) => {
 
     const handleFocus = () => {
       initPushNotifications();
+      fetchUnreadCount();
     };
 
     window.addEventListener('focus', handleFocus);
-    const interval = setInterval(fetchUnreadCount, 8000);
     return () => {
       window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
     };
   }, [user]);
 
@@ -58,15 +57,14 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // In dev: connect to backend (localhost:5000) via VITE_SOCKET_URL
-    // In production: backend and frontend share the same origin so window.location.origin works
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    // Connecting via relative path/current origin allows Vite proxy (/socket.io) to route seamlessly on port 5173, 3030, and mobile IPs
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || '';
 
     const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
     });
 
