@@ -17,56 +17,57 @@ const safeSave = (key, data) => {
 // Called right after a successful admin login — completely fire-and-forget.
 // By the time the admin navigates to any page, the data is already cached.
 export const prefetchAdminData = () => {
-  Promise.allSettled([
-    api.get('/tickets', {
-      params: { excludeCategoryName: 'Installation Request', limit: 10, page: 1, sortBy: 'created_at', sortOrder: 'DESC' },
-    }),
-    api.get('/tickets', {
-      params: { categoryName: 'Installation Request', limit: 50 },
-    }),
-    api.get('/tickets/stats', {
-      params: { excludeCategoryName: 'Installation Request' },
-    }),
-    api.get('/technicians', {
-      params: { page: 1, limit: 10, status: 'all', sortBy: 'created_at', sortOrder: 'DESC' },
-    }),
-    api.get('/technicians/stats'),
-    api.get('/dashboard/admin'),
-  ])
-    .then(([ticketsR, installR, statsR, techR, techStatsR, dashR]) => {
+  // Delay background prefetch by 2 seconds so initial login redirect and Dashboard component render first without network congestion
+  setTimeout(() => {
+    Promise.allSettled([
+      api.get('/tickets', {
+        params: { excludeCategoryName: 'Installation Request', limit: 10, page: 1, sortBy: 'created_at', sortOrder: 'DESC' },
+      }),
+      api.get('/tickets', {
+        params: { categoryName: 'Installation Request', limit: 50 },
+      }),
+      api.get('/tickets/stats', {
+        params: { excludeCategoryName: 'Installation Request' },
+      }),
+    ]).then(([ticketsR, installR, statsR]) => {
       if (ticketsR.status === 'fulfilled' && ticketsR.value?.success)
         safeSave(TICKETS_KEY, ticketsR.value.data || []);
-
       if (installR.status === 'fulfilled' && installR.value?.success)
         safeSave(INSTALL_KEY, installR.value.data || []);
-
       if (statsR.status === 'fulfilled' && statsR.value?.success)
         safeSave(TICKETS_STATS_KEY, statsR.value.data || {});
 
-      if (techR.status === 'fulfilled' && techR.value?.success)
-        safeSave(TECHNICIANS_KEY, {
-          data: techR.value.data || [],
-          pagination: techR.value.pagination || {},
-        });
-
-      if (techStatsR.status === 'fulfilled' && techStatsR.value?.success)
-        safeSave(TECHNICIANS_STATS_KEY, techStatsR.value.data || {});
-
-      if (dashR.status === 'fulfilled' && dashR.value?.success)
-        safeSave(ADMIN_DASHBOARD_KEY, dashR.value.data || {});
-    })
-    .catch(() => {}); // completely silent — never blocks login
+      // Stagger second batch to prevent network saturation on mobile devices
+      setTimeout(() => {
+        Promise.allSettled([
+          api.get('/technicians', {
+            params: { page: 1, limit: 10, status: 'all', sortBy: 'created_at', sortOrder: 'DESC' },
+          }),
+          api.get('/technicians/stats'),
+        ]).then(([techR, techStatsR]) => {
+          if (techR.status === 'fulfilled' && techR.value?.success)
+            safeSave(TECHNICIANS_KEY, {
+              data: techR.value.data || [],
+              pagination: techR.value.pagination || {},
+            });
+          if (techStatsR.status === 'fulfilled' && techStatsR.value?.success)
+            safeSave(TECHNICIANS_STATS_KEY, techStatsR.value.data || {});
+        }).catch(() => {});
+      }, 1000);
+    }).catch(() => {});
+  }, 2000);
 };
 
 // ─── Technician Pre-fetch ────────────────────────────────────────────────────
-// Called right after a successful PIN login — fire-and-forget.
 export const prefetchTechData = () => {
-  Promise.allSettled([
-    api.get('/dashboard/technician'),
-  ])
-    .then(([dashR]) => {
-      if (dashR.status === 'fulfilled' && dashR.value?.success)
-        safeSave(TECH_DASHBOARD_KEY, dashR.value.data || {});
-    })
-    .catch(() => {});
+  setTimeout(() => {
+    Promise.allSettled([
+      api.get('/dashboard/technician'),
+    ])
+      .then(([dashR]) => {
+        if (dashR.status === 'fulfilled' && dashR.value?.success)
+          safeSave(TECH_DASHBOARD_KEY, dashR.value.data || {});
+      })
+      .catch(() => {});
+  }, 2000);
 };

@@ -42,10 +42,10 @@ const Dashboard = () => {
     if (!socket || typeof socket.on !== 'function') return;
 
     const handleUpdate = () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['technicians'] });
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.refetchQueries({ queryKey: ['dashboard', 'admin'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['tickets'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['technicians'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['customers'], type: 'active' });
     };
 
     socket.on('ticket:created', handleUpdate);

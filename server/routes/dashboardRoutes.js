@@ -4,8 +4,17 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { query } = require('../config/database');
 const { getAuditMemoryLogs } = require('../services/auditService');
 
+let adminCache = null;
+let adminCacheTime = 0;
+const CACHE_TTL = 15000;
+
 router.get('/admin', authenticate, authorize('admin'), async (req, res, next) => {
   try {
+    const now = Date.now();
+    if (adminCache && (now - adminCacheTime < CACHE_TTL)) {
+      return res.json(adminCache);
+    }
+
     const [
       ticketStats,
       recentTickets,
@@ -101,7 +110,7 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
       `)
     ]);
 
-    res.json({
+    const responseObj = {
       success: true,
       data: {
         ticketStats: ticketStats.rows[0],
@@ -114,7 +123,12 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
         slaPerformance: slaPerformance.rows[0],
         todayActivity: todayActivity.rows[0]
       }
-    });
+    };
+
+    adminCache = responseObj;
+    adminCacheTime = now;
+
+    res.json(responseObj);
   } catch (error) { next(error); }
 });
 

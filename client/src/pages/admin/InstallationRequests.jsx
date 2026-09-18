@@ -155,25 +155,30 @@ const InstallationRequests = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    // New ticket created via Messenger → prepend directly to cache (zero latency)
-    const handleCreated = ({ ticket } = {}) => {
-      if (ticket) {
+    // New ticket created via Messenger or API → prepend directly to cache (zero latency)
+    const handleCreated = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
+      if (ticket && ticket.id) {
         queryClient.setQueryData(['installation-requests'], (old = []) => {
-          // Avoid duplicates if socket fires twice
-          const exists = old.some((t) => t.id === ticket.id);
-          if (exists) return old;
-          return [ticket, ...old];
+          const list = Array.isArray(old) ? old : [];
+          const exists = list.some((t) => t.id === ticket.id);
+          if (exists) return list;
+          const updated = [ticket, ...list];
+          try {
+            localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
         });
       }
-      // Also do a background refetch to get fully-populated data (with customer name, etc.)
-      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['technicians'] });
+      // Force immediate active refetch overriding staleTime
+      queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['technicians'], type: 'active' });
     };
 
-    // Ticket updated (status/assign) → just invalidate to get fresh data
+    // Ticket updated (status/assign) → refetch to get fresh data
     const handleUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['technicians'] });
+      queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['technicians'], type: 'active' });
       if (selectedTicket) {
         refreshTicketDetail(selectedTicket.id);
       }
@@ -183,7 +188,7 @@ const InstallationRequests = () => {
     const handleDeleted = ({ id } = {}) => {
       if (id) {
         queryClient.setQueryData(['installation-requests'], (old = []) => {
-          const updated = (old || []).filter((t) => t.id !== id);
+          const updated = (Array.isArray(old) ? old : []).filter((t) => t.id !== id);
           try {
             localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(updated));
           } catch (e) {}
@@ -195,7 +200,7 @@ const InstallationRequests = () => {
           setIsDetailModalOpen(false);
         }
       }
-      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
+      queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
     };
 
     socket.on('ticket:created', handleCreated);
