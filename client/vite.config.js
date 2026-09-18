@@ -7,7 +7,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    open: false,
+    open: 'http://localhost:5173',
+    browser: 'msedge',
     proxy: {
       // REST API
       '/api': {
