@@ -133,18 +133,32 @@ const TicketManagement = () => {
         const freshPages = ticketsRes.pagination?.totalPages || 1;
         const freshTotal = ticketsRes.pagination?.total || 0;
 
-        setTickets(freshTickets);
-        setTotalPages(freshPages);
-        setTotalItems(freshTotal);
-        setFetchError(false);
+        setTickets((prev) => {
+          const freshIds = new Set(freshTickets.map((t) => t.id));
+          const now = Date.now();
+          // Preserve recently prepended tickets (< 60s old) if DB read hasn't caught up yet
+          const recentPending = (Array.isArray(prev) ? prev : []).filter((t) => {
+            if (!t || !t.id || freshIds.has(t.id)) return false;
+            const createdAt = t.created_at ? new Date(t.created_at).getTime() : now;
+            return (now - createdAt) < 60000;
+          });
 
-        // Update persistent memory cache & storage
-        ticketMemoryCache.tickets = freshTickets;
-        ticketMemoryCache.totalPages = freshPages;
-        ticketMemoryCache.totalItems = freshTotal;
-        try {
-          localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(freshTickets));
-        } catch (e) {}
+          const merged = [...recentPending, ...freshTickets];
+
+          // Update persistent memory cache & storage
+          ticketMemoryCache.tickets = merged;
+          ticketMemoryCache.totalPages = freshPages;
+          ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
+          try {
+            localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(merged));
+          } catch (e) {}
+
+          return merged;
+        });
+
+        setTotalPages(freshPages);
+        setTotalItems((prev) => Math.max(prev, freshTotal));
+        setFetchError(false);
       } else if (!ticketsRes) {
         if (retryCount < 2) {
           // Automatic quiet retry after 500ms on transient connection hiccup
@@ -218,7 +232,7 @@ const TicketManagement = () => {
   useEffect(() => {
     if (unreadNotifications > prevUnreadRef.current && hasLoaded.current) {
       prevUnreadRef.current = unreadNotifications;
-      fetchTicketsRef.current(true);
+      setTimeout(() => fetchTicketsRef.current(true), 1000);
     } else {
       prevUnreadRef.current = unreadNotifications;
     }
@@ -257,8 +271,8 @@ const TicketManagement = () => {
           setTotalItems((prev) => prev + 1);
         }
       }
-      // Background sync via stable ref — always calls latest fetchTickets
-      fetchTicketsRef.current(true);
+      // Background sync via stable ref after 1s delay (gives Supabase pool time to finalize write)
+      setTimeout(() => fetchTicketsRef.current(true), 1000);
     };
 
     // Ticket updated → background-sync to refresh status/assignee
