@@ -262,13 +262,26 @@ exports.handleWebhook = async (req, res) => {
 
     logger.info(`✅ Ticket created successfully: ${createdTicket.ticket_number}`);
 
-    const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
+    try {
+      const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
+      if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
+    } catch (_) {}
 
-    // Emit real-time socket events to Admin Dashboard (ticket:created matches frontend listener)
+    const fullTicketPayload = {
+      ...createdTicket,
+      customer_name: customer.full_name || 'Customer',
+      customer_contact: customer.contact_number || '',
+      customer_address: customer.complete_address || '',
+      category_name: categoryName,
+    };
+
+    // Emit real-time socket events IMMEDIATELY (0ms delay)
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
+
+    // Run notifications asynchronously in background
     notifyAdmins({
       type: 'ticket',
       title: 'New Messenger Ticket',

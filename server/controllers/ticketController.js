@@ -140,25 +140,40 @@ exports.createTicket = async (req, res, next) => {
       [ticketNumber, customerId, categoryId || null, assignedTo || null, priorityVal, 'open', subject, description, (aiPriority || priorityVal), aiEtaHours || defaultEta]
     );
     const ticket = result.rows[0];
-    await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number });
-    
-    // Notify admins about the new ticket
-    await notifyAdmins({
+    const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
+    if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
+
+    // Fetch joined customer & category details for instant client table rendering
+    const fullTicketRes = await query(`
+      SELECT t.*, c.full_name AS customer_name, c.contact_number AS customer_contact,
+             c.complete_address AS customer_address, cat.name AS category_name, cat.color_code AS category_color
+      FROM tickets t
+      LEFT JOIN customers c ON t.customer_id = c.id
+      LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+      WHERE t.id = $1`, [ticket.id]);
+    const fullPayload = fullTicketRes.rows[0] || ticket;
+
+    // Emit real-time socket events IMMEDIATELY
+    emitToAdmins('ticket:created', { ticket: fullPayload });
+    emitToAdmins('ticket_created', { ticket: fullPayload });
+    emitToAll('ticket:created', { ticket: fullPayload });
+    emitToAll('ticket_created', { ticket: fullPayload });
+
+    await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number }).catch(() => {});
+
+    // Run notifications asynchronously in background
+    notifyAdmins({
       type: 'ticket',
       title: 'New Ticket Created',
       body: `Ticket #${ticket.ticket_number} (${ticket.subject || ticket.description || 'New Issue'}) has been created.`,
       data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number }
-    });
+    }).catch(() => {});
 
     if (assignedTo) {
-      await createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } });
+      createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } }).catch(() => {});
     }
-    emitToAdmins('ticket:created', { ticket });
-    emitToAdmins('ticket_created', { ticket });
-    const { emitToAll } = require('../services/socketService');
-    emitToAll('ticket:created', { ticket });
-    emitToAll('ticket_created', { ticket });
-    res.status(201).json({ success: true, data: ticket, message: 'Ticket created successfully' });
+
+    res.status(201).json({ success: true, data: fullPayload, message: 'Ticket created successfully' });
   } catch (error) { next(error); }
 };
 
