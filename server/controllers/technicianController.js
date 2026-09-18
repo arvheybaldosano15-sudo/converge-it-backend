@@ -2,7 +2,7 @@ const { query } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
 const { logAudit } = require('../services/auditService');
 const { createNotification } = require('../services/notificationService');
-const { emitToAdmins } = require('../services/socketService');
+const { emitToAdmins, emitToAll } = require('../services/socketService');
 
 exports.getTechnicians = async (req, res, next) => {
   try {
@@ -421,6 +421,9 @@ exports.deleteTechnician = async (req, res, next) => {
       targetId: id,
       targetDescription: techName
     });
+
+    if (typeof emitToAll === 'function') emitToAll('technician:deleted', { id });
+    if (typeof emitToAdmins === 'function') emitToAdmins('technician_deleted', { id });
 
     res.json({ success: true, message: `Technician "${techName}" deleted successfully` });
   } catch (error) {

@@ -1,7 +1,7 @@
 const { query, getClient } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
 const { logAudit } = require('../services/auditService');
-const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
+const { emitToUser, emitToAdmins, emitToRoom, emitToAll } = require('../services/socketService');
 const { createNotification, notifyAdmins } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
@@ -222,18 +222,40 @@ exports.updateTicket = async (req, res, next) => {
 
 exports.deleteTicket = async (req, res, next) => {
   try {
+    const ticketId = req.params.id;
     let checkResult;
     if (req.user.role === 'technician') {
       // Technicians may only delete their own resolved/closed tickets
       checkResult = await query(
         `SELECT id, ticket_number FROM tickets WHERE id = $1 AND assigned_technician_id = $2 AND status IN ('resolved','closed')`,
-        [req.params.id, req.user.id]
+        [ticketId, req.user.id]
       );
       if (!checkResult.rows[0]) throw createError('Ticket not found or not authorised to delete', 403);
     }
-    const result = await query('DELETE FROM tickets WHERE id = $1 RETURNING ticket_number', [req.params.id]);
+    
+    // Clean up notifications referencing this ticket
+    try {
+      await query('DELETE FROM notifications WHERE reference_id = $1', [ticketId]);
+    } catch (e) {}
+
+    // Delete ticket from Supabase
+    const result = await query('DELETE FROM tickets WHERE id = $1 RETURNING ticket_number', [ticketId]);
     if (!result.rows[0]) throw createError('Ticket not found', 404);
-    await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'delete', targetType: 'ticket', targetId: req.params.id, targetDescription: result.rows[0].ticket_number });
+
+    await logAudit({
+      actorId: req.user.id,
+      actorName: req.user.full_name,
+      actorRole: req.user.role,
+      action: 'delete',
+      targetType: 'ticket',
+      targetId: ticketId,
+      targetDescription: result.rows[0].ticket_number
+    });
+
+    // Real-time socket emissions to notify all connected clients immediately
+    if (typeof emitToAll === 'function') emitToAll('ticket:deleted', { id: ticketId });
+    if (typeof emitToAdmins === 'function') emitToAdmins('ticket_deleted', { id: ticketId });
+
     res.json({ success: true, message: 'Ticket deleted successfully' });
   } catch (error) { next(error); }
 };

@@ -1,5 +1,7 @@
 const { query } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
+const { logAudit } = require('../services/auditService');
+const { emitToAll, emitToAdmins } = require('../services/socketService');
 
 exports.getCustomers = async (req, res, next) => {
   try {
@@ -201,8 +203,44 @@ exports.updateCustomer = async (req, res, next) => {
 
 exports.deleteCustomer = async (req, res, next) => {
   try {
-    const result = await query('DELETE FROM customers WHERE id = $1 RETURNING full_name', [req.params.id]);
+    const customerId = req.params.id;
+
+    // 1. Get all tickets for this customer to clean up notifications
+    const ticketRes = await query('SELECT id FROM tickets WHERE customer_id = $1', [customerId]);
+    const ticketIds = ticketRes.rows.map(r => r.id);
+    if (ticketIds.length > 0) {
+      try {
+        await query('DELETE FROM notifications WHERE reference_id = ANY($1)', [ticketIds]);
+      } catch (e) {}
+    }
+
+    // 2. Delete tickets associated with this customer
+    await query('DELETE FROM tickets WHERE customer_id = $1', [customerId]);
+
+    // 3. Delete other customer relations
+    try { await query('DELETE FROM customer_services WHERE customer_id = $1', [customerId]); } catch (e) {}
+    try { await query('DELETE FROM messenger_submissions WHERE customer_id = $1', [customerId]); } catch (e) {}
+    try { await query('DELETE FROM feedback WHERE customer_id = $1', [customerId]); } catch (e) {}
+
+    // 4. Delete customer record from Supabase
+    const result = await query('DELETE FROM customers WHERE id = $1 RETURNING full_name', [customerId]);
     if (!result.rows[0]) throw createError('Customer not found', 404);
+
+    if (req.user) {
+      await logAudit({
+        actorId: req.user.id,
+        actorName: req.user.full_name,
+        actorRole: req.user.role,
+        action: 'delete',
+        targetType: 'customer',
+        targetId: customerId,
+        targetDescription: result.rows[0].full_name
+      });
+    }
+
+    if (typeof emitToAll === 'function') emitToAll('customer:deleted', { id: customerId });
+    if (typeof emitToAdmins === 'function') emitToAdmins('customer_deleted', { id: customerId });
+
     res.json({ success: true, message: `Customer ${result.rows[0].full_name} deleted successfully` });
   } catch (error) {
     next(error);

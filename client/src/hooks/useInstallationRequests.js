@@ -96,10 +96,20 @@ export const useDeleteInstallationRequest = () => {
   return useMutation({
     mutationFn: async (ticketId) => {
       const res = await api.delete(`/tickets/${ticketId}`);
-      return res.data;
+      return { res: res.data, ticketId };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const deletedId = variables || data?.ticketId;
       toast.success('Installation request deleted successfully');
+      if (deletedId) {
+        queryClient.setQueryData(['installation-requests'], (old = []) => {
+          const updated = (old || []).filter((t) => t.id !== deletedId);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_CACHE_KEY, JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['technicians'] });

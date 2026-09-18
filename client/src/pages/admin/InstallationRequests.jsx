@@ -179,10 +179,26 @@ const InstallationRequests = () => {
       }
     };
 
+    // Ticket deleted → instantly remove from cache & storage
+    const handleDeleted = ({ id } = {}) => {
+      if (id) {
+        queryClient.setQueryData(['installation-requests'], (old = []) => {
+          const updated = (old || []).filter((t) => t.id !== id);
+          try {
+            localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
+    };
+
     socket.on('ticket:created', handleCreated);
     socket.on('ticket_created', handleCreated);
     socket.on('ticket:updated', handleUpdated);
     socket.on('ticket_updated', handleUpdated);
+    socket.on('ticket:deleted', handleDeleted);
+    socket.on('ticket_deleted', handleDeleted);
 
     return () => {
       if (typeof socket.off === 'function') {
@@ -190,6 +206,8 @@ const InstallationRequests = () => {
         socket.off('ticket_created', handleCreated);
         socket.off('ticket:updated', handleUpdated);
         socket.off('ticket_updated', handleUpdated);
+        socket.off('ticket:deleted', handleDeleted);
+        socket.off('ticket_deleted', handleDeleted);
       }
     };
   }, [socket, selectedTicket, queryClient]);

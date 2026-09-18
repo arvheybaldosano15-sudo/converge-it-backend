@@ -227,10 +227,28 @@ const TicketManagement = () => {
       }
     };
 
+    // Ticket deleted → remove from state and cache immediately
+    const handleDeleted = ({ id } = {}) => {
+      if (id) {
+        setTickets((prev) => {
+          const updated = prev.filter((t) => t.id !== id);
+          ticketMemoryCache.tickets = updated;
+          try {
+            localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+        setTotalItems((prev) => Math.max(0, prev - 1));
+      }
+      fetchTickets(true);
+    };
+
     socket.on('ticket:created', handleCreated);
     socket.on('ticket_created', handleCreated);
     socket.on('ticket:updated', handleUpdated);
     socket.on('ticket_updated', handleUpdated);
+    socket.on('ticket:deleted', handleDeleted);
+    socket.on('ticket_deleted', handleDeleted);
 
     return () => {
       if (typeof socket.off === 'function') {
@@ -238,6 +256,8 @@ const TicketManagement = () => {
         socket.off('ticket_created', handleCreated);
         socket.off('ticket:updated', handleUpdated);
         socket.off('ticket_updated', handleUpdated);
+        socket.off('ticket:deleted', handleDeleted);
+        socket.off('ticket_deleted', handleDeleted);
       }
     };
   }, [socket, selectedTicket]);
@@ -324,8 +344,15 @@ const TicketManagement = () => {
         setIsDeleteConfirmOpen(false);
         setTicketToDelete(null);
 
-        // Instant local removal without showing full loading spinner
-        setTickets(prev => prev.filter(t => t.id !== deletedId));
+        // Instant local removal from state, memory cache, and localStorage
+        setTickets(prev => {
+          const updated = prev.filter(t => t.id !== deletedId);
+          ticketMemoryCache.tickets = updated;
+          try {
+            localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
         setTotalItems(prev => Math.max(0, prev - 1));
 
         // If deleting the last item on current page, step back one page
