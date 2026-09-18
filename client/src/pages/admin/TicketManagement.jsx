@@ -198,6 +198,10 @@ const TicketManagement = () => {
     }
   };
 
+  // Always-fresh ref to fetchTickets — prevents stale closure in socket handlers
+  const fetchTicketsRef = React.useRef(fetchTickets);
+  React.useLayoutEffect(() => { fetchTicketsRef.current = fetchTickets; });
+
   useEffect(() => {
     fetchAuxiliaryData();
   }, []);
@@ -210,15 +214,21 @@ const TicketManagement = () => {
 
 
   // Real-time socket event listener
+  // Use refs so handlers always call latest fetchTickets/selectedTicket without re-registering listeners
+  const selectedTicketRef = React.useRef(selectedTicket);
+  React.useLayoutEffect(() => { selectedTicketRef.current = selectedTicket; });
+
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
     // New ticket created → instantly prepend to current list, save to storage, then background-sync
     const handleCreated = (payload = {}) => {
+      console.log('[TicketMgmt] ticket:created received', payload);
       const ticket = payload?.ticket || payload?.data || payload;
       if (ticket && ticket.id) {
         const catName = (ticket.category_name || '').toLowerCase();
         const isInstallation = catName.includes('installation');
+        console.log('[TicketMgmt] catName:', catName, '| isInstallation:', isInstallation);
         if (!isInstallation) {
           setTickets((prev) => {
             const list = Array.isArray(prev) ? prev : [];
@@ -234,16 +244,15 @@ const TicketManagement = () => {
           setTotalItems((prev) => prev + 1);
         }
       }
-      // Background sync to get fully populated data & updated card stats
-      fetchTickets(true);
+      // Background sync via stable ref — always calls latest fetchTickets
+      fetchTicketsRef.current(true);
     };
 
     // Ticket updated → background-sync to refresh status/assignee
     const handleUpdated = () => {
-      fetchTickets(true);
-      if (selectedTicket) {
-        refreshTicketDetail(selectedTicket.id);
-      }
+      fetchTicketsRef.current(true);
+      const cur = selectedTicketRef.current;
+      if (cur) refreshTicketDetail(cur.id);
     };
 
     // Ticket deleted → remove from state and cache immediately
@@ -259,12 +268,13 @@ const TicketManagement = () => {
         });
         setTotalItems((prev) => Math.max(0, prev - 1));
 
-        if (selectedTicket && selectedTicket.id === id) {
+        const cur = selectedTicketRef.current;
+        if (cur && cur.id === id) {
           setSelectedTicket(null);
           setIsDetailModalOpen(false);
         }
       }
-      fetchTickets(true);
+      fetchTicketsRef.current(true);
     };
 
     socket.on('ticket:created', handleCreated);
@@ -284,7 +294,8 @@ const TicketManagement = () => {
         socket.off('ticket_deleted', handleDeleted);
       }
     };
-  }, [socket, selectedTicket]);
+  // Only re-register when the socket instance itself changes
+  }, [socket]);
 
   const refreshTicketDetail = async (ticketId) => {
     if (!ticketId) return;
