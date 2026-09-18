@@ -189,6 +189,11 @@ const InstallationRequests = () => {
           } catch (e) {}
           return updated;
         });
+
+        if (selectedTicket && selectedTicket.id === id) {
+          setSelectedTicket(null);
+          setIsDetailModalOpen(false);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['installation-requests'] });
     };
@@ -213,13 +218,17 @@ const InstallationRequests = () => {
   }, [socket, selectedTicket, queryClient]);
 
   const refreshTicketDetail = async (ticketId) => {
+    if (!ticketId) return;
     try {
       const res = await api.get(`/tickets/${ticketId}`);
-      if (res.success) {
+      if (res && res.success) {
         setSelectedTicket(res.data);
       }
     } catch (e) {
-      console.error(e);
+      if (e?.response?.status === 404 || e?.status === 404) {
+        setSelectedTicket(null);
+        setIsDetailModalOpen(false);
+      }
     }
   };
 

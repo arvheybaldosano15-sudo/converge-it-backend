@@ -239,6 +239,11 @@ const TicketManagement = () => {
           return updated;
         });
         setTotalItems((prev) => Math.max(0, prev - 1));
+
+        if (selectedTicket && selectedTicket.id === id) {
+          setSelectedTicket(null);
+          setIsDetailModalOpen(false);
+        }
       }
       fetchTickets(true);
     };
@@ -263,13 +268,17 @@ const TicketManagement = () => {
   }, [socket, selectedTicket]);
 
   const refreshTicketDetail = async (ticketId) => {
+    if (!ticketId) return;
     try {
       const res = await api.get(`/tickets/${ticketId}`);
-      if (res.success) {
+      if (res && res.success) {
         setSelectedTicket(res.data);
       }
     } catch (e) {
-      console.error(e);
+      if (e?.response?.status === 404 || e?.status === 404) {
+        setSelectedTicket(null);
+        setIsDetailModalOpen(false);
+      }
     }
   };
 

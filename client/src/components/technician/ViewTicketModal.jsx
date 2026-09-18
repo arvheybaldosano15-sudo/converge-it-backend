@@ -73,7 +73,12 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
           setTicketData(res.data);
         }
       } catch (e) {
-        toast.error('Failed to load ticket details');
+        if (e?.response?.status === 404 || e?.status === 404) {
+          toast.error('Ticket no longer exists');
+          onClose();
+        } else {
+          toast.error('Failed to load ticket details');
+        }
       } finally {
         setLoading(false);
       }
