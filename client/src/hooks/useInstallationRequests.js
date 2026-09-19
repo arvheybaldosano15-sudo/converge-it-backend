@@ -4,6 +4,15 @@ import toast from 'react-hot-toast';
 
 const LOCAL_STORAGE_CACHE_KEY = 'CONVERGE_INSTALLATION_REQUESTS_CACHE';
 
+let memoryInstallationCache = (() => {
+  try {
+    const cached = localStorage.getItem(LOCAL_STORAGE_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+
 // ─── Helper: Fetch Installation Requests ────────────────────────────────────
 const fetchInstallationRequests = async () => {
   const ticketsRes = await api.get('/tickets', {
@@ -13,6 +22,7 @@ const fetchInstallationRequests = async () => {
   if (!ticketsRes.success) throw new Error('Failed to fetch installation requests');
 
   const data = ticketsRes.data || [];
+  memoryInstallationCache = data;
   try {
     localStorage.setItem(LOCAL_STORAGE_CACHE_KEY, JSON.stringify(data));
   } catch (e) {
@@ -31,19 +41,22 @@ export const useInstallationRequests = () => {
   return useQuery({
     queryKey: ['installation-requests'],
     queryFn: fetchInstallationRequests,
-    staleTime: 1000 * 60 * 10, // 10 minutes fresh — Socket.IO handles live updates in real-time
-    refetchOnMount: false,      // Use instant localStorage cache on hard refresh
-    refetchOnWindowFocus: false, // Don't trigger refetch on window focus
+    staleTime: 1000 * 5, // 5 seconds stale so refetch occurs seamlessly
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Background poll every 5s
     gcTime: 1000 * 60 * 60 * 24, // 24 hours retention in storage
     initialData: () => {
       try {
         const cached = localStorage.getItem(LOCAL_STORAGE_CACHE_KEY);
-        return cached ? JSON.parse(cached) : undefined;
-      } catch (e) {
-        return undefined;
-      }
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+      return memoryInstallationCache || [];
     },
-    initialDataUpdatedAt: () => Date.now(), // Marks localStorage initialData as fresh so it loads instantly without background delay
+    initialDataUpdatedAt: () => Date.now(),
     placeholderData: (previousData) => previousData,
   });
 };

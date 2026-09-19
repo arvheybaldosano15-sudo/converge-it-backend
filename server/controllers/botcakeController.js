@@ -301,7 +301,7 @@ exports.handleWebhook = async (req, res) => {
       if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
     } catch (_) {}
 
-    const fullTicketPayload = {
+    const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || {
       ...createdTicket,
       customer_name: customer.full_name || 'Customer',
       customer_contact: customer.contact_number || '',
@@ -309,11 +309,22 @@ exports.handleWebhook = async (req, res) => {
       category_name: categoryName,
     };
 
-    // Emit real-time socket events IMMEDIATELY (0ms delay)
+    // Emit real-time socket events & create notifications IMMEDIATELY (0ms delay)
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
+
+    try {
+      await notifyAdmins({
+        type: 'ticket',
+        title: 'New Messenger Ticket',
+        body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+        data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+      });
+    } catch (err) {
+      logger.error('notifyAdmins error:', err);
+    }
 
     // Send confirmation reply back to customer on Messenger
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityVal.toUpperCase()}\n⏱️ Estimated Resolution: ${etaHoursVal} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
@@ -323,14 +334,6 @@ exports.handleWebhook = async (req, res) => {
     } catch (err) {
       await sendTextMessage(psid, replyMsg).catch(() => {});
     }
-
-    // Run notifications asynchronously in background
-    notifyAdmins({
-      type: 'ticket',
-      title: 'New Messenger Ticket',
-      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
-      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
-    }).catch(err => logger.error('notifyAdmins error:', err));
 
     // Optional background AI enrichment (does not delay ticket delivery or socket events)
     classifyAndGenerateTicket([], messageText).then(async (aiResult) => {

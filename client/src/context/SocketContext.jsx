@@ -156,7 +156,7 @@ export const SocketProvider = ({ children }) => {
           toast.info(`New Ticket #${ticket.ticket_number} created`);
         }
         setUnreadNotifications((prev) => prev + 1);
-        setTimeout(fetchUnreadCount, 1000);
+        fetchUnreadCount();
       }
     };
 

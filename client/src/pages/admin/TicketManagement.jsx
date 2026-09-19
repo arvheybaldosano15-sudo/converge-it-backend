@@ -219,6 +219,26 @@ const TicketManagement = () => {
 
   useEffect(() => {
     fetchAuxiliaryData();
+
+    // Background polling fallback (5s) so table always stays in sync even if socket misses an event
+    const pollInterval = setInterval(() => {
+      if (hasLoaded.current) {
+        fetchTicketsRef.current(true);
+      }
+    }, 5000);
+
+    // Refetch when tab/window regains focus
+    const handleFocus = () => {
+      if (hasLoaded.current) {
+        fetchTicketsRef.current(true);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -232,13 +252,11 @@ const TicketManagement = () => {
   useEffect(() => {
     if (unreadNotifications > prevUnreadRef.current && hasLoaded.current) {
       prevUnreadRef.current = unreadNotifications;
-      setTimeout(() => fetchTicketsRef.current(true), 1000);
+      fetchTicketsRef.current(true);
     } else {
       prevUnreadRef.current = unreadNotifications;
     }
   }, [unreadNotifications]);
-
-
 
   // Real-time socket event listener
   // Use refs so handlers always call latest fetchTickets/selectedTicket without re-registering listeners
@@ -248,7 +266,13 @@ const TicketManagement = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    // New ticket created → instantly prepend to current list, save to storage, then background-sync
+    // Trigger sync on socket reconnect
+    const handleConnect = () => {
+      console.log('[TicketMgmt] Socket connected/reconnected -> refreshing tickets');
+      fetchTicketsRef.current(true);
+    };
+
+    // New ticket created → instantly prepend to current list & update card stats, save to storage, then background-sync
     const handleCreated = (payload = {}) => {
       console.log('[TicketMgmt] ticket:created received', payload);
       const ticket = payload?.ticket || payload?.data || payload;
@@ -270,9 +294,22 @@ const TicketManagement = () => {
             return updated;
           });
           setTotalItems((prev) => prev + 1);
+
+          // Instant real-time Card Stats update (0ms delay)
+          setTicketStats((prev) => {
+            const newStats = {
+              ...prev,
+              total: (parseInt(prev?.total) || 0) + 1,
+              open_count: (parseInt(prev?.open_count) || 0) + 1,
+            };
+            ticketMemoryCache.stats = newStats;
+            try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(newStats)); } catch (_) {}
+            return newStats;
+          });
         }
       }
-      // Background sync via stable ref after 1s delay (gives Supabase pool time to finalize write)
+      // Background sync via stable ref immediately and after 1s delay
+      fetchTicketsRef.current(true);
       setTimeout(() => fetchTicketsRef.current(true), 1000);
     };
 
@@ -283,7 +320,7 @@ const TicketManagement = () => {
       if (cur) refreshTicketDetail(cur.id);
     };
 
-    // Ticket deleted → remove from state and cache immediately
+    // Ticket deleted → remove from state and cache immediately & update card stats
     const handleDeleted = ({ id } = {}) => {
       if (id) {
         setTickets((prev) => {
@@ -296,6 +333,18 @@ const TicketManagement = () => {
         });
         setTotalItems((prev) => Math.max(0, prev - 1));
 
+        // Instant real-time Card Stats update (0ms delay)
+        setTicketStats((prev) => {
+          const newStats = {
+            ...prev,
+            total: Math.max(0, (parseInt(prev?.total) || 0) - 1),
+            open_count: Math.max(0, (parseInt(prev?.open_count) || 0) - 1),
+          };
+          ticketMemoryCache.stats = newStats;
+          try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(newStats)); } catch (_) {}
+          return newStats;
+        });
+
         const cur = selectedTicketRef.current;
         if (cur && cur.id === id) {
           setSelectedTicket(null);
@@ -305,6 +354,8 @@ const TicketManagement = () => {
       fetchTicketsRef.current(true);
     };
 
+    socket.on('connect', handleConnect);
+    socket.on('reconnect', handleConnect);
     socket.on('ticket:created', handleCreated);
     socket.on('ticket_created', handleCreated);
     socket.on('ticket:updated', handleUpdated);
@@ -314,6 +365,8 @@ const TicketManagement = () => {
 
     return () => {
       if (typeof socket.off === 'function') {
+        socket.off('connect', handleConnect);
+        socket.off('reconnect', handleConnect);
         socket.off('ticket:created', handleCreated);
         socket.off('ticket_created', handleCreated);
         socket.off('ticket:updated', handleUpdated);
@@ -422,6 +475,17 @@ const TicketManagement = () => {
         });
         setTotalItems(prev => Math.max(0, prev - 1));
 
+        setTicketStats((prev) => {
+          const newStats = {
+            ...prev,
+            total: Math.max(0, (parseInt(prev?.total) || 0) - 1),
+            open_count: Math.max(0, (parseInt(prev?.open_count) || 0) - 1),
+          };
+          ticketMemoryCache.stats = newStats;
+          try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(newStats)); } catch (_) {}
+          return newStats;
+        });
+
         // If deleting the last item on current page, step back one page
         if (tickets.length <= 1 && page > 1) {
           setPage(prev => prev - 1);
@@ -441,16 +505,6 @@ const TicketManagement = () => {
     setIsDetailModalOpen(true);
     refreshTicketDetail(ticket.id);
   };
-
-  // Summary KPI Cards data
-  const summaryCards = [
-    { label: 'Total Tickets', count: parseInt(ticketStats.total) || 0, icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500', active: !statusFilter && !slaFilter, onClick: () => resetFilters() },
-    { label: 'Pending', count: parseInt(ticketStats.open_count) || 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500', active: statusFilter === 'open', onClick: () => { setStatusFilter('open'); setSlaFilter(''); setPage(1); } },
-    { label: 'In Progress', count: parseInt(ticketStats.in_progress_count) || 0, icon: UserCheck, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500', active: statusFilter === 'in_progress', onClick: () => { setStatusFilter('in_progress'); setSlaFilter(''); setPage(1); } },
-    { label: 'Resolved', count: parseInt(ticketStats.resolved_count) || 0, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500', active: statusFilter === 'resolved', onClick: () => { setStatusFilter('resolved'); setSlaFilter(''); setPage(1); } },
-    { label: 'SLA At Risk', count: parseInt(ticketStats.sla_at_risk) || 0, icon: AlertCircle, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500', active: slaFilter === 'at_risk', onClick: () => { setSlaFilter('at_risk'); setStatusFilter(''); setPage(1); } },
-    { label: 'SLA Breached', count: parseInt(ticketStats.sla_breached) || 0, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500', active: slaFilter === 'breached', onClick: () => { setSlaFilter('breached'); setStatusFilter(''); setPage(1); } },
-  ];
 
   // Calculate SLA Status Helper
   const getSlaStatus = (slaDeadline, status) => {
@@ -477,6 +531,37 @@ const TicketManagement = () => {
       return { text: 'WITHIN SLA', desc: `${remHours}h remaining`, variant: 'success', color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' };
     }
   };
+
+  // Derive real-time card counts directly from currently loaded tickets & stats object
+  const cardCounts = React.useMemo(() => {
+    const list = Array.isArray(tickets) ? tickets : [];
+
+    const liveTotal = Math.max(totalItems, list.length, parseInt(ticketStats.total) || 0);
+    const liveOpen = list.filter((t) => t.status === 'open').length;
+    const liveInProgress = list.filter((t) => t.status === 'in_progress').length;
+    const liveResolved = list.filter((t) => ['resolved', 'closed'].includes(t.status)).length;
+    const liveSlaRisk = list.filter((t) => getSlaStatus(t.sla_deadline, t.status).text === 'AT RISK').length;
+    const liveSlaBreached = list.filter((t) => getSlaStatus(t.sla_deadline, t.status).text === 'BREACHED').length;
+
+    return {
+      total: typeof ticketStats.total !== 'undefined' ? parseInt(ticketStats.total) : liveTotal,
+      open: typeof ticketStats.open_count !== 'undefined' ? parseInt(ticketStats.open_count) : liveOpen,
+      inProgress: typeof ticketStats.in_progress_count !== 'undefined' ? parseInt(ticketStats.in_progress_count) : liveInProgress,
+      resolved: typeof ticketStats.resolved_count !== 'undefined' ? parseInt(ticketStats.resolved_count) : liveResolved,
+      slaRisk: typeof ticketStats.sla_at_risk !== 'undefined' ? parseInt(ticketStats.sla_at_risk) : liveSlaRisk,
+      slaBreached: typeof ticketStats.sla_breached !== 'undefined' ? parseInt(ticketStats.sla_breached) : liveSlaBreached,
+    };
+  }, [tickets, totalItems, ticketStats]);
+
+  // Summary KPI Cards data
+  const summaryCards = [
+    { label: 'Total Tickets', count: cardCounts.total, icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500', active: !statusFilter && !slaFilter, onClick: () => resetFilters() },
+    { label: 'Pending', count: cardCounts.open, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500', active: statusFilter === 'open', onClick: () => { setStatusFilter('open'); setSlaFilter(''); setPage(1); } },
+    { label: 'In Progress', count: cardCounts.inProgress, icon: UserCheck, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500', active: statusFilter === 'in_progress', onClick: () => { setStatusFilter('in_progress'); setSlaFilter(''); setPage(1); } },
+    { label: 'Resolved', count: cardCounts.resolved, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500', active: statusFilter === 'resolved', onClick: () => { setStatusFilter('resolved'); setSlaFilter(''); setPage(1); } },
+    { label: 'SLA At Risk', count: cardCounts.slaRisk, icon: AlertCircle, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500', active: slaFilter === 'at_risk', onClick: () => { setSlaFilter('at_risk'); setStatusFilter(''); setPage(1); } },
+    { label: 'SLA Breached', count: cardCounts.slaBreached, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500', active: slaFilter === 'breached', onClick: () => { setSlaFilter('breached'); setStatusFilter(''); setPage(1); } },
+  ];
 
   return (
     <div className="space-y-6">

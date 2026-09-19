@@ -53,6 +53,13 @@ exports.getTickets = async (req, res, next) => {
       params.push(`%${req.query.excludeCategoryName}%`);
     }
 
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push(`(t.ticket_number ILIKE $${idx} OR t.subject ILIKE $${idx} OR t.description ILIKE $${idx} OR c.full_name ILIKE $${idx} OR c.contact_number ILIKE $${idx} OR c.complete_address ILIKE $${idx})`);
+      params.push(term);
+      idx++;
+    }
+
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const validSort = ['created_at','updated_at','priority','status','ticket_number','sla_deadline'];
     const col = validSort.includes(sortBy) ? sortBy : 'created_at';
@@ -62,7 +69,7 @@ exports.getTickets = async (req, res, next) => {
     const dataParams = [...params, parseInt(limit), offset];
 
     const countJoins = [
-      search ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
+      (search || req.user.role === 'admin') ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
       (req.query.excludeCategoryName || req.query.categoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
     ].filter(Boolean).join(' ');
 
@@ -318,21 +325,21 @@ const getInstallationCategoryId = async () => {
 exports.getTicketStats = async (req, res, next) => {
   try {
     const isTech = req.user.role === 'technician';
-    let baseWhere = isTech ? 'WHERE t.assigned_technician_id = $1' : '';
-    let params = isTech ? [req.user.id] : [];
-    
-    if (req.query.excludeCategoryName) {
-      const installCatId = await getInstallationCategoryId();
-      if (installCatId) {
-        const paramIdx = params.length + 1;
-        if (baseWhere === '') {
-          baseWhere = `WHERE (t.service_category_id != $${paramIdx} OR t.service_category_id IS NULL)`;
-        } else {
-          baseWhere += ` AND (t.service_category_id != $${paramIdx} OR t.service_category_id IS NULL)`;
-        }
-        params.push(installCatId);
-      }
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (isTech) {
+      conditions.push(`t.assigned_technician_id = $${idx++}`);
+      params.push(req.user.id);
     }
+
+    if (req.query.excludeCategoryName) {
+      conditions.push(`(cat.name IS NULL OR cat.name NOT ILIKE $${idx++})`);
+      params.push(`%${req.query.excludeCategoryName}%`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const result = await query(`
       SELECT COUNT(*) FILTER (WHERE t.status = 'open') AS open_count,
@@ -347,7 +354,9 @@ exports.getTicketStats = async (req, res, next) => {
              COUNT(*) FILTER (WHERE t.created_at >= NOW() - INTERVAL '24 hours') AS created_today,
              COUNT(*) FILTER (WHERE t.resolved_at >= NOW() - INTERVAL '24 hours') AS resolved_today,
              COUNT(*) AS total
-      FROM tickets t ${baseWhere}`,
+      FROM tickets t
+      LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+      ${where}`,
       params
     );
     res.json({ success: true, data: result.rows[0] });

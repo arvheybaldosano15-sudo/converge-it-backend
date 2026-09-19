@@ -151,24 +151,44 @@ const InstallationRequests = () => {
     return filteredTickets.slice(start, start + itemsPerPage);
   }, [filteredTickets, page]);
 
-  // Real-time socket event listener — instant table update on new ticket, no polling needed
+  // Window focus listener to keep installation requests fresh when switching tabs
+  useEffect(() => {
+    const handleFocus = () => {
+      queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [queryClient]);
+
+  // Real-time socket event listener — instant table update on new ticket, connect/reconnect sync
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    // New ticket created via Messenger or API → prepend directly to cache (zero latency)
+    const handleConnect = () => {
+      console.log('[InstallationRequests] Socket re-connected -> syncing installation requests');
+      queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['technicians'], type: 'active' });
+    };
+
+    // New ticket created via Messenger or API → prepend directly to cache if category matches installation
     const handleCreated = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
       if (ticket && ticket.id) {
-        queryClient.setQueryData(['installation-requests'], (old = []) => {
-          const list = Array.isArray(old) ? old : [];
-          const exists = list.some((t) => t.id === ticket.id);
-          if (exists) return list;
-          const updated = [ticket, ...list];
-          try {
-            localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(updated));
-          } catch (e) {}
-          return updated;
-        });
+        const catName = (ticket.category_name || '').toLowerCase();
+        // If category is not specified or contains 'installation', process it
+        const isInstallation = !catName || catName.includes('installation');
+        if (isInstallation) {
+          queryClient.setQueryData(['installation-requests'], (old = []) => {
+            const list = Array.isArray(old) ? old : [];
+            const exists = list.some((t) => t.id === ticket.id);
+            if (exists) return list;
+            const updated = [ticket, ...list];
+            try {
+              localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+        }
       }
       // Force immediate active refetch overriding staleTime
       queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
@@ -203,6 +223,8 @@ const InstallationRequests = () => {
       queryClient.refetchQueries({ queryKey: ['installation-requests'], type: 'active' });
     };
 
+    socket.on('connect', handleConnect);
+    socket.on('reconnect', handleConnect);
     socket.on('ticket:created', handleCreated);
     socket.on('ticket_created', handleCreated);
     socket.on('ticket:updated', handleUpdated);
@@ -212,6 +234,8 @@ const InstallationRequests = () => {
 
     return () => {
       if (typeof socket.off === 'function') {
+        socket.off('connect', handleConnect);
+        socket.off('reconnect', handleConnect);
         socket.off('ticket:created', handleCreated);
         socket.off('ticket_created', handleCreated);
         socket.off('ticket:updated', handleUpdated);

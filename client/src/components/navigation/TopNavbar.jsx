@@ -66,6 +66,8 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
 
     const handleTicketCreated = () => {
       fetchNotifications(false);
+      setTimeout(() => fetchNotifications(false), 500);
+      setTimeout(() => fetchNotifications(false), 1500);
     };
 
     socket.on('notification:new', handleNewNotification);
