@@ -531,7 +531,9 @@ const InstallationRequests = () => {
                 <Icon className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 className={`text-lg font-extrabold font-display leading-none ${card.color}`}>{card.count}</h3>
+                <h3 className={`text-lg font-extrabold font-display leading-none ${card.color}`}>
+                  {(isFetching && tickets.length === 0) ? '--' : card.count}
+                </h3>
                 <p className="text-[11px] font-bold text-slate-200 mt-0.5 truncate">{card.label}</p>
               </div>
             </Card>
@@ -657,7 +659,7 @@ const InstallationRequests = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {ticketsLoading && paginatedTickets.length === 0 ? (
+              {(ticketsLoading || (isFetching && tickets.length === 0)) && paginatedTickets.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-slate-500">
                     <Loader text="Loading installation requests..." />
