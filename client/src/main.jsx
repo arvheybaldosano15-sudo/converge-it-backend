@@ -74,6 +74,21 @@ const queryClient = new QueryClient({
   },
 });
 
+// ─── Synchronous localStorage pre-seed ────────────────────────────────────────
+// PersistQueryClientProvider restores the TanStack cache asynchronously,
+// which creates a brief window where data is missing (shows loader / zeros).
+// By seeding the queryClient synchronously here, data is available IMMEDIATELY
+// on hard refresh — before any component mounts or any effect fires.
+try {
+  const installationCached = localStorage.getItem('CONVERGE_INSTALLATION_REQUESTS_CACHE');
+  if (installationCached) {
+    const parsed = JSON.parse(installationCached);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      queryClient.setQueryData(['installation-requests'], parsed);
+    }
+  }
+} catch (_) {}
+
 // Persist query cache to localStorage for instant offline access and zero-loading reloads
 const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
