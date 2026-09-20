@@ -41,7 +41,7 @@ export const useInstallationRequests = () => {
   return useQuery({
     queryKey: ['installation-requests'],
     queryFn: fetchInstallationRequests,
-    staleTime: 1000 * 5, // 5 seconds stale so refetch occurs seamlessly
+    staleTime: 0, // Always stale → always refetch in background immediately on mount
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchInterval: 5000, // Background poll every 5s
@@ -56,7 +56,9 @@ export const useInstallationRequests = () => {
       } catch (e) {}
       return memoryInstallationCache || [];
     },
-    initialDataUpdatedAt: () => Date.now(),
+    // 0 = epoch → data is always considered stale → React Query refetches immediately
+    // on every mount instead of waiting for staleTime to expire (which caused 5s delay)
+    initialDataUpdatedAt: 0,
     placeholderData: (previousData) => previousData,
   });
 };
