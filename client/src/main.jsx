@@ -79,15 +79,21 @@ const queryClient = new QueryClient({
 // which creates a brief window where data is missing (shows loader / zeros).
 // By seeding the queryClient synchronously here, data is available IMMEDIATELY
 // on hard refresh — before any component mounts or any effect fires.
-try {
-  const installationCached = localStorage.getItem('CONVERGE_INSTALLATION_REQUESTS_CACHE');
-  if (installationCached) {
-    const parsed = JSON.parse(installationCached);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      queryClient.setQueryData(['installation-requests'], parsed);
+const preSeedCache = (localKey, queryKey) => {
+  try {
+    const cached = localStorage.getItem(localKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && (Array.isArray(parsed) ? parsed.length > 0 : Object.keys(parsed).length > 0)) {
+        queryClient.setQueryData(queryKey, parsed);
+      }
     }
-  }
-} catch (_) {}
+  } catch (_) {}
+};
+
+preSeedCache('CONVERGE_INSTALLATION_REQUESTS_CACHE', ['installation-requests']);
+preSeedCache('CONVERGE_TECH_DASHBOARD_CACHE',        ['dashboard', 'technician']);
+preSeedCache('CONVERGE_ADMIN_DASHBOARD_CACHE',       ['dashboard', 'admin']);
 
 // Persist query cache to localStorage for instant offline access and zero-loading reloads
 const persister = createSyncStoragePersister({

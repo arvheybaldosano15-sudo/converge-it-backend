@@ -18,7 +18,7 @@ export const useAdminDashboard = () => {
       safeSave(ADMIN_DASH_KEY, data);
       return data;
     },
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 0, // Always stale → refetch immediately in background on mount
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     initialData: () => {
@@ -27,7 +27,7 @@ export const useAdminDashboard = () => {
         return cached ? JSON.parse(cached) : undefined;
       } catch (_) { return undefined; }
     },
-    initialDataUpdatedAt: () => Date.now(), // treat localStorage data as fresh
+    initialDataUpdatedAt: 0, // epoch → always stale → triggers immediate background refetch
     placeholderData: (previousData) => previousData,
   });
 };
@@ -42,7 +42,7 @@ export const useTechDashboard = () => {
       safeSave(TECH_DASH_KEY, data);
       return data;
     },
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 0, // Always stale → refetch immediately in background on mount
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     initialData: () => {
@@ -51,7 +51,7 @@ export const useTechDashboard = () => {
         return cached ? JSON.parse(cached) : undefined;
       } catch (_) { return undefined; }
     },
-    initialDataUpdatedAt: () => Date.now(),
+    initialDataUpdatedAt: 0, // epoch → always stale → triggers immediate background refetch
     placeholderData: (previousData) => previousData,
   });
 };
