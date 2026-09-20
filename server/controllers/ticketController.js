@@ -38,14 +38,11 @@ exports.getTickets = async (req, res, next) => {
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     if (req.query.categoryName) {
-      const catId = await getCategoryIdByName(req.query.categoryName);
-      if (catId) {
-        conditions.push(`t.service_category_id = $${idx++}`);
-        params.push(catId);
-      } else {
-        conditions.push(`cat.name ILIKE $${idx++}`);
-        params.push(`%${req.query.categoryName}%`);
-      }
+      // Inline subquery — avoids a sequential pre-lookup DB round-trip on every request.
+      // getCategoryIdByName() used a Map cache that resets on every Render cold-start,
+      // causing an extra sequential DB hit before the main query on every hard refresh.
+      conditions.push(`t.service_category_id = (SELECT id FROM service_categories WHERE name ILIKE $${idx++} LIMIT 1)`);
+      params.push(`%${req.query.categoryName}%`);
     }
 
     if (req.query.excludeCategoryName) {
