@@ -1,12 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/navigation/Sidebar';
 import TopNavbar from '../components/navigation/TopNavbar';
+import { useQueryClient } from '@tanstack/react-query';
+import api from '../utils/axios';
+
+// Prefetch function — mirrors fetchInstallationRequests in useInstallationRequests.js
+const prefetchInstallationRequests = async () => {
+  try {
+    const res = await api.get('/tickets', {
+      params: { categoryName: 'Installation Request', limit: 50 },
+    });
+    if (res.success && Array.isArray(res.data)) {
+      try {
+        localStorage.setItem('CONVERGE_INSTALLATION_REQUESTS_CACHE', JSON.stringify(res.data));
+      } catch (_) {}
+      return res.data;
+    }
+  } catch (_) {}
+  return [];
+};
 
 const AdminLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Prefetch installation requests in the background as soon as admin layout mounts
+  // so that navigating to /admin/installation-requests shows data instantly
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['installation-requests'],
+      queryFn: prefetchInstallationRequests,
+      staleTime: 0, // Always prefetch fresh data
+    });
+  }, [queryClient]);
 
   return (
     <div className="flex min-h-screen bg-transparent">
