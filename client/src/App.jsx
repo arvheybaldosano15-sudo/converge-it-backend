@@ -14,6 +14,7 @@ import TicketManagement from './pages/admin/TicketManagement';
 import InstallationRequests from './pages/admin/InstallationRequests';
 import CustomerManagement from './pages/admin/CustomerManagement';
 import TechnicianManagement from './pages/admin/TechnicianManagement';
+import TechnicianApproval from './pages/admin/TechnicianApproval';
 import MessengerManagement from './pages/admin/MessengerManagement';
 import KnowledgeBase from './pages/admin/KnowledgeBase';
 import Reports from './pages/admin/Reports';
