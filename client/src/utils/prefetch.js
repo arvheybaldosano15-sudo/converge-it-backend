@@ -17,9 +17,7 @@ const safeSave = (key, data) => {
 // Called right after a successful admin login — completely fire-and-forget.
 // By the time the admin navigates to any page, the data is already cached.
 export const prefetchAdminData = () => {
-  // Delay background prefetch by 2 seconds so initial login redirect and Dashboard component render first without network congestion
-  setTimeout(() => {
-    Promise.allSettled([
+  Promise.allSettled([
       api.get('/tickets', {
         params: { excludeCategoryName: 'Installation Request', limit: 10, page: 1, sortBy: 'created_at', sortOrder: 'DESC' },
       }),
@@ -55,7 +53,6 @@ export const prefetchAdminData = () => {
         }).catch(() => {});
       }, 1000);
     }).catch(() => {});
-  }, 2000);
 };
 
 // ─── Technician Pre-fetch ────────────────────────────────────────────────────
