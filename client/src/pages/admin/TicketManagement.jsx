@@ -41,7 +41,11 @@ let ticketMemoryCache = {
           const list = Array.isArray(parsed)
             ? parsed
             : (parsed?.data || parsed?.tickets || parsed?.recentTickets || parsed?.assignedTickets || []);
-          const validList = list.filter((t) => t && t.id && (t.ticket_number || t.subject));
+          const validList = list.filter((t) => {
+            if (!t || !t.id || (!t.ticket_number && !t.subject)) return false;
+            const catName = (t.category_name || t.categoryName || '').toLowerCase();
+            return !catName.includes('installation');
+          });
           if (validList.length > 0) return validList;
         }
       }
