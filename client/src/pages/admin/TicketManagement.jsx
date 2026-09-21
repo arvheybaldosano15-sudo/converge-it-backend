@@ -61,8 +61,12 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(() => !Array.isArray(ticketMemoryCache.tickets) || ticketMemoryCache.tickets.length === 0);
-  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
+  // `loading` = true only when there is ZERO data to show (first-ever visit with empty cache)
+  // `fetching` = true during any background refresh — shows a thin progress bar, never blocks the table
+  const hasCache = Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0;
+  const [loading, setLoading] = useState(() => !hasCache);
+  const [fetching, setFetching] = useState(false);
+  const hasLoaded = React.useRef(hasCache);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -113,11 +117,13 @@ const TicketManagement = () => {
   const [fetchError, setFetchError] = useState(false);
 
   const fetchTickets = async (silent = false, retryCount = 0) => {
-    // Only show full loader spinner if there are zero tickets in state/cache
-    const isSilent = silent || (Array.isArray(tickets) && tickets.length > 0) || (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
-    if (!isSilent) {
+    // If we already have data to display, use the thin progress bar (fetching) instead of blocking loader
+    const hasData = (Array.isArray(tickets) && tickets.length > 0) || (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
+    if (!hasData) {
       setLoading(true);
       setFetchError(false);
+    } else {
+      setFetching(true);
     }
 
     const params = paramsRef.current;
@@ -188,6 +194,7 @@ const TicketManagement = () => {
     } finally {
       hasLoaded.current = true;
       setLoading(false);
+      setFetching(false);
     }
   };
 
@@ -567,6 +574,12 @@ const TicketManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Thin top progress bar — shows during background fetch without blocking the table */}
+      {fetching && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px]">
+          <div className="h-full bg-cyan-400 animate-pulse" style={{ width: '100%', animation: 'progress-slide 1.2s ease-in-out infinite' }} />
+        </div>
+      )}
       {/* Header Title Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
@@ -708,7 +721,7 @@ const TicketManagement = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-800/60">
-              {(loading || (!hasLoaded.current && tickets.length === 0)) ? (
+              {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={`skeleton-${i}`} className="animate-pulse border-b border-slate-800/60">
                     <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>

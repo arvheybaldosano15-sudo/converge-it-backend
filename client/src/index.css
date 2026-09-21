@@ -332,3 +332,8 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   50% { opacity: 0.8; }
 }
 .animate-pulse-glow { animation: pulseGlow 3s infinite; }
+
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
