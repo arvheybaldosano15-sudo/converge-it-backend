@@ -28,7 +28,11 @@ let ticketMemoryCache = {
   tickets: (() => {
     try {
       const cached = localStorage.getItem(LOCAL_TICKETS_CACHE_KEY);
-      return cached ? JSON.parse(cached) : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -36,9 +40,9 @@ let ticketMemoryCache = {
   stats: (() => {
     try {
       const cached = localStorage.getItem(LOCAL_TICKETS_STATS_KEY);
-      return cached ? JSON.parse(cached) : null;
+      return cached ? JSON.parse(cached) : {};
     } catch (e) {
-      return null;
+      return {};
     }
   })(),
   totalPages: 1,
@@ -57,8 +61,8 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(() => !Array.isArray(ticketMemoryCache.tickets) || ticketMemoryCache.tickets.length === 0);
-  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
+  const [loading, setLoading] = useState(() => ticketMemoryCache.tickets === null);
+  const hasLoaded = React.useRef(ticketMemoryCache.tickets !== null);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
