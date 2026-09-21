@@ -51,21 +51,21 @@ const ServiceReport = lazy(() => import('./pages/technician/ServiceReport'));
 const TechNotifications = lazy(() => import('./pages/technician/Notifications'));
 const TechProfile = lazy(() => import('./pages/technician/Profile'));
 
-// Code-Split Customer Pages
+// Code-Split Public Pages
+const LandingPage = lazy(() => import('./pages/public/LandingPage'));
 const TrackTicket = lazy(() => import('./pages/customer/TrackTicket'));
 const CustomerKnowledgeBase = lazy(() => import('./pages/customer/KnowledgeBase'));
 
 // Code-Split Error Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'));
 
-const DefaultRootRedirect = () => {
-  return <Navigate to="/login" replace />;
-};
-
 function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+
         {/* Public Customer Pages */}
         <Route path="/track" element={<TrackTicket />} />
         <Route path="/kb" element={<CustomerKnowledgeBase />} />
@@ -120,8 +120,6 @@ function App() {
           </Route>
         </Route>
 
-        {/* Redirect Root to Login */}
-        <Route path="/" element={<DefaultRootRedirect />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
