@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Converge IT Solutions - Mobile Ticketing System",
-  "short_name": "Converge IT",
+  "name": "Converge-MTS",
+  "short_name": "Converge-MTS",
   "description": "Mobile-Based Messenger Integrated Customer Support and Automated Ticketing System for Converge IT Solutions",
   "start_url": "/",
   "scope": "/",
