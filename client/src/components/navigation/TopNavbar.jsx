@@ -64,10 +64,22 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
       fetchNotifications(false);
     };
 
-    const handleTicketCreated = () => {
+    const handleTicketCreated = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
+      if (ticket && ticket.ticket_number) {
+        const notifItem = {
+          id: 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          title: `New Ticket #${ticket.ticket_number}`,
+          message: `Ticket #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`,
+          type: 'ticket',
+          is_read: false,
+          created_at: new Date().toISOString(),
+          reference_id: ticket.id,
+        };
+        setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
+      }
       fetchNotifications(false);
-      setTimeout(() => fetchNotifications(false), 500);
-      setTimeout(() => fetchNotifications(false), 1500);
+      setTimeout(() => fetchNotifications(false), 800);
     };
 
     socket.on('notification:new', handleNewNotification);
