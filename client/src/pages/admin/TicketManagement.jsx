@@ -24,6 +24,14 @@ const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
 const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE';
 const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
 
+// Persistent memory cache across page tab navigation & browser reloads
+let ticketMemoryCache = {
+  tickets: [],
+  stats: {},
+  totalPages: 1,
+  totalItems: 0,
+};
+
 const getInitialTicketsFromStorage = () => {
   if (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0) {
     return ticketMemoryCache.tickets;
@@ -56,19 +64,17 @@ const getInitialStatsFromStorage = () => {
   }
   try {
     const cached = localStorage.getItem(LOCAL_TICKETS_STATS_KEY);
-    return cached ? JSON.parse(cached) : {};
+    const parsed = cached ? JSON.parse(cached) : {};
+    ticketMemoryCache.stats = parsed;
+    return parsed;
   } catch (_) {
     return {};
   }
 };
 
-// Persistent memory cache across page tab navigation & browser reloads
-let ticketMemoryCache = {
-  tickets: getInitialTicketsFromStorage(),
-  stats: getInitialStatsFromStorage(),
-  totalPages: 1,
-  totalItems: 0,
-};
+// Populate initial memory cache on module load
+ticketMemoryCache.tickets = getInitialTicketsFromStorage();
+ticketMemoryCache.stats = getInitialStatsFromStorage();
 
 const TicketManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
