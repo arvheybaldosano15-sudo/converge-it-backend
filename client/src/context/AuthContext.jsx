@@ -23,9 +23,15 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
         return;
       }
+
+      // Safety timeout promise — guarantees setLoading(false) completes within 6 seconds
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Auth check timeout')), 6000)
+      );
+
       try {
-        const res = await api.get('/auth/me');
-        if (res.success) {
+        const res = await Promise.race([api.get('/auth/me'), timeoutPromise]);
+        if (res && res.success) {
           setAuthSession(res.data);
           setUser(res.data);
         }
@@ -45,8 +51,8 @@ export const AuthProvider = ({ children }) => {
           clearAuthSession();
           setUser(null);
         } else {
-          // Keep session — server may be temporarily unavailable (e.g. 5xx / network error)
-          console.warn('Auth check failed (keeping session):', err?.message || err);
+          // Keep session — server may be temporarily unavailable (e.g. 5xx / network timeout)
+          console.warn('Auth check notice (keeping session):', err?.message || err);
         }
       } finally {
         setLoading(false);

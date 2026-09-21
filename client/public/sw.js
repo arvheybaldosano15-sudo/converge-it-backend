@@ -37,7 +37,26 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event — Bulletproof Network First with Cache Fallback
+// Helper: Fetch with Timeout to prevent hanging network requests on mobile Wi-Fi / Data
+const fetchWithTimeout = (request, timeoutMs = 3000) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Network timeout'));
+    }, timeoutMs);
+
+    fetch(request)
+      .then((response) => {
+        clearTimeout(timer);
+        resolve(response);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
+// Fetch Event — Bulletproof Fast-Load Strategy (Cache First / Fast Network Timeout)
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
@@ -59,13 +78,43 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
+      // 1. Navigation requests (App launch / page navigation):
+      // Try network with a fast 2.5s timeout. If slow/hanging, immediately fallback to cached index.html!
+      if (event.request.mode === 'navigate') {
+        try {
+          const networkResponse = await fetchWithTimeout(event.request, 2500);
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('/index.html', responseClone);
+            }).catch(() => {});
+            return networkResponse;
+          }
+        } catch (e) {
+          // Fast fallback on slow mobile network / timeout
+        }
+
+        const cachedIndex = await caches.match('/index.html') || await caches.match('/');
+        if (cachedIndex) return cachedIndex;
+      }
+
+      // 2. Static Assets (JS, CSS, Images, Fonts):
+      // Return cached version instantly if available, then revalidate in background
       try {
-        const networkResponse = await fetch(event.request);
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          networkResponse.type === 'basic'
-        ) {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          // Background revalidation
+          fetchWithTimeout(event.request, 4000).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse)).catch(() => {});
+            }
+          }).catch(() => {});
+          return cachedResponse;
+        }
+
+        // Not in cache — fetch from network with a 5s timeout
+        const networkResponse = await fetchWithTimeout(event.request, 5000);
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
@@ -73,10 +122,8 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       } catch (err) {
-        const cachedResponse = await caches.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+        const fallback = await caches.match(event.request);
+        if (fallback) return fallback;
 
         if (event.request.mode === 'navigate') {
           const indexPage = await caches.match('/index.html');

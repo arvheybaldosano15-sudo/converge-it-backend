@@ -13,6 +13,7 @@ const getApiUrl = () => {
 
 const api = axios.create({
   baseURL: getApiUrl(),
+  timeout: 15000, // 15 seconds network timeout to prevent hanging requests on mobile
   headers: {
     'Content-Type': 'application/json',
   },
