@@ -84,12 +84,8 @@ const query = async (text, params, retries = 3) => {
         code === '503';
 
       if (isConnError && attempt < retries) {
-        logger.warn(`Database connection dropped (attempt ${attempt}/${retries}). Re-establishing connection...`);
-        if (pool) {
-          pool.end().catch(() => {});
-          pool = null;
-        }
-        await new Promise((r) => setTimeout(r, 400 * attempt));
+        logger.warn(`Database connection hiccup (attempt ${attempt}/${retries}). Retrying...`);
+        await new Promise((r) => setTimeout(r, 50 * attempt));
         continue;
       }
       logger.error('Database query error:', { text: text.substring(0, 100), error: error.message });
