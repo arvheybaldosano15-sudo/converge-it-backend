@@ -10,7 +10,7 @@ exports.getTickets = async (req, res, next) => {
 
     const cacheKey = `${req.user.id}:${req.user.role}:${JSON.stringify(req.query)}`;
     const cached = ticketsCache.get(cacheKey);
-    if (cached && Date.now() < cached.expiresAt) {
+    if (!req.query.fresh && cached && Date.now() < cached.expiresAt) {
       return res.json(cached.data);
     }
 
