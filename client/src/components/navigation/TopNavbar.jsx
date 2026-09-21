@@ -76,10 +76,11 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
           created_at: new Date().toISOString(),
           reference_id: ticket.id,
         };
+        // Instant 0ms prepend — no HTTP needed for badge (SocketContext handles that)
         setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
       }
-      fetchNotifications(false);
-      setTimeout(() => fetchNotifications(false), 800);
+      // Delayed sync to replace temp item with real DB record
+      setTimeout(() => fetchNotifications(false), 2000);
     };
 
     socket.on('notification:new', handleNewNotification);

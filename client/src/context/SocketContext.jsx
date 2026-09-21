@@ -21,7 +21,8 @@ export const SocketProvider = ({ children }) => {
       const res = await api.get('/notifications/unread-count');
       if (res && res.data) {
         const freshCount = typeof res.data.count === 'number' ? res.data.count : parseInt(res.data.count || 0);
-        setUnreadNotifications((prev) => Math.max(prev, freshCount));
+        // Always use the server count as the source of truth (no Math.max to avoid stale value locking)
+        setUnreadNotifications(freshCount);
       }
     } catch (e) {
       // Quiet catch for transient network/auth status
@@ -113,7 +114,8 @@ export const SocketProvider = ({ children }) => {
         { position: 'top-center', duration: 6000 }
       );
       setUnreadNotifications((prev) => prev + 1);
-      fetchUnreadCount();
+      // Delayed sync to reconcile — NOT immediately (that causes race condition)
+      setTimeout(() => fetchUnreadCount(), 2000);
 
       // Trigger actual native mobile phone top pop-up notification banner
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -155,8 +157,10 @@ export const SocketProvider = ({ children }) => {
         if (ticket?.ticket_number) {
           toast.info(`New Ticket #${ticket.ticket_number} created`);
         }
+        // Instantly increment badge at 0ms — no HTTP call that could race and override
         setUnreadNotifications((prev) => prev + 1);
-        fetchUnreadCount();
+        // Delayed server sync after 2s to reconcile any edge cases
+        setTimeout(() => fetchUnreadCount(), 2000);
       }
     };
 
