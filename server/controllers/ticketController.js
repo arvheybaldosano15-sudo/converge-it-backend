@@ -319,6 +319,10 @@ const getInstallationCategoryId = async () => {
   return cachedInstallationCategoryId;
 };
 
+// --- Server-side stats cache (10s TTL) — rapid refreshes skip the DB round-trip ---
+const statsCache = new Map(); // key -> { data, expiresAt }
+const STATS_TTL_MS = 10_000;
+
 exports.getTicketStats = async (req, res, next) => {
   try {
     const isTech = req.user.role === 'technician';
@@ -334,6 +338,13 @@ exports.getTicketStats = async (req, res, next) => {
     if (req.query.excludeCategoryName) {
       conditions.push(`(cat.name IS NULL OR cat.name NOT ILIKE $${idx++})`);
       params.push(`%${req.query.excludeCategoryName}%`);
+    }
+
+    // Cache key combines role + userId + excludeCategoryName so each user gets their own cache
+    const cacheKey = `${req.user.role}:${req.user.id}:${req.query.excludeCategoryName || ''}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ success: true, data: cached.data, cached: true });
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -356,6 +367,9 @@ exports.getTicketStats = async (req, res, next) => {
       ${where}`,
       params
     );
+
+    // Store result in cache
+    statsCache.set(cacheKey, { data: result.rows[0], expiresAt: Date.now() + STATS_TTL_MS });
     res.json({ success: true, data: result.rows[0] });
   } catch (error) { next(error); }
 };

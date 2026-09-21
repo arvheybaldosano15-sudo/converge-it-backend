@@ -61,7 +61,7 @@ const query = async (text, params, retries = 3) => {
     try {
       const result = await getPool().query(text, params);
       const duration = Date.now() - start;
-      if (duration > 1000) {
+      if (duration > 3000) {
         logger.warn('Slow query detected', { text: text.substring(0, 100), duration, rows: result.rowCount });
       }
       return result;
@@ -107,6 +107,11 @@ const testConnection = async () => {
       CREATE INDEX IF NOT EXISTS idx_tickets_category_created ON tickets (service_category_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_tickets_status_created ON tickets (status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_service_categories_name ON service_categories (name);
+      CREATE INDEX IF NOT EXISTS idx_tickets_assigned_status ON tickets (assigned_technician_id, status);
+      CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets (status);
+      CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets (priority);
+      CREATE INDEX IF NOT EXISTS idx_tickets_sla_deadline ON tickets (sla_deadline) WHERE sla_deadline IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_customers_id ON customers (id);
     `).catch(() => {});
 
     await query(`
