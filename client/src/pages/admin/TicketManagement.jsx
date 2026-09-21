@@ -28,11 +28,14 @@ const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
 let ticketMemoryCache = {
   tickets: (() => {
     try {
-      let cached = localStorage.getItem(LOCAL_TICKETS_CACHE_KEY);
-      if (!cached) cached = localStorage.getItem(LOCAL_STORAGE_TICKETS_CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const keys = [LOCAL_TICKETS_CACHE_KEY, LOCAL_STORAGE_TICKETS_CACHE_KEY, 'CONVERGE_ADMIN_DASHBOARD_CACHE'];
+      for (const key of keys) {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const list = Array.isArray(parsed) ? parsed : (parsed?.data || parsed?.tickets || []);
+          if (Array.isArray(list) && list.length > 0) return list;
+        }
       }
       return [];
     } catch (e) {
