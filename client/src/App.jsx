@@ -8,19 +8,23 @@ import TechnicianLayout from './layouts/TechnicianLayout';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 
+// Synchronous Core Admin Views for Instant Route Chunk Resolution on Hard Refresh
 import AdminDashboard from './pages/admin/Dashboard';
 import TicketManagement from './pages/admin/TicketManagement';
 import InstallationRequests from './pages/admin/InstallationRequests';
+import CustomerManagement from './pages/admin/CustomerManagement';
+import TechnicianManagement from './pages/admin/TechnicianManagement';
+import MessengerManagement from './pages/admin/MessengerManagement';
+import KnowledgeBase from './pages/admin/KnowledgeBase';
+import Reports from './pages/admin/Reports';
+import Notifications from './pages/admin/Notifications';
+import AuditLogs from './pages/admin/AuditLogs';
+import AIRecommendations from './pages/admin/AIRecommendations';
+import AdminProfile from './pages/admin/Profile';
+import Settings from './pages/admin/Settings';
 
-// Lightweight Fallback Loader for Suspense
-const PageLoader = () => (
-  <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 space-y-3">
-    <div className="w-9 h-9 border-3 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin" />
-    <span className="text-xs font-bold text-slate-400 font-display tracking-wider animate-pulse">
-      Loading...
-    </span>
-  </div>
-);
+// Lightweight Fallback Loader for Suspense (renders nothing to prevent white/loading flashes)
+const PageLoader = () => null;
 
 // Code-Split Auth Pages
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -29,19 +33,6 @@ const TechnicianPinLogin = lazy(() => import('./pages/auth/TechnicianPinLogin'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const PendingApproval = lazy(() => import('./pages/auth/PendingApproval'));
 const Unauthorized = lazy(() => import('./pages/auth/Unauthorized'));
-
-// Code-Split Admin Pages
-const MessengerManagement = lazy(() => import('./pages/admin/MessengerManagement'));
-const CustomerManagement = lazy(() => import('./pages/admin/CustomerManagement'));
-const TechnicianManagement = lazy(() => import('./pages/admin/TechnicianManagement'));
-const TechnicianApproval = lazy(() => import('./pages/admin/TechnicianApproval'));
-const KnowledgeBase = lazy(() => import('./pages/admin/KnowledgeBase'));
-const Reports = lazy(() => import('./pages/admin/Reports'));
-const Notifications = lazy(() => import('./pages/admin/Notifications'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
-const AIRecommendations = lazy(() => import('./pages/admin/AIRecommendations'));
-const AdminProfile = lazy(() => import('./pages/admin/Profile'));
-const Settings = lazy(() => import('./pages/admin/Settings'));
 
 // Code-Split Technician Pages
 const TechDashboard = lazy(() => import('./pages/technician/Dashboard'));
