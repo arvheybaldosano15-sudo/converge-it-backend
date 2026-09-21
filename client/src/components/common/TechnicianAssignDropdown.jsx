@@ -86,10 +86,10 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
     };
   }, [open, isMobile]);
 
-  // MOBILE: Native HTML <select> (Triggers native mobile OS picker dialog with 100% smooth touch scrolling)
+  // MOBILE: Native HTML <select> with premium custom button styling
   if (isMobile) {
     return (
-      <div className="relative inline-block w-full min-w-[110px] sm:max-w-[140px] shrink-0">
+      <div className="relative inline-block w-full min-w-[115px] sm:max-w-[140px] shrink-0">
         <select
           value=""
           disabled={loading || technicians.length === 0}
@@ -99,24 +99,24 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
               onAssign(val);
             }
           }}
-          className="w-full appearance-none py-1.5 pl-7 pr-6 text-[11px] font-bold rounded-lg border border-purple-500/40 bg-purple-950/40 text-purple-300 focus:outline-none focus:border-purple-400 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
+          className="w-full appearance-none py-1.5 pl-7 pr-6 text-[11px] font-extrabold rounded-xl border border-purple-500/40 bg-gradient-to-r from-purple-950/80 via-slate-900 to-purple-950/80 text-purple-300 shadow-md shadow-purple-950/40 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap active:scale-[0.98] transition-all"
         >
-          <option value="" disabled className="bg-slate-900 text-slate-300">
+          <option value="" disabled className="bg-slate-950 text-slate-300 font-bold">
             {loading ? 'Loading...' : (currentAssignee || 'Select Tech...')}
           </option>
           {availableTechs.length > 0 && (
-            <optgroup label="Available (Up to 3 Tickets)" className="bg-slate-900 text-emerald-400 font-bold">
+            <optgroup label="Available (Up to 3 Tickets)" className="bg-slate-950 text-emerald-400 font-bold">
               {availableTechs.map((tech) => (
-                <option key={tech.id} value={tech.id} className="bg-slate-900 text-slate-100 py-1 font-medium">
+                <option key={tech.id} value={tech.id} className="bg-slate-900 text-slate-100 py-1.5 font-medium">
                   {tech.full_name} ({parseInt(tech.active_tickets || 0)}/3)
                 </option>
               ))}
             </optgroup>
           )}
           {busyTechs.length > 0 && (
-            <optgroup label="Max Capacity (3/3 Active)" className="bg-slate-900 text-amber-400 font-bold">
+            <optgroup label="Max Capacity (3/3 Active)" className="bg-slate-950 text-amber-400 font-bold">
               {busyTechs.map((tech) => (
-                <option key={tech.id} value={tech.id} disabled className="bg-slate-900 text-slate-500 py-1">
+                <option key={tech.id} value={tech.id} disabled className="bg-slate-900 text-slate-500 py-1.5">
                   {tech.full_name} (Full {parseInt(tech.active_tickets || 0)}/3)
                 </option>
               ))}
