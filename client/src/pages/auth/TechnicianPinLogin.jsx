@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import InstallPwaButton from '../../components/common/InstallPwaButton';
@@ -13,6 +14,11 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const { pinLogin } = useAuth();
   const navigate = useNavigate();
+
+  // Pre-wake Render backend container on mount while technician types PIN
+  useEffect(() => {
+    api.get('/health').catch(() => {});
+  }, []);
 
   const handleKeyPress = (num) => {
     if (pin.length < 6) {

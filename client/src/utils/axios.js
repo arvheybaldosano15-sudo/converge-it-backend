@@ -13,7 +13,7 @@ const getApiUrl = () => {
 
 const api = axios.create({
   baseURL: getApiUrl(),
-  timeout: 15000, // 15 seconds network timeout to prevent hanging requests on mobile
+  timeout: 45000, // 45 seconds timeout to accommodate Render free tier cold starts
   headers: {
     'Content-Type': 'application/json',
   },
