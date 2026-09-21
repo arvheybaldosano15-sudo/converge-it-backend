@@ -31,8 +31,6 @@ let ticketMemoryCache = {
       const keys = [
         LOCAL_TICKETS_CACHE_KEY,
         LOCAL_STORAGE_TICKETS_CACHE_KEY,
-        'CONVERGE_ADMIN_DASHBOARD_CACHE',
-        'CONVERGE_TECH_DASHBOARD_CACHE'
       ];
       for (const key of keys) {
         const cached = localStorage.getItem(key);
@@ -40,7 +38,7 @@ let ticketMemoryCache = {
           const parsed = JSON.parse(cached);
           const list = Array.isArray(parsed)
             ? parsed
-            : (parsed?.data || parsed?.tickets || parsed?.recentTickets || parsed?.assignedTickets || []);
+            : (parsed?.data || parsed?.tickets || []);
           const validList = list.filter((t) => {
             if (!t || !t.id || (!t.ticket_number && !t.subject)) return false;
             const catName = (t.category_name || t.categoryName || '').toLowerCase();
