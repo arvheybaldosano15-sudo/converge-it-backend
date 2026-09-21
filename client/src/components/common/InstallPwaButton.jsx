@@ -37,9 +37,11 @@ const InstallPwaButton = ({ variant = 'floating', className = '' }) => {
         type="button"
         onClick={handleClick}
         aria-label="Install Converge IT App"
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-cyan-500/20 to-blue-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 text-xs font-bold text-amber-300 hover:text-white transition-all active:scale-95 shadow-sm cursor-pointer ${className}`}
+        className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/40 text-xs font-bold text-cyan-300 hover:text-white transition-all active:scale-95 shadow-sm cursor-pointer ${className}`}
       >
-        <Download className="w-3.5 h-3.5 text-amber-400" />
+        <div className="w-4 h-4 rounded-md bg-slate-900 border border-cyan-400/60 overflow-hidden shrink-0 flex items-center justify-center">
+          <img src="/logo16.png" alt="Logo" className="w-full h-full object-cover" />
+        </div>
         <span>Install App</span>
       </button>
     );

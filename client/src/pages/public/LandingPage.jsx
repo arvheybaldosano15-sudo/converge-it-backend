@@ -78,24 +78,8 @@ const LandingPage = () => {
           </div>
 
           {/* Action CTAs in Top Navbar */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-3">
             <InstallPwaButton variant="navbar" />
-
-            <button
-              onClick={() => setIsSignUpOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all active:scale-95 shadow-sm"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Register Tech</span>
-            </button>
-
-            <button
-              onClick={() => setIsPinOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-all active:scale-95 shadow-sm"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
-              <span>PIN Portal</span>
-            </button>
 
             <button
               onClick={() => setIsLoginOpen(true)}
@@ -234,9 +218,6 @@ const LandingPage = () => {
           </Link>
         </section>
       </main>
-
-      {/* Floating PWA Install Button */}
-      <InstallPwaButton variant="floating" />
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-6 text-center text-xs text-slate-500 relative z-10">
