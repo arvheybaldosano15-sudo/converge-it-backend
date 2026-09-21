@@ -37,20 +37,53 @@ const getInitialTicketsFromStorage = () => {
     return ticketMemoryCache.tickets;
   }
   try {
-    const keys = [LOCAL_TICKETS_CACHE_KEY, LOCAL_STORAGE_TICKETS_CACHE_KEY];
+    const keys = [
+      LOCAL_TICKETS_CACHE_KEY,
+      LOCAL_STORAGE_TICKETS_CACHE_KEY,
+      'CONVERGE_ADMIN_DASHBOARD_CACHE',
+    ];
     for (const key of keys) {
       const cached = localStorage.getItem(key);
       if (cached) {
         const parsed = JSON.parse(cached);
-        const list = Array.isArray(parsed) ? parsed : (parsed?.data || parsed?.tickets || []);
-        const validList = list.filter((t) => {
-          if (!t || !t.id || (!t.ticket_number && !t.subject)) return false;
-          const catName = (t.category_name || t.categoryName || '').toLowerCase();
-          return !catName.includes('installation');
-        });
-        if (validList.length > 0) {
-          ticketMemoryCache.tickets = validList;
-          return validList;
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.data || parsed?.tickets || parsed?.recentTickets || parsed?.assignedTickets || []);
+
+        if (Array.isArray(list) && list.length > 0) {
+          const validList = list.filter((t) => {
+            if (!t || (!t.id && !t.ticket_number && !t.subject)) return false;
+            const catName = (t.category_name || t.categoryName || '').toLowerCase();
+            return !catName.includes('installation');
+          });
+          if (validList.length > 0) {
+            ticketMemoryCache.tickets = validList;
+            return validList;
+          }
+        }
+      }
+    }
+
+    // Secondary fallback: check TanStack Query cache in localStorage
+    const tanstackCache = localStorage.getItem('CONVERGE_TANSTACK_QUERY_CACHE');
+    if (tanstackCache) {
+      const parsed = JSON.parse(tanstackCache);
+      const queries = parsed?.clientState?.queries || [];
+      const ticketQuery = queries.find((q) => Array.isArray(q?.queryKey) && q.queryKey[0] === 'tickets');
+      if (ticketQuery?.state?.data) {
+        const list = Array.isArray(ticketQuery.state.data)
+          ? ticketQuery.state.data
+          : (ticketQuery.state.data.data || []);
+        if (Array.isArray(list) && list.length > 0) {
+          const validList = list.filter((t) => {
+            if (!t || (!t.id && !t.ticket_number && !t.subject)) return false;
+            const catName = (t.category_name || t.categoryName || '').toLowerCase();
+            return !catName.includes('installation');
+          });
+          if (validList.length > 0) {
+            ticketMemoryCache.tickets = validList;
+            return validList;
+          }
         }
       }
     }
@@ -747,10 +780,6 @@ const TicketManagement = () => {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ) : (tickets.length === 0 && (fetching || !hasLoaded.current)) ? (
-                <tr key="initial-fetch-spacer">
-                  <td colSpan="9" className="p-12 text-center"></td>
                 </tr>
               ) : tickets.length === 0 ? (
                 <tr>
