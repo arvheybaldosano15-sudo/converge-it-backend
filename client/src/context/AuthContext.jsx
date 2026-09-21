@@ -9,11 +9,9 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState(() => {
-    // Immediately restore role-scoped cached user
-    return getCachedUser();
-  });
-  const [loading, setLoading] = useState(true);
+  const cachedUser = getCachedUser();
+  const [user, setUser] = useState(() => cachedUser);
+  const [loading, setLoading] = useState(() => !cachedUser);
 
   useEffect(() => {
     const fetchMe = async () => {

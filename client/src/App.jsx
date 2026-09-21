@@ -1,12 +1,16 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Synchronous Layouts & Guards for Instant Routing Logic
+// Synchronous Layouts, Core Views & Guards for Instant Routing Logic
 import AuthLayout from './layouts/AuthLayout';
 import AdminLayout from './layouts/AdminLayout';
 import TechnicianLayout from './layouts/TechnicianLayout';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
+
+import AdminDashboard from './pages/admin/Dashboard';
+import TicketManagement from './pages/admin/TicketManagement';
+import InstallationRequests from './pages/admin/InstallationRequests';
 
 // Lightweight Fallback Loader for Suspense
 const PageLoader = () => (
@@ -27,9 +31,6 @@ const PendingApproval = lazy(() => import('./pages/auth/PendingApproval'));
 const Unauthorized = lazy(() => import('./pages/auth/Unauthorized'));
 
 // Code-Split Admin Pages
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
-const TicketManagement = lazy(() => import('./pages/admin/TicketManagement'));
-const InstallationRequests = lazy(() => import('./pages/admin/InstallationRequests'));
 const MessengerManagement = lazy(() => import('./pages/admin/MessengerManagement'));
 const CustomerManagement = lazy(() => import('./pages/admin/CustomerManagement'));
 const TechnicianManagement = lazy(() => import('./pages/admin/TechnicianManagement'));
