@@ -157,21 +157,21 @@ exports.createTicket = async (req, res, next) => {
       WHERE t.id = $1`, [ticket.id]);
     const fullPayload = fullTicketRes.rows[0] || ticket;
 
-    await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number }).catch(() => {});
+    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
+    emitToAdmins('ticket:created', { ticket: fullPayload });
+    emitToAdmins('ticket_created', { ticket: fullPayload });
+    emitToAll('ticket:created', { ticket: fullPayload });
+    emitToAll('ticket_created', { ticket: fullPayload });
 
-    // Create DB notification FIRST so count is ready
-    await notifyAdmins({
+    // Run audit log + DB notifications in background (non-blocking)
+    logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number }).catch(() => {});
+
+    notifyAdmins({
       type: 'ticket',
       title: `New Ticket Created #${ticket.ticket_number}`,
       message: `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}.`,
       referenceId: ticket.id,
     }).catch(() => {});
-
-    // Emit real-time socket events IMMEDIATELY
-    emitToAdmins('ticket:created', { ticket: fullPayload });
-    emitToAdmins('ticket_created', { ticket: fullPayload });
-    emitToAll('ticket:created', { ticket: fullPayload });
-    emitToAll('ticket_created', { ticket: fullPayload });
 
     if (assignedTo) {
       createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } }).catch(() => {});

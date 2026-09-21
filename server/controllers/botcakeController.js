@@ -309,22 +309,19 @@ exports.handleWebhook = async (req, res) => {
       category_name: categoryName,
     };
 
-    try {
-      await notifyAdmins({
-        type: 'ticket',
-        title: 'New Messenger Ticket',
-        body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
-        data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
-      });
-    } catch (err) {
-      logger.error('notifyAdmins error:', err);
-    }
-
-    // Emit real-time socket events & create notifications IMMEDIATELY (0ms delay)
+    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
+
+    // Run DB notifications in background (non-blocking)
+    notifyAdmins({
+      type: 'ticket',
+      title: 'New Messenger Ticket',
+      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+    }).catch(err => logger.error('notifyAdmins error:', err));
 
     // Send confirmation reply back to customer on Messenger
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityVal.toUpperCase()}\n⏱️ Estimated Resolution: ${etaHoursVal} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
@@ -707,18 +704,19 @@ exports.createTicket = async (req, res) => {
 
     const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
 
-    await notifyAdmins({
+    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
+    emitToAdmins('ticket:created', { ticket: fullTicketPayload });
+    emitToAdmins('ticket_created', { ticket: fullTicketPayload });
+    emitToAll('ticket:created', { ticket: fullTicketPayload });
+    emitToAll('ticket_created', { ticket: fullTicketPayload });
+
+    // Run DB notifications in background (non-blocking)
+    notifyAdmins({
       type: 'ticket',
       title: 'New Messenger Ticket',
       body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
       data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
     }).catch(err => logger.error('notifyAdmins error:', err));
-
-    // Emit real-time socket events to Admin Dashboard
-    emitToAdmins('ticket:created', { ticket: fullTicketPayload });
-    emitToAdmins('ticket_created', { ticket: fullTicketPayload });
-    emitToAll('ticket:created', { ticket: fullTicketPayload });
-    emitToAll('ticket_created', { ticket: fullTicketPayload });
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityEnum.toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
 

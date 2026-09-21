@@ -113,9 +113,16 @@ export const SocketProvider = ({ children }) => {
         ),
         { position: 'top-center', duration: 6000 }
       );
-      setUnreadNotifications((prev) => prev + 1);
-      // Delayed sync to reconcile — NOT immediately (that causes race condition)
-      setTimeout(() => fetchUnreadCount(), 2000);
+
+      // For ticket notifications: ticket:created already incremented badge at 0ms.
+      // notification:new fires LATER (after DB write) — do a server sync to get accurate count.
+      // For non-ticket (system/approval): increment normally since ticket:created won't fire.
+      if (notification?.type === 'ticket') {
+        // Sync with server to get accurate count (ticket:created already did +1)
+        setTimeout(() => fetchUnreadCount(), 500);
+      } else {
+        setUnreadNotifications((prev) => prev + 1);
+      }
 
       // Trigger actual native mobile phone top pop-up notification banner
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -153,14 +160,10 @@ export const SocketProvider = ({ children }) => {
 
     const handleCreatedNotification = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
-      if (user?.role === 'admin') {
-        if (ticket?.ticket_number) {
-          toast.info(`New Ticket #${ticket.ticket_number} created`);
-        }
-        // Instantly increment badge at 0ms — no HTTP call that could race and override
-        setUnreadNotifications((prev) => prev + 1);
-        // Delayed server sync after 2s to reconcile any edge cases
-        setTimeout(() => fetchUnreadCount(), 2000);
+      // ✅ Instantly increment badge at 0ms for ALL roles (admin + technician)
+      setUnreadNotifications((prev) => prev + 1);
+      if (ticket?.ticket_number) {
+        toast.info(`New Ticket #${ticket.ticket_number} created`);
       }
     };
 
