@@ -723,17 +723,25 @@ const TicketManagement = () => {
                     </div>
                   </td>
                 </tr>
+              ) : (tickets.length === 0 && fetching) ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={`skeleton-${i}`} className="animate-pulse border-b border-slate-800/60">
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-32"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-20"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-16"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-16"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-28"></div></td>
+                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-20"></div></td>
+                    <td className="p-3 sm:p-4 text-right"><div className="h-4 bg-slate-800/80 rounded-lg w-12 ml-auto"></div></td>
+                  </tr>
+                ))
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
-                    {fetching ? (
-                      <p className="text-xs text-cyan-400 font-semibold animate-pulse">Fetching tickets...</p>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold text-slate-400">No support tickets found matching current filters.</p>
-                        <p className="text-xs text-slate-500 mt-1">Try resetting search filters or checking Botcake integration.</p>
-                      </>
-                    )}
+                    <p className="text-sm font-semibold text-slate-400">No support tickets found matching current filters.</p>
+                    <p className="text-xs text-slate-500 mt-1">Try resetting search filters or checking Botcake integration.</p>
                   </td>
                 </tr>
               ) : (
