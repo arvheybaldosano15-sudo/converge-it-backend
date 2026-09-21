@@ -69,11 +69,9 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
     };
     if (open) {
       document.addEventListener('mousedown', handleOutside);
-      document.addEventListener('touchstart', handleOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutside);
-      document.removeEventListener('touchstart', handleOutside);
     };
   }, [open]);
 
@@ -84,17 +82,17 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
     <>
       {loading ? (
         <div className="flex items-center justify-center gap-2 text-slate-400 text-xs px-4 py-4">
-          <Loader className="w-4 h-4 animate-spin text-purple-400" />
+          <Loader className="w-4 h-4 text-purple-400" />
           <span>Loading active technicians...</span>
         </div>
       ) : technicians.length === 0 ? (
         <p className="text-slate-500 text-xs px-4 py-4 text-center">No active technicians available</p>
       ) : (
-        <div className="max-h-[60vh] sm:max-h-[260px] overflow-y-auto divide-y divide-slate-800/50">
+        <div className="max-h-[50vh] sm:max-h-[240px] overflow-y-auto overscroll-contain touch-pan-y divide-y divide-slate-800/50">
           {/* Available technicians (< 3 active tickets) */}
           {availableTechs.length > 0 && (
             <div>
-              <p className="text-[10px] font-extrabold text-emerald-400/90 uppercase tracking-widest px-3.5 pt-2.5 pb-1.5 bg-slate-900/60">
+              <p className="text-[10px] font-extrabold text-emerald-400/90 uppercase tracking-widest px-3.5 pt-2.5 pb-1.5 bg-slate-900/60 sticky top-0 z-10">
                 Available (Up to 3 Tickets)
               </p>
               {availableTechs.map((tech) => {
@@ -107,7 +105,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
                       onAssign(tech.id);
                       setOpen(false);
                     }}
-                    className="w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 text-white hover:bg-purple-950/40 active:bg-purple-900/60 transition-colors cursor-pointer"
+                    className="w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 text-white hover:bg-purple-950/40 active:bg-purple-900/60 cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -125,7 +123,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
           {/* Busy technicians (3/3 active tickets) */}
           {busyTechs.length > 0 && (
             <div>
-              <p className="text-[10px] font-extrabold text-amber-400/90 uppercase tracking-widest px-3.5 pt-2.5 pb-1.5 bg-slate-900/60">
+              <p className="text-[10px] font-extrabold text-amber-400/90 uppercase tracking-widest px-3.5 pt-2.5 pb-1.5 bg-slate-900/60 sticky top-0 z-10">
                 Max Capacity (3/3 Active)
               </p>
               {busyTechs.map((tech) => {
@@ -160,11 +158,15 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
 
   const dropdownMenu = open ? (
     isMobile ? (
-      // Mobile Bottom Sheet Portal
-      <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/75 backdrop-blur-sm p-0 animate-in fade-in duration-200">
+      // Mobile Bottom Sheet Portal (No animation, touch-action pan-y scrollable)
+      <div
+        className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/75 p-0"
+        onClick={() => setOpen(false)}
+      >
         <div
           ref={dropdownRef}
-          className="w-full max-w-md bg-slate-950 border-t border-slate-800 rounded-t-2xl p-4 shadow-2xl space-y-3 pb-8"
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-md bg-slate-950 border-t border-slate-800 rounded-t-2xl p-4 shadow-2xl space-y-3 pb-8 touch-pan-y"
         >
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <div className="flex items-center gap-2">
@@ -173,7 +175,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
             >
               <X className="w-5 h-5" />
             </button>
@@ -182,7 +184,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         </div>
       </div>
     ) : (
-      // Desktop Floating Portal Menu
+      // Desktop Floating Portal Menu (No animation)
       <div
         ref={dropdownRef}
         style={{
@@ -191,7 +193,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
           left: `${coords.left}px`,
           width: `${coords.width}px`,
         }}
-        className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden"
       >
         <TechListContent />
       </div>
@@ -204,17 +206,17 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border border-purple-500/40 bg-purple-950/30 text-purple-300 font-semibold w-full min-w-[110px] sm:max-w-[140px] hover:border-purple-400 hover:bg-purple-900/40 transition-all shrink-0 cursor-pointer"
+        className="flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border border-purple-500/40 bg-purple-950/30 text-purple-300 font-semibold w-full min-w-[110px] sm:max-w-[140px] hover:border-purple-400 hover:bg-purple-900/40 shrink-0 cursor-pointer"
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {loading ? (
-            <Loader className="w-3.5 h-3.5 animate-spin shrink-0 text-purple-400" />
+            <Loader className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           ) : (
             <User className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           )}
           <span className="truncate text-left text-[11px] font-bold">Select Tech...</span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-purple-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-purple-400 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && ReactDOM.createPortal(dropdownMenu, document.body)}
