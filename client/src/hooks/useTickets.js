@@ -10,8 +10,12 @@ export const useTickets = (filters = {}) => {
       const res = await api.get('/tickets', { params: filters });
       return res.data || [];
     },
-    staleTime: 1000 * 5, // 5 seconds
-    refetchOnMount: 'always',
+    staleTime: 0,                    // Always consider data stale → always refetch
+    refetchOnMount: 'always',        // Refetch every time component mounts (including page refresh)
+    refetchOnWindowFocus: true,      // Refetch when tab/app regains focus on mobile
+    refetchOnReconnect: true,        // Refetch when network reconnects
+    refetchInterval: 5000,           // Poll every 5s in background for real-time feel
+    refetchIntervalInBackground: false, // Pause polling when tab is backgrounded (saves battery)
   });
 };
 

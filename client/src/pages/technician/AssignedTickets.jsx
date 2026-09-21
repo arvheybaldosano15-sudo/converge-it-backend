@@ -26,6 +26,7 @@ import {
 
 import { useTickets } from '../../hooks/useTickets';
 import { useTechDashboard } from '../../hooks/useDashboard';
+import { useSocket } from '../../context/SocketContext';
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import UpdateTicketModal from '../../components/technician/UpdateTicketModal';
 import FileServiceReportModal from '../../components/technician/FileServiceReportModal';
@@ -124,12 +125,39 @@ const AssignedTickets = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
 
-  // Fast 1.5-second background auto-sync polling
+  // Socket for real-time instant updates
+  const { socket } = useSocket();
+
+  // Real-time socket listeners — refetch instantly on ticket events (0ms)
   useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 1500);
-    return () => clearInterval(interval);
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleRefetch = () => refetch();
+
+    socket.on('ticket:created', handleRefetch);
+    socket.on('ticket_created', handleRefetch);
+    socket.on('ticket:updated', handleRefetch);
+    socket.on('ticket_updated', handleRefetch);
+    socket.on('connect', handleRefetch); // Refetch on socket reconnect
+
+    return () => {
+      socket.off('ticket:created', handleRefetch);
+      socket.off('ticket_created', handleRefetch);
+      socket.off('ticket:updated', handleRefetch);
+      socket.off('ticket_updated', handleRefetch);
+      socket.off('connect', handleRefetch);
+    };
+  }, [socket, refetch]);
+
+  // Refetch when app/tab becomes visible again on mobile (e.g. switching back from another app)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refetch();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [refetch]);
 
   const rawTickets = ticketsData?.data || ticketsData || [];
