@@ -63,8 +63,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     queryClient.clear();
-    const res = await api.post('/auth/login', { email, password });
-    if (res.success) {
+    let res;
+    try {
+      res = await api.post('/auth/login', { email, password });
+    } catch (err) {
+      // Auto-retry once if temporary network drop or cold start occurs on mobile
+      if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
+        await new Promise((r) => setTimeout(r, 1000));
+        res = await api.post('/auth/login', { email, password });
+      } else {
+        throw err;
+      }
+    }
+    if (res && res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
@@ -77,8 +88,19 @@ export const AuthProvider = ({ children }) => {
 
   const pinLogin = async (pin) => {
     queryClient.clear();
-    const res = await api.post('/auth/pin-login', { pin });
-    if (res.success) {
+    let res;
+    try {
+      res = await api.post('/auth/pin-login', { pin });
+    } catch (err) {
+      // Auto-retry once if temporary network drop or cold start occurs on mobile
+      if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
+        await new Promise((r) => setTimeout(r, 1000));
+        res = await api.post('/auth/pin-login', { pin });
+      } else {
+        throw err;
+      }
+    }
+    if (res && res.success) {
       const { user: userData, accessToken, refreshToken } = res.data;
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
