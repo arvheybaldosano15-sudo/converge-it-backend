@@ -799,17 +799,11 @@ const TicketManagement = () => {
 
                       {/* Assignee */}
                       <td className="p-2.5 sm:p-3" onClick={(e) => e.stopPropagation()}>
-                        {row.assignee_name ? (
-                          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 max-w-[140px]">
-                            <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-                            <span className="truncate font-semibold text-[11px]">{row.assignee_name}</span>
-                          </div>
-                        ) : (
-                          <TechnicianAssignDropdown
-                            technicians={technicians}
-                            onAssign={(techId) => handleAssignTechnician(row.id, techId)}
-                          />
-                        )}
+                        <TechnicianAssignDropdown
+                          technicians={technicians}
+                          currentAssignee={row.assignee_name}
+                          onAssign={(techId) => handleAssignTechnician(row.id, techId)}
+                        />
                       </td>
 
                       {/* SLA Status */}

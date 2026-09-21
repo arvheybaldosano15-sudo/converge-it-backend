@@ -3,11 +3,11 @@ import ReactDOM from 'react-dom';
 import { ChevronDown, UserCheck, User, Loader } from 'lucide-react';
 
 /**
- * Responsive, dark-themed dropdown for assigning a technician to a ticket.
+ * Responsive, dark-themed dropdown for assigning or re-assigning a technician to a ticket.
  * - On Mobile (<640px): Uses a styled native HTML <select> element which triggers the OS native picker (100% smooth touch scrolling, native haptics, zero touch traps).
  * - On Desktop (>=640px): Uses a compact custom portal dropdown with smart auto-positioning.
  */
-const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false }) => {
+const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAssign, loading = false }) => {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -48,15 +48,23 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
     }
   };
 
+  const handleScroll = (e) => {
+    // Prevent inner dropdown list scrolling from re-calculating position and causing re-renders
+    if (dropdownRef.current && dropdownRef.current.contains(e.target)) {
+      return;
+    }
+    updateCoords();
+  };
+
   useEffect(() => {
     if (open && !isMobile) {
       updateCoords();
       window.addEventListener('resize', updateCoords);
-      window.addEventListener('scroll', updateCoords, true);
+      window.addEventListener('scroll', handleScroll, true);
     }
     return () => {
       window.removeEventListener('resize', updateCoords);
-      window.removeEventListener('scroll', updateCoords, true);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [open, isMobile]);
 
@@ -94,7 +102,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
           className="w-full appearance-none py-1.5 pl-7 pr-6 text-[11px] font-bold rounded-lg border border-purple-500/40 bg-purple-950/40 text-purple-300 focus:outline-none focus:border-purple-400 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
         >
           <option value="" disabled className="bg-slate-900 text-slate-300">
-            {loading ? 'Loading...' : 'Select Tech...'}
+            {loading ? 'Loading...' : (currentAssignee || 'Select Tech...')}
           </option>
           {availableTechs.length > 0 && (
             <optgroup label="Available (Up to 3 Tickets)" className="bg-slate-900 text-emerald-400 font-bold">
@@ -119,6 +127,8 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         <div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
           {loading ? (
             <Loader className="w-3.5 h-3.5 text-purple-400 animate-spin" />
+          ) : currentAssignee ? (
+            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
           ) : (
             <User className="w-3.5 h-3.5 text-purple-400" />
           )}
@@ -150,6 +160,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
               </p>
               {availableTechs.map((tech) => {
                 const count = parseInt(tech.active_tickets || 0);
+                const isCurrent = currentAssignee === tech.full_name;
                 return (
                   <button
                     key={tech.id}
@@ -158,10 +169,12 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
                       onAssign(tech.id);
                       setOpen(false);
                     }}
-                    className="w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 text-white hover:bg-purple-950/40 active:bg-purple-900/60 cursor-pointer"
+                    className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 text-white hover:bg-purple-950/40 active:bg-purple-900/60 cursor-pointer ${
+                      isCurrent ? 'bg-purple-950/60 font-bold border-l-2 border-purple-400' : ''
+                    }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <UserCheck className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-purple-400' : 'text-emerald-400'}`} />
                       <span className="truncate font-semibold text-slate-100">{tech.full_name}</span>
                     </div>
                     <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
@@ -230,15 +243,23 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border border-purple-500/40 bg-purple-950/30 text-purple-300 font-semibold w-full min-w-[110px] sm:max-w-[140px] hover:border-purple-400 hover:bg-purple-900/40 shrink-0 cursor-pointer"
+        className={`flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border font-semibold w-full min-w-[110px] sm:max-w-[140px] shrink-0 cursor-pointer transition-colors ${
+          currentAssignee
+            ? 'border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900/50'
+            : 'border-purple-500/40 bg-purple-950/30 text-purple-300 hover:border-purple-400 hover:bg-purple-900/40'
+        }`}
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {loading ? (
             <Loader className="w-3.5 h-3.5 shrink-0 text-purple-400 animate-spin" />
+          ) : currentAssignee ? (
+            <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
           ) : (
             <User className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           )}
-          <span className="truncate text-left text-[11px] font-bold">Select Tech...</span>
+          <span className="truncate text-left text-[11px] font-bold">
+            {currentAssignee || 'Select Tech...'}
+          </span>
         </div>
         <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-purple-400 ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -249,4 +270,5 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
 };
 
 export default TechnicianAssignDropdown;
+
 
