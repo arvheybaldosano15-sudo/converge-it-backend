@@ -7,6 +7,13 @@ const { createNotification, notifyAdmins } = require('../services/notificationSe
 exports.getTickets = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
+
+    const cacheKey = `${req.user.id}:${req.user.role}:${JSON.stringify(req.query)}`;
+    const cached = ticketsCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json(cached.data);
+    }
+
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;
     if (req.user.role === 'technician') { conditions.push(`t.assigned_technician_id = $${idx++}`); params.push(req.user.id); }
@@ -38,16 +45,19 @@ exports.getTickets = async (req, res, next) => {
     if (startDate) { conditions.push(`t.created_at >= $${idx++}`); params.push(startDate); }
     if (endDate) { conditions.push(`t.created_at <= $${idx++}`); params.push(endDate); }
     if (req.query.categoryName) {
-      // Inline subquery — avoids a sequential pre-lookup DB round-trip on every request.
-      // getCategoryIdByName() used a Map cache that resets on every Render cold-start,
-      // causing an extra sequential DB hit before the main query on every hard refresh.
       conditions.push(`t.service_category_id = (SELECT id FROM service_categories WHERE name ILIKE $${idx++} LIMIT 1)`);
       params.push(`%${req.query.categoryName}%`);
     }
 
     if (req.query.excludeCategoryName) {
-      conditions.push(`(t.service_category_id IS NULL OR t.service_category_id != (SELECT id FROM service_categories WHERE name ILIKE $${idx++} LIMIT 1))`);
-      params.push(`%${req.query.excludeCategoryName}%`);
+      const installCatId = await getInstallationCategoryId();
+      if (installCatId) {
+        conditions.push(`(t.service_category_id IS NULL OR t.service_category_id != $${idx++})`);
+        params.push(installCatId);
+      } else {
+        conditions.push(`(t.service_category_id IS NULL OR t.service_category_id != (SELECT id FROM service_categories WHERE name ILIKE $${idx++} LIMIT 1))`);
+        params.push(`%${req.query.excludeCategoryName}%`);
+      }
     }
 
     if (search && search.trim()) {
@@ -83,7 +93,9 @@ exports.getTickets = async (req, res, next) => {
              ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
       query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
-    res.json({ success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } });
+    const responsePayload = { success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } };
+    ticketsCache.set(cacheKey, { data: responsePayload, expiresAt: Date.now() + TICKETS_CACHE_TTL });
+    res.json(responsePayload);
   } catch (error) { next(error); }
 };
 
@@ -146,6 +158,7 @@ exports.createTicket = async (req, res, next) => {
     const ticket = result.rows[0];
     const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
     if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
+    clearTicketsCache();
 
     // Fetch joined customer & category details for instant client table rendering
     const fullTicketRes = await query(`
@@ -237,6 +250,7 @@ exports.updateTicket = async (req, res, next) => {
     }
     emitToRoom(`ticket:${id}`, 'ticket:updated', { ticket: updatedTicket });
     emitToAdmins('ticket:updated', { ticket: updatedTicket });
+    clearTicketsCache();
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'update', targetType: 'ticket', targetId: id, targetDescription: updatedTicket.ticket_number, oldValues: { status: old.status, priority: old.priority }, newValues: { status: status || old.status, priority: priority || old.priority } });
     res.json({ success: true, data: updatedTicket, message: 'Ticket updated successfully' });
   } catch (error) {
@@ -268,6 +282,7 @@ exports.deleteTicket = async (req, res, next) => {
     // Delete ticket from Supabase
     const result = await query('DELETE FROM tickets WHERE id = $1 RETURNING ticket_number', [ticketId]);
     if (!result.rows[0]) throw createError('Ticket not found', 404);
+    clearTicketsCache();
 
     await logAudit({
       actorId: req.user.id,
@@ -319,9 +334,17 @@ const getInstallationCategoryId = async () => {
   return cachedInstallationCategoryId;
 };
 
-// --- Server-side stats cache (10s TTL) — rapid refreshes skip the DB round-trip ---
+// --- Server-side tickets cache (5s TTL) & clear function ---
+const ticketsCache = new Map(); // key -> { data, expiresAt }
+const TICKETS_CACHE_TTL = 5000;
+
 const statsCache = new Map(); // key -> { data, expiresAt }
 const STATS_TTL_MS = 10_000;
+
+const clearTicketsCache = () => {
+  ticketsCache.clear();
+  statsCache.clear();
+};
 
 exports.getTicketStats = async (req, res, next) => {
   try {
