@@ -726,6 +726,12 @@ const TicketManagement = () => {
                     </div>
                   </td>
                 </tr>
+              ) : (tickets.length === 0 && (fetching || !hasLoaded.current)) ? (
+                <tr key="initial-fetch-spacer">
+                  <td colSpan="9" className="p-12 text-center">
+                    {/* Transparent spacer while initial fetch completes in background */}
+                  </td>
+                </tr>
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
