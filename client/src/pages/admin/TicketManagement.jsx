@@ -748,22 +748,6 @@ const TicketManagement = () => {
                     </div>
                   </td>
                 </tr>
-              ) : (tickets.length === 0 && (fetching || !hasLoaded.current)) ? (
-                <>
-                  {[...Array(5)].map((_, idx) => (
-                    <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-slate-800/40">
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-20"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-28"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-16"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-16"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-20"></div></td>
-                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
-                      <td className="p-3 text-right"><div className="h-4 bg-slate-800/70 rounded w-12 ml-auto"></div></td>
-                    </tr>
-                  ))}
-                </>
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
