@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, UserCheck, User, Loader } from 'lucide-react';
+import { ChevronDown, UserCheck, User, Loader, X } from 'lucide-react';
 
 /**
- * Responsive, dark-themed dropdown for assigning or re-assigning a technician to a ticket.
- * - On Mobile (<640px): Uses a styled native HTML <select> element which triggers the OS native picker (100% smooth touch scrolling, native haptics, zero touch traps).
- * - On Desktop (>=640px): Uses a compact custom portal dropdown with smart auto-positioning.
+ * Responsive, dark-themed dropdown for assigning a technician to a ticket.
+ * - On Mobile (<640px): Renders a sleek custom dark bottom-sheet modal.
+ * - On Desktop (>=640px): Renders a compact custom portal dropdown with smart auto-positioning.
  */
 const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAssign, loading = false }) => {
   const [open, setOpen] = useState(false);
@@ -86,61 +86,6 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
     };
   }, [open, isMobile]);
 
-  // MOBILE: Native HTML <select> with premium custom button styling
-  if (isMobile) {
-    return (
-      <div className="relative inline-block w-full min-w-[115px] sm:max-w-[140px] shrink-0">
-        <select
-          value=""
-          disabled={loading || technicians.length === 0}
-          onChange={(e) => {
-            const val = e.target.value;
-            if (val) {
-              onAssign(val);
-            }
-          }}
-          className="w-full appearance-none py-1.5 pl-7 pr-6 text-[11px] font-extrabold rounded-xl border border-purple-500/40 bg-gradient-to-r from-purple-950/80 via-slate-900 to-purple-950/80 text-purple-300 shadow-md shadow-purple-950/40 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap active:scale-[0.98] transition-all"
-        >
-          <option value="" disabled className="bg-slate-950 text-slate-300 font-bold">
-            {loading ? 'Loading...' : (currentAssignee || 'Select Tech...')}
-          </option>
-          {availableTechs.length > 0 && (
-            <optgroup label="Available (Up to 3 Tickets)" className="bg-slate-950 text-emerald-400 font-bold">
-              {availableTechs.map((tech) => (
-                <option key={tech.id} value={tech.id} className="bg-slate-900 text-slate-100 py-1.5 font-medium">
-                  {tech.full_name} ({parseInt(tech.active_tickets || 0)}/3)
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {busyTechs.length > 0 && (
-            <optgroup label="Max Capacity (3/3 Active)" className="bg-slate-950 text-amber-400 font-bold">
-              {busyTechs.map((tech) => (
-                <option key={tech.id} value={tech.id} disabled className="bg-slate-900 text-slate-500 py-1.5">
-                  {tech.full_name} (Full {parseInt(tech.active_tickets || 0)}/3)
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-
-        <div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
-          {loading ? (
-            <Loader className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-          ) : currentAssignee ? (
-            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <User className="w-3.5 h-3.5 text-purple-400" />
-          )}
-        </div>
-        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-          <ChevronDown className="w-3.5 h-3.5 text-purple-400" />
-        </div>
-      </div>
-    );
-  }
-
-  // DESKTOP: Custom floating portal dropdown
   const TechListContent = () => (
     <>
       {loading ? (
@@ -151,7 +96,7 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
       ) : technicians.length === 0 ? (
         <p className="text-slate-500 text-xs px-4 py-4 text-center">No active technicians available</p>
       ) : (
-        <div className="max-h-[240px] overflow-y-auto divide-y divide-slate-800/50">
+        <div className="max-h-[50vh] sm:max-h-[240px] overflow-y-auto divide-y divide-slate-800/50 touch-pan-y">
           {/* Available technicians (< 3 active tickets) */}
           {availableTechs.length > 0 && (
             <div>
@@ -223,18 +168,48 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
   );
 
   const dropdownMenu = open ? (
-    <div
-      ref={dropdownRef}
-      style={{
-        position: 'absolute',
-        top: `${coords.top}px`,
-        left: `${coords.left}px`,
-        width: `${coords.width}px`,
-      }}
-      className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden"
-    >
-      <TechListContent />
-    </div>
+    isMobile ? (
+      // Mobile Bottom Sheet Portal with Custom Dark Theme Design
+      <div
+        className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 backdrop-blur-sm p-0"
+        onClick={() => setOpen(false)}
+      >
+        <div
+          ref={dropdownRef}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-md bg-slate-950 border-t border-purple-500/30 rounded-t-2xl p-4 shadow-2xl space-y-3 pb-8 touch-pan-y"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-purple-400" />
+              <h3 className="text-sm font-bold text-white">Select Technician</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <TechListContent />
+        </div>
+      </div>
+    ) : (
+      // Desktop Floating Portal Menu
+      <div
+        ref={dropdownRef}
+        style={{
+          position: 'absolute',
+          top: `${coords.top}px`,
+          left: `${coords.left}px`,
+          width: `${coords.width}px`,
+        }}
+        className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden"
+      >
+        <TechListContent />
+      </div>
+    )
   ) : null;
 
   return (
@@ -243,23 +218,15 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border font-semibold w-full min-w-[110px] sm:max-w-[140px] shrink-0 cursor-pointer transition-colors ${
-          currentAssignee
-            ? 'border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900/50'
-            : 'border-purple-500/40 bg-purple-950/30 text-purple-300 hover:border-purple-400 hover:bg-purple-900/40'
-        }`}
+        className="flex items-center justify-between gap-1 text-[11px] rounded-lg py-1.5 px-2 border border-purple-500/40 bg-purple-950/30 text-purple-300 font-semibold w-full min-w-[110px] sm:max-w-[140px] hover:border-purple-400 hover:bg-purple-900/40 shrink-0 cursor-pointer transition-colors"
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {loading ? (
             <Loader className="w-3.5 h-3.5 shrink-0 text-purple-400 animate-spin" />
-          ) : currentAssignee ? (
-            <UserCheck className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
           ) : (
             <User className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           )}
-          <span className="truncate text-left text-[11px] font-bold">
-            {currentAssignee || 'Select Tech...'}
-          </span>
+          <span className="truncate text-left text-[11px] font-bold">Select Tech...</span>
         </div>
         <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-purple-400 ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -270,5 +237,6 @@ const TechnicianAssignDropdown = ({ technicians = [], currentAssignee = '', onAs
 };
 
 export default TechnicianAssignDropdown;
+
 
 
