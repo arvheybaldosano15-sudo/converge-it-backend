@@ -71,27 +71,26 @@ export const setAuthSession = (userData, accessToken, refreshToken) => {
 };
 
 export const clearAuthSession = (roleHint) => {
+  if (roleHint === 'all' || !roleHint) {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('tech_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('admin_refreshToken');
+    localStorage.removeItem('tech_refreshToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('admin_user');
+    localStorage.removeItem('tech_user');
+    localStorage.removeItem('user');
+    return;
+  }
+
   const isTech = roleHint === 'technician' || (roleHint !== 'admin' && isTechPath());
   const prefix = isTech ? 'tech_' : 'admin_';
 
   localStorage.removeItem(`${prefix}token`);
   localStorage.removeItem(`${prefix}refreshToken`);
   localStorage.removeItem(`${prefix}user`);
-
-  // Safely clean general keys if they belong to this role
-  try {
-    const cached = localStorage.getItem('user');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed.role === (isTech ? 'technician' : parsed.role)) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-      }
-    }
-  } catch {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-  }
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
 };

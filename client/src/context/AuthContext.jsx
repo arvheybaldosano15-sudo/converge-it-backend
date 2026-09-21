@@ -22,9 +22,9 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Safety timeout promise — guarantees setLoading(false) completes within 6 seconds
+      // Safety timeout promise — guarantees setLoading(false) completes within 4 seconds
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Auth check timeout')), 6000)
+        setTimeout(() => reject(new Error('Auth check timeout')), 4000)
       );
 
       try {
@@ -42,14 +42,16 @@ export const AuthProvider = ({ children }) => {
           msg.includes('unauthorized') ||
           msg.includes('expired') ||
           msg.includes('no token') ||
-          msg.includes('invalid');
+          msg.includes('invalid') ||
+          msg.includes('timeout');
 
         if (isAuthError) {
           queryClient.clear();
-          clearAuthSession();
+          clearAuthSession('all');
+          delete api.defaults.headers.common['Authorization'];
           setUser(null);
         } else {
-          // Keep session — server may be temporarily unavailable (e.g. 5xx / network timeout)
+          // Keep session — server may be temporarily unavailable (e.g. 5xx / temporary network glitch)
           console.warn('Auth check notice (keeping session):', err?.message || err);
         }
       } finally {
@@ -61,14 +63,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     queryClient.clear();
+    // Instantly wipe any stale tokens from previous session to prevent 401 header interference
+    clearAuthSession('all');
+    delete api.defaults.headers.common['Authorization'];
+
     let res;
     try {
-      res = await api.post('/auth/login', { email, password });
+      res = await api.post('/auth/login', { email, password }, { timeout: 15000 });
     } catch (err) {
-      // Auto-retry once if temporary network drop or cold start occurs on mobile
+      // Fast retry once if temporary connection drop occurs
       if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
-        await new Promise((r) => setTimeout(r, 1000));
-        res = await api.post('/auth/login', { email, password });
+        await new Promise((r) => setTimeout(r, 800));
+        res = await api.post('/auth/login', { email, password }, { timeout: 15000 });
       } else {
         throw err;
       }
@@ -86,14 +92,18 @@ export const AuthProvider = ({ children }) => {
 
   const pinLogin = async (pin) => {
     queryClient.clear();
+    // Instantly wipe any stale tokens from previous session to prevent 401 header interference
+    clearAuthSession('all');
+    delete api.defaults.headers.common['Authorization'];
+
     let res;
     try {
-      res = await api.post('/auth/pin-login', { pin });
+      res = await api.post('/auth/pin-login', { pin }, { timeout: 15000 });
     } catch (err) {
-      // Auto-retry once if temporary network drop or cold start occurs on mobile
+      // Fast retry once if temporary connection drop occurs
       if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
-        await new Promise((r) => setTimeout(r, 1000));
-        res = await api.post('/auth/pin-login', { pin });
+        await new Promise((r) => setTimeout(r, 800));
+        res = await api.post('/auth/pin-login', { pin }, { timeout: 15000 });
       } else {
         throw err;
       }
