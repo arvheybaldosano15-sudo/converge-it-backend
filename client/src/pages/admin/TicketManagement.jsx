@@ -32,9 +32,9 @@ let ticketMemoryCache = {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed;
       }
-      return null;
+      return [];
     } catch (e) {
-      return null;
+      return [];
     }
   })(),
   stats: (() => {
@@ -61,12 +61,8 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  // `loading` = true only when there is ZERO data to show (first-ever visit with empty cache)
-  // `fetching` = true during any background refresh — shows a thin progress bar, never blocks the table
-  const hasCache = Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0;
-  const [loading, setLoading] = useState(() => !hasCache);
   const [fetching, setFetching] = useState(false);
-  const hasLoaded = React.useRef(hasCache);
+  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -117,14 +113,8 @@ const TicketManagement = () => {
   const [fetchError, setFetchError] = useState(false);
 
   const fetchTickets = async (silent = false, retryCount = 0) => {
-    // If we already have data to display, use the thin progress bar (fetching) instead of blocking loader
-    const hasData = (Array.isArray(tickets) && tickets.length > 0) || (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
-    if (!hasData) {
-      setLoading(true);
-      setFetchError(false);
-    } else {
-      setFetching(true);
-    }
+    setFetching(true);
+    setFetchError(false);
 
     const params = paramsRef.current;
 
@@ -193,7 +183,6 @@ const TicketManagement = () => {
       }
     } finally {
       hasLoaded.current = true;
-      setLoading(false);
       setFetching(false);
     }
   };
@@ -721,21 +710,7 @@ const TicketManagement = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="animate-pulse border-b border-slate-800/60">
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-32"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-20"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-16"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-16"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-28"></div></td>
-                    <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-20"></div></td>
-                    <td className="p-3 sm:p-4 text-right"><div className="h-4 bg-slate-800/80 rounded-lg w-12 ml-auto"></div></td>
-                  </tr>
-                ))
-              ) : fetchError ? (
+              {fetchError && tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2 py-4">
@@ -754,8 +729,14 @@ const TicketManagement = () => {
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
-                    <p className="text-sm font-semibold text-slate-400">No support tickets found matching current filters.</p>
-                    <p className="text-xs text-slate-500 mt-1">Try resetting search filters or checking Botcake integration.</p>
+                    {fetching ? (
+                      <p className="text-xs text-cyan-400 font-semibold animate-pulse">Fetching tickets...</p>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-slate-400">No support tickets found matching current filters.</p>
+                        <p className="text-xs text-slate-500 mt-1">Try resetting search filters or checking Botcake integration.</p>
+                      </>
+                    )}
                   </td>
                 </tr>
               ) : (
