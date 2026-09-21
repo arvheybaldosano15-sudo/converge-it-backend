@@ -24,42 +24,48 @@ const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
 const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE';
 const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
 
-// Persistent memory cache across page tab navigation & browser reloads
-let ticketMemoryCache = {
-  tickets: (() => {
-    try {
-      const keys = [
-        LOCAL_TICKETS_CACHE_KEY,
-        LOCAL_STORAGE_TICKETS_CACHE_KEY,
-      ];
-      for (const key of keys) {
-        const cached = localStorage.getItem(key);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          const list = Array.isArray(parsed)
-            ? parsed
-            : (parsed?.data || parsed?.tickets || []);
-          const validList = list.filter((t) => {
-            if (!t || !t.id || (!t.ticket_number && !t.subject)) return false;
-            const catName = (t.category_name || t.categoryName || '').toLowerCase();
-            return !catName.includes('installation');
-          });
-          if (validList.length > 0) return validList;
+const getInitialTicketsFromStorage = () => {
+  if (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0) {
+    return ticketMemoryCache.tickets;
+  }
+  try {
+    const keys = [LOCAL_TICKETS_CACHE_KEY, LOCAL_STORAGE_TICKETS_CACHE_KEY];
+    for (const key of keys) {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const list = Array.isArray(parsed) ? parsed : (parsed?.data || parsed?.tickets || []);
+        const validList = list.filter((t) => {
+          if (!t || !t.id || (!t.ticket_number && !t.subject)) return false;
+          const catName = (t.category_name || t.categoryName || '').toLowerCase();
+          return !catName.includes('installation');
+        });
+        if (validList.length > 0) {
+          ticketMemoryCache.tickets = validList;
+          return validList;
         }
       }
-      return [];
-    } catch (e) {
-      return [];
     }
-  })(),
-  stats: (() => {
-    try {
-      const cached = localStorage.getItem(LOCAL_TICKETS_STATS_KEY);
-      return cached ? JSON.parse(cached) : {};
-    } catch (e) {
-      return {};
-    }
-  })(),
+  } catch (_) {}
+  return [];
+};
+
+const getInitialStatsFromStorage = () => {
+  if (ticketMemoryCache.stats && Object.keys(ticketMemoryCache.stats).length > 0) {
+    return ticketMemoryCache.stats;
+  }
+  try {
+    const cached = localStorage.getItem(LOCAL_TICKETS_STATS_KEY);
+    return cached ? JSON.parse(cached) : {};
+  } catch (_) {
+    return {};
+  }
+};
+
+// Persistent memory cache across page tab navigation & browser reloads
+let ticketMemoryCache = {
+  tickets: getInitialTicketsFromStorage(),
+  stats: getInitialStatsFromStorage(),
   totalPages: 1,
   totalItems: 0,
 };
@@ -70,14 +76,14 @@ const TicketManagement = () => {
   const socket = socketContext?.socket;
   const unreadNotifications = socketContext?.unreadNotifications ?? 0;
 
-  // Data States initialized from persistent memory cache
-  const [tickets, setTickets] = useState(() => ticketMemoryCache.tickets || []);
-  const [ticketStats, setTicketStats] = useState(() => ticketMemoryCache.stats || {});
+  // Data States initialized from persistent memory cache & storage
+  const [tickets, setTickets] = useState(() => getInitialTicketsFromStorage());
+  const [ticketStats, setTicketStats] = useState(() => getInitialStatsFromStorage());
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [fetching, setFetching] = useState(false);
-  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
+  const hasLoaded = React.useRef(Array.isArray(tickets) && tickets.length > 0);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -737,11 +743,21 @@ const TicketManagement = () => {
                   </td>
                 </tr>
               ) : (tickets.length === 0 && (fetching || !hasLoaded.current)) ? (
-                <tr key="initial-fetch-spacer">
-                  <td colSpan="9" className="p-12 text-center">
-                    {/* Transparent spacer while initial fetch completes in background */}
-                  </td>
-                </tr>
+                <>
+                  {[...Array(5)].map((_, idx) => (
+                    <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-slate-800/40">
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-20"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-28"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-16"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-16"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-20"></div></td>
+                      <td className="p-3"><div className="h-4 bg-slate-800/70 rounded w-24"></div></td>
+                      <td className="p-3 text-right"><div className="h-4 bg-slate-800/70 rounded w-12 ml-auto"></div></td>
+                    </tr>
+                  ))}
+                </>
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
