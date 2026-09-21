@@ -77,23 +77,31 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Action CTAs */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <InstallPwaButton className="hidden sm:inline-flex" />
+          {/* Action CTAs in Top Navbar */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <InstallPwaButton className="hidden md:inline-flex" />
+
+            <button
+              onClick={() => setIsSignUpOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-cyan-300 transition-all active:scale-95 shadow-sm"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Register Tech</span>
+            </button>
 
             <button
               onClick={() => setIsPinOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-xs sm:text-sm font-bold text-cyan-300 hover:text-cyan-200 transition-all active:scale-95 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-all active:scale-95 shadow-sm"
             >
-              <KeyRound className="w-4 h-4 text-cyan-400" />
+              <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
               <span>PIN Portal</span>
             </button>
 
             <button
               onClick={() => setIsLoginOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
             >
-              <LogIn className="w-4 h-4" />
+              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Sign In</span>
             </button>
           </div>
@@ -135,39 +143,6 @@ const LandingPage = () => {
           >
             Unified ticketing, real-time SLA tracking, GPS service reports, and automated Messenger notifications for Converge IT Solutions.
           </motion.p>
-
-          {/* Hero CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2"
-          >
-            <button
-              onClick={() => setIsLoginOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-sm font-extrabold text-white shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/40 transition-all active:scale-95"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Sign In to Portal</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setIsPinOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 text-sm font-bold text-cyan-300 hover:text-white transition-all active:scale-95 shadow-md"
-            >
-              <KeyRound className="w-4 h-4 text-cyan-400" />
-              <span>Technician PIN Portal</span>
-            </button>
-
-            <button
-              onClick={() => setIsSignUpOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/80 border border-slate-700/60 text-sm font-bold text-slate-300 hover:text-cyan-300 transition-all active:scale-95"
-            >
-              <UserPlus className="w-4 h-4 text-slate-400" />
-              <span>Register Technician</span>
-            </button>
-          </motion.div>
 
           {/* Quick Ticket Tracker Bar */}
           <motion.div
