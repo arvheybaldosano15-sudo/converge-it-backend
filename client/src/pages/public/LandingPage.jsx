@@ -79,7 +79,7 @@ const LandingPage = () => {
 
           {/* Action CTAs in Top Navbar */}
           <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <InstallPwaButton className="hidden md:inline-flex" />
+            <InstallPwaButton variant="navbar" />
 
             <button
               onClick={() => setIsSignUpOpen(true)}
@@ -234,6 +234,9 @@ const LandingPage = () => {
           </Link>
         </section>
       </main>
+
+      {/* Floating PWA Install Button */}
+      <InstallPwaButton variant="floating" />
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-6 text-center text-xs text-slate-500 relative z-10">

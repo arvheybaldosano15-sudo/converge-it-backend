@@ -3,7 +3,7 @@ import { Download, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import usePwaInstall from '../../hooks/usePwaInstall';
 
-const InstallPwaButton = () => {
+const InstallPwaButton = ({ variant = 'floating', className = '' }) => {
   const { showInstallButton, installApp } = usePwaInstall();
 
   if (!showInstallButton) return null;
@@ -19,7 +19,6 @@ const InstallPwaButton = () => {
     const isInApp = /FBAN|FBAV|Instagram|Line|Twitter|MicroMessenger/i.test(ua);
 
     if (isAndroid && isInApp) {
-      // Only launch Chrome intent if opened inside Messenger or other in-app webviews
       toast('Opening in Google Chrome for app installation...', { icon: '🚀', id: 'pwa-android-intent' });
       const intentUrl = 'intent://' + window.location.host + window.location.pathname + window.location.search + '#Intent;scheme=https;package=com.android.chrome;end;';
       window.location.href = intentUrl;
@@ -32,8 +31,22 @@ const InstallPwaButton = () => {
     }
   };
 
+  if (variant === 'navbar') {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label="Install Converge IT App"
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-cyan-500/20 to-blue-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 text-xs font-bold text-amber-300 hover:text-white transition-all active:scale-95 shadow-sm cursor-pointer ${className}`}
+      >
+        <Download className="w-3.5 h-3.5 text-amber-400" />
+        <span>Install App</span>
+      </button>
+    );
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 animate-pulse-subtle">
+    <div className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 animate-pulse-subtle ${className}`}>
       <button
         type="button"
         onClick={handleClick}

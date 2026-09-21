@@ -59,12 +59,27 @@ const CustomerKnowledgeBase = lazy(() => import('./pages/customer/KnowledgeBase'
 // Code-Split Error Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'));
 
+// Smart Root Route — Launched PWA goes directly to Login, Browser shows Landing Page
+const RootRoute = () => {
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://')
+  );
+
+  if (isStandalone) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <LandingPage />;
+};
+
 function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Landing Page */}
-        <Route path="/" element={<LandingPage />} />
+        {/* Smart Root Route */}
+        <Route path="/" element={<RootRoute />} />
 
         {/* Public Customer Pages */}
         <Route path="/track" element={<TrackTicket />} />
