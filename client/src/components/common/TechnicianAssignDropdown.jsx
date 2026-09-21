@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ChevronDown, UserCheck, User, Loader, X } from 'lucide-react';
+import { ChevronDown, UserCheck, User, Loader } from 'lucide-react';
 
 /**
  * Responsive, dark-themed dropdown for assigning a technician to a ticket.
- * - On Mobile (<640px): Renders a clean bottom-sheet modal.
- * - On Desktop (>=640px): Renders a portal dropdown with smart upward/downward auto-positioning.
+ * - On Mobile (<640px): Uses a styled native HTML <select> element which triggers the OS native picker (100% smooth touch scrolling, native haptics, zero touch traps).
+ * - On Desktop (>=640px): Uses a compact custom portal dropdown with smart auto-positioning.
  */
 const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false }) => {
   const [open, setOpen] = useState(false);
@@ -19,6 +19,9 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const availableTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) < 3);
+  const busyTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) >= 3);
 
   const updateCoords = () => {
     if (buttonRef.current && !isMobile) {
@@ -67,28 +70,78 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
       }
       setOpen(false);
     };
-    if (open) {
+    if (open && !isMobile) {
       document.addEventListener('mousedown', handleOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutside);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
-  const availableTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) < 3);
-  const busyTechs = technicians.filter((t) => parseInt(t.active_tickets || 0) >= 3);
+  // MOBILE: Native HTML <select> (Triggers native mobile OS picker dialog with 100% smooth touch scrolling)
+  if (isMobile) {
+    return (
+      <div className="relative inline-block w-full min-w-[110px] sm:max-w-[140px] shrink-0">
+        <select
+          value=""
+          disabled={loading || technicians.length === 0}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val) {
+              onAssign(val);
+            }
+          }}
+          className="w-full appearance-none py-1.5 pl-7 pr-6 text-[11px] font-bold rounded-lg border border-purple-500/40 bg-purple-950/40 text-purple-300 focus:outline-none focus:border-purple-400 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
+        >
+          <option value="" disabled className="bg-slate-900 text-slate-300">
+            {loading ? 'Loading...' : 'Select Tech...'}
+          </option>
+          {availableTechs.length > 0 && (
+            <optgroup label="Available (Up to 3 Tickets)" className="bg-slate-900 text-emerald-400 font-bold">
+              {availableTechs.map((tech) => (
+                <option key={tech.id} value={tech.id} className="bg-slate-900 text-slate-100 py-1 font-medium">
+                  {tech.full_name} ({parseInt(tech.active_tickets || 0)}/3)
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {busyTechs.length > 0 && (
+            <optgroup label="Max Capacity (3/3 Active)" className="bg-slate-900 text-amber-400 font-bold">
+              {busyTechs.map((tech) => (
+                <option key={tech.id} value={tech.id} disabled className="bg-slate-900 text-slate-500 py-1">
+                  {tech.full_name} (Full {parseInt(tech.active_tickets || 0)}/3)
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
 
+        <div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
+          {loading ? (
+            <Loader className="w-3.5 h-3.5 text-purple-400 animate-spin" />
+          ) : (
+            <User className="w-3.5 h-3.5 text-purple-400" />
+          )}
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+          <ChevronDown className="w-3.5 h-3.5 text-purple-400" />
+        </div>
+      </div>
+    );
+  }
+
+  // DESKTOP: Custom floating portal dropdown
   const TechListContent = () => (
     <>
       {loading ? (
         <div className="flex items-center justify-center gap-2 text-slate-400 text-xs px-4 py-4">
-          <Loader className="w-4 h-4 text-purple-400" />
+          <Loader className="w-4 h-4 text-purple-400 animate-spin" />
           <span>Loading active technicians...</span>
         </div>
       ) : technicians.length === 0 ? (
         <p className="text-slate-500 text-xs px-4 py-4 text-center">No active technicians available</p>
       ) : (
-        <div className="max-h-[50vh] sm:max-h-[240px] overflow-y-auto overscroll-contain touch-pan-y divide-y divide-slate-800/50">
+        <div className="max-h-[240px] overflow-y-auto divide-y divide-slate-800/50">
           {/* Available technicians (< 3 active tickets) */}
           {availableTechs.length > 0 && (
             <div>
@@ -157,47 +210,18 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
   );
 
   const dropdownMenu = open ? (
-    isMobile ? (
-      // Mobile Bottom Sheet Portal (No animation, touch-action pan-y scrollable)
-      <div
-        className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/75 p-0"
-        onClick={() => setOpen(false)}
-      >
-        <div
-          ref={dropdownRef}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md bg-slate-950 border-t border-slate-800 rounded-t-2xl p-4 shadow-2xl space-y-3 pb-8 touch-pan-y"
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-white">Assign Technician</h3>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <TechListContent />
-        </div>
-      </div>
-    ) : (
-      // Desktop Floating Portal Menu (No animation)
-      <div
-        ref={dropdownRef}
-        style={{
-          position: 'absolute',
-          top: `${coords.top}px`,
-          left: `${coords.left}px`,
-          width: `${coords.width}px`,
-        }}
-        className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden"
-      >
-        <TechListContent />
-      </div>
-    )
+    <div
+      ref={dropdownRef}
+      style={{
+        position: 'absolute',
+        top: `${coords.top}px`,
+        left: `${coords.left}px`,
+        width: `${coords.width}px`,
+      }}
+      className="z-[9999] bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl shadow-black/90 overflow-hidden"
+    >
+      <TechListContent />
+    </div>
   ) : null;
 
   return (
@@ -210,7 +234,7 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {loading ? (
-            <Loader className="w-3.5 h-3.5 shrink-0 text-purple-400" />
+            <Loader className="w-3.5 h-3.5 shrink-0 text-purple-400 animate-spin" />
           ) : (
             <User className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           )}
@@ -225,3 +249,4 @@ const TechnicianAssignDropdown = ({ technicians = [], onAssign, loading = false 
 };
 
 export default TechnicianAssignDropdown;
+
