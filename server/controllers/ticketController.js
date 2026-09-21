@@ -46,7 +46,7 @@ exports.getTickets = async (req, res, next) => {
     }
 
     if (req.query.excludeCategoryName) {
-      conditions.push(`(cat.name IS NULL OR cat.name NOT ILIKE $${idx++})`);
+      conditions.push(`(t.service_category_id IS NULL OR t.service_category_id != (SELECT id FROM service_categories WHERE name ILIKE $${idx++} LIMIT 1))`);
       params.push(`%${req.query.excludeCategoryName}%`);
     }
 
@@ -66,8 +66,8 @@ exports.getTickets = async (req, res, next) => {
     const dataParams = [...params, parseInt(limit), offset];
 
     const countJoins = [
-      (search || req.user.role === 'admin') ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
-      (req.query.excludeCategoryName || req.query.categoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
+      search ? 'LEFT JOIN customers c ON t.customer_id = c.id' : '',
+      (req.query.categoryName || category) ? 'LEFT JOIN service_categories cat ON t.service_category_id = cat.id' : ''
     ].filter(Boolean).join(' ');
 
     const [data, count] = await Promise.all([

@@ -21,16 +21,18 @@ import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
 const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
+const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE';
 const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
 
 // Persistent memory cache across page tab navigation & browser reloads
 let ticketMemoryCache = {
   tickets: (() => {
     try {
-      const cached = localStorage.getItem(LOCAL_TICKETS_CACHE_KEY);
+      let cached = localStorage.getItem(LOCAL_TICKETS_CACHE_KEY);
+      if (!cached) cached = localStorage.getItem(LOCAL_STORAGE_TICKETS_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
       return [];
     } catch (e) {
@@ -155,6 +157,7 @@ const TicketManagement = () => {
           ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
           try {
             localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(merged));
+            localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(merged));
           } catch (e) {}
 
           return merged;
@@ -563,12 +566,6 @@ const TicketManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Thin top progress bar — shows during background fetch without blocking the table */}
-      {fetching && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px]">
-          <div className="h-full bg-cyan-400 animate-pulse" style={{ width: '100%', animation: 'progress-slide 1.2s ease-in-out infinite' }} />
-        </div>
-      )}
       {/* Header Title Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
