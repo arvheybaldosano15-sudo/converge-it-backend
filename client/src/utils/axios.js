@@ -3,11 +3,32 @@ import { getAuthToken, getRefreshToken, setAuthSession, clearAuthSession, isTech
 
 const getApiUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
+
+  // 1. Default to relative /api (always safe for same-origin & PWA deployments)
   if (!envUrl) return '/api';
+
   let cleaned = envUrl.trim().replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location;
+
+    // 2. Prevent mobile devices from trying to hit localhost when accessed over network
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (cleaned.includes('localhost') || cleaned.includes('127.0.0.1')) {
+        return '/api';
+      }
+    }
+
+    // 3. Upgrade HTTP to HTTPS on secure sites to prevent Mixed Content Network Errors
+    if (protocol === 'https:' && cleaned.startsWith('http://')) {
+      cleaned = cleaned.replace('http://', 'https://');
+    }
+  }
+
   if (!cleaned.endsWith('/api')) {
     cleaned += '/api';
   }
+
   return cleaned;
 };
 
