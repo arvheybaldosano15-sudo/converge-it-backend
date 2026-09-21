@@ -61,8 +61,8 @@ const TicketManagement = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [loading, setLoading] = useState(() => ticketMemoryCache.tickets === null);
-  const hasLoaded = React.useRef(ticketMemoryCache.tickets !== null);
+  const [loading, setLoading] = useState(() => !Array.isArray(ticketMemoryCache.tickets) || ticketMemoryCache.tickets.length === 0);
+  const hasLoaded = React.useRef(Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -708,7 +708,7 @@ const TicketManagement = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
+              {(loading || (!hasLoaded.current && tickets.length === 0)) ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={`skeleton-${i}`} className="animate-pulse border-b border-slate-800/60">
                     <td className="p-3 sm:p-4"><div className="h-4 bg-slate-800/80 rounded-lg w-24"></div></td>
