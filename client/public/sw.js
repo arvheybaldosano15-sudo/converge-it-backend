@@ -1,11 +1,13 @@
-/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.4.0 */
-const SW_VERSION = 'v2.4.0';
+/* Service Worker for Converge IT Solutions PWA & Real Mobile Push Notifications - v2.5.0 */
+const SW_VERSION = 'v2.5.0';
 const CACHE_NAME = `converge-pwa-cache-${SW_VERSION}`;
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/logo.png',
+  '/CSiLogo.png',
   '/logo16.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
@@ -78,24 +80,38 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      // 1. Navigation requests (App launch / page navigation):
-      // Try network with a fast 2.5s timeout. If slow/hanging, immediately fallback to cached index.html!
+      // 1. Navigation requests (PWA app launch from home screen / page navigation):
+      // Return cached /index.html INSTANTLY (0ms) so mobile OS dismisses splash logo immediately!
       if (event.request.mode === 'navigate') {
+        const cachedIndex = (await caches.match('/index.html')) || (await caches.match('/'));
+        
+        // Background revalidation so index.html stays fresh
+        const bgFetch = fetchWithTimeout(event.request, 3000)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put('/index.html', responseClone);
+              }).catch(() => {});
+            }
+            return networkResponse;
+          })
+          .catch(() => {});
+
+        if (cachedIndex) {
+          // Serve cached index.html immediately — zero delay, splash screen logo vanishes instantly!
+          return cachedIndex;
+        }
+
+        // If not in cache yet (first launch), wait for network fetch
         try {
-          const networkResponse = await fetchWithTimeout(event.request, 2500);
+          const networkResponse = await bgFetch;
           if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put('/index.html', responseClone);
-            }).catch(() => {});
             return networkResponse;
           }
         } catch (e) {
-          // Fast fallback on slow mobile network / timeout
+          // fallback handled below
         }
-
-        const cachedIndex = await caches.match('/index.html') || await caches.match('/');
-        if (cachedIndex) return cachedIndex;
       }
 
       // 2. Static Assets (JS, CSS, Images, Fonts):
