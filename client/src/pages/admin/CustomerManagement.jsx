@@ -106,14 +106,39 @@ const CustomerForm = ({ formData, onChange, onSubmit, onCancel, submitLabel, isE
   </form>
 );
 
+// ─── Customer Data Caching ───
+const LOCAL_CUSTOMERS_KEY = 'mts_customers_cache_v1';
+const LOCAL_CUSTOMER_STATS_KEY = 'mts_customer_stats_cache_v1';
+
+const customerMemoryCache = {
+  customers: (() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_CUSTOMERS_KEY);
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  })(),
+  stats: (() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_CUSTOMER_STATS_KEY);
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  })(),
+  totalPages: 1,
+  totalItems: 0,
+};
+
 const CustomerManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
   const navigate = useNavigate();
 
-  // Data States
-  const [customers, setCustomers] = useState([]);
-  const [stats, setStats] = useState({});
-  const [loading, setLoading] = useState(true);
+  // Data States initialized from persistent memory cache
+  const [customers, setCustomers] = useState(() => customerMemoryCache.customers || []);
+  const [stats, setStats] = useState(() => customerMemoryCache.stats || {});
+  const [loading, setLoading] = useState(() => !customerMemoryCache.customers || customerMemoryCache.customers.length === 0);
 
   // Filters & Search
   const [localSearch, setLocalSearch] = useState('');
@@ -123,8 +148,8 @@ const CustomerManagement = () => {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(() => customerMemoryCache.totalPages || 1);
+  const [totalItems, setTotalItems] = useState(() => customerMemoryCache.totalItems || (customerMemoryCache.customers ? customerMemoryCache.customers.length : 0));
 
   // Modals & Customer Detail
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -149,7 +174,10 @@ const CustomerManagement = () => {
   const activeSearch = localSearch || globalSearch || '';
 
   const fetchCustomers = async () => {
-    setLoading(true);
+    // Only show full loading spinner if we have NO cached customer data at all
+    if (!customers || customers.length === 0) {
+      setLoading(true);
+    }
     try {
       const [custRes, statsRes] = await Promise.all([
         api.get('/customers', {
@@ -159,12 +187,21 @@ const CustomerManagement = () => {
       ]);
 
       if (custRes.success) {
-        setCustomers(custRes.data || []);
+        const freshData = custRes.data || [];
+        setCustomers(freshData);
         setTotalPages(custRes.pagination?.totalPages || 1);
         setTotalItems(custRes.pagination?.total || 0);
+
+        customerMemoryCache.customers = freshData;
+        customerMemoryCache.totalPages = custRes.pagination?.totalPages || 1;
+        customerMemoryCache.totalItems = custRes.pagination?.total || 0;
+        try { localStorage.setItem(LOCAL_CUSTOMERS_KEY, JSON.stringify(freshData)); } catch (_) {}
       }
       if (statsRes && statsRes.success) {
-        setStats(statsRes.data || {});
+        const freshStats = statsRes.data || {};
+        setStats(freshStats);
+        customerMemoryCache.stats = freshStats;
+        try { localStorage.setItem(LOCAL_CUSTOMER_STATS_KEY, JSON.stringify(freshStats)); } catch (_) {}
       }
     } catch (e) {
       console.error('Failed to load customers:', e);
@@ -591,7 +628,7 @@ const CustomerManagement = () => {
       <DataTable
         columns={columns}
         data={customers}
-        isLoading={loading}
+        isLoading={loading && (!customers || customers.length === 0)}
         emptyMessage="No customer records found matching current search criteria."
       />
 
