@@ -109,24 +109,30 @@ const TicketManagement = () => {
   const [fetchError, setFetchError] = useState(false);
 
   const fetchTickets = async (silent = false, retryCount = 0) => {
-    const isSilent = silent || ticketMemoryCache.tickets !== null;
+    // Only show full loader spinner if there are zero tickets in state/cache
+    const isSilent = silent || (Array.isArray(tickets) && tickets.length > 0) || (Array.isArray(ticketMemoryCache.tickets) && ticketMemoryCache.tickets.length > 0);
     if (!isSilent) {
       setLoading(true);
       setFetchError(false);
     }
 
+    const params = paramsRef.current;
+
+    // Fetch stats in background independently — does not block table rendering
+    api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } })
+      .then((statsRes) => {
+        if (statsRes && statsRes.success) {
+          const statsData = statsRes.data || {};
+          setTicketStats(statsData);
+          ticketMemoryCache.stats = statsData;
+          try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(statsData)); } catch (_) {}
+        }
+      })
+      .catch((err) => console.error('Error fetching ticket stats:', err));
+
+    // Fetch primary tickets list
     try {
-      const params = paramsRef.current;
-      const [ticketsRes, statsRes] = await Promise.all([
-        api.get('/tickets', { params }).catch(err => {
-          console.error('Error fetching tickets list:', err);
-          return null;
-        }),
-        api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } }).catch(err => {
-          console.error('Error fetching ticket stats:', err);
-          return null;
-        }),
-      ]);
+      const ticketsRes = await api.get('/tickets', { params });
 
       if (ticketsRes && ticketsRes.success) {
         const freshTickets = ticketsRes.data || [];
@@ -136,7 +142,6 @@ const TicketManagement = () => {
         setTickets((prev) => {
           const freshIds = new Set(freshTickets.map((t) => t.id));
           const now = Date.now();
-          // Preserve only explicitly tagged socket prepends (_isSocketPrepend === true) < 15s old if DB read pool hasn't updated yet
           const pendingSocketPrepends = (Array.isArray(prev) ? prev : []).filter((t) => {
             if (!t || !t.id || !t._isSocketPrepend || freshIds.has(t.id)) return false;
             const createdAt = t.created_at ? new Date(t.created_at).getTime() : now;
@@ -145,7 +150,6 @@ const TicketManagement = () => {
 
           const merged = [...pendingSocketPrepends, ...freshTickets];
 
-          // Update persistent memory cache & storage
           ticketMemoryCache.tickets = merged;
           ticketMemoryCache.totalPages = freshPages;
           ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
@@ -159,32 +163,26 @@ const TicketManagement = () => {
         setTotalPages(freshPages);
         setTotalItems((prev) => Math.max(prev, freshTotal));
         setFetchError(false);
-      } else if (!ticketsRes) {
+      } else {
         if (retryCount < 2) {
-          // Automatic quiet retry after 500ms on transient connection hiccup
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 400));
           return await fetchTickets(silent, retryCount + 1);
         }
-        if (!ticketMemoryCache.tickets) {
+        if (!ticketMemoryCache.tickets || ticketMemoryCache.tickets.length === 0) {
           setFetchError(true);
         }
-      }
-
-      if (statsRes && statsRes.success) {
-        const statsData = statsRes.data || {};
-        setTicketStats(statsData);
-        ticketMemoryCache.stats = statsData;
-        try { localStorage.setItem(LOCAL_TICKETS_STATS_KEY, JSON.stringify(statsData)); } catch (_) {}
       }
     } catch (err) {
       console.error('Error loading tickets:', err);
       if (retryCount < 2) {
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 400));
         return await fetchTickets(silent, retryCount + 1);
       }
-      if (!ticketMemoryCache.tickets) setFetchError(true);
+      if (!ticketMemoryCache.tickets || ticketMemoryCache.tickets.length === 0) {
+        setFetchError(true);
+      }
     } finally {
-      hasLoaded.current = true; // Always mark loaded so spinner never stays stuck
+      hasLoaded.current = true;
       setLoading(false);
     }
   };
