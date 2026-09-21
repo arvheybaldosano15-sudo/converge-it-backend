@@ -44,8 +44,20 @@ export const SocketProvider = ({ children }) => {
     };
 
     window.addEventListener('focus', handleFocus);
+
+    // 🔥 Keep Render backend alive — ping every 8 minutes to prevent cold start on mobile
+    // Render free tier sleeps after 15 min inactivity → causes 10-30s load delays
+    const keepAlive = setInterval(async () => {
+      try {
+        await api.get('/health');
+      } catch (e) {
+        // Silent — just a keep-alive ping
+      }
+    }, 8 * 60 * 1000); // 8 minutes
+
     return () => {
       window.removeEventListener('focus', handleFocus);
+      clearInterval(keepAlive);
     };
   }, [user]);
 

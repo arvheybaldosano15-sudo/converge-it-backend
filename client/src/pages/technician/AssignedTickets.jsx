@@ -72,6 +72,18 @@ const getSlaInfo = (deadlineStr, status) => {
   return { text, isBreached: false, isUrgent, colorClass };
 };
 
+// ─── Persistent localStorage cache so tickets show INSTANTLY on page load ────
+const CACHE_KEY = 'CONVERGE_ASSIGNED_TICKETS_CACHE';
+const getTicketCache = () => {
+  try {
+    const c = localStorage.getItem(CACHE_KEY);
+    return c ? JSON.parse(c) : null;
+  } catch { return null; }
+};
+const saveTicketCache = (data) => {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
+};
+
 const AssignedTickets = () => {
   const queryClient = useQueryClient();
 
@@ -116,14 +128,26 @@ const AssignedTickets = () => {
   const [reportTicket, setReportTicket] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Query Backend tickets
-  const { data: ticketsData, isLoading: loading, refetch } = useTickets({
+  // Query Backend tickets — initialData from localStorage shows tickets INSTANTLY on mount
+  const { data: ticketsData, isLoading, isFetching, refetch } = useTickets({
     limit: 100,
     search: search ? search : undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
     priority: priorityFilter !== 'all' ? priorityFilter : undefined,
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
+
+  // Show loading spinner ONLY when there's no cached data at all (true first-time load)
+  const cachedTickets = getTicketCache();
+  const loading = isLoading && !cachedTickets;
+
+  // Save fresh data to localStorage whenever it arrives
+  useEffect(() => {
+    if (ticketsData) {
+      const data = ticketsData?.data || ticketsData || [];
+      if (Array.isArray(data) && data.length > 0) saveTicketCache(data);
+    }
+  }, [ticketsData]);
 
   // Socket for real-time instant updates
   const { socket } = useSocket();
@@ -160,7 +184,8 @@ const AssignedTickets = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [refetch]);
 
-  const rawTickets = ticketsData?.data || ticketsData || [];
+  // Use live data if available, fall back to localStorage cache for instant display
+  const rawTickets = ticketsData?.data || ticketsData || cachedTickets || [];
 
   // Client-side filtering & smart sorting
   const processedTickets = useMemo(() => {
