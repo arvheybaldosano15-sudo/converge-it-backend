@@ -805,16 +805,9 @@ const TicketManagement = () => {
                     </div>
                   </td>
                 </tr>
-              ) : (fetching || !hasLoaded.current) && tickets.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-400">
-                    <div className="flex items-center justify-center space-x-2 py-4">
-                      <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
-                      <span className="text-xs font-medium text-slate-300">Syncing live support tickets...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : tickets.length === 0 ? (
+              ) : (!hasLoaded.current && tickets.length === 0) ? (
+                null
+              ) : tickets.length === 0 && hasLoaded.current && !fetching ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
                     <p className="text-sm font-semibold text-slate-400">No support tickets found matching current filters.</p>
