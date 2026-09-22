@@ -1,4 +1,5 @@
 import api from './axios';
+import { getAuthToken } from './authStorage';
 
 // Helper to convert base64 VAPID public key to Uint8Array
 function urlBase64ToUint8Array(base64String) {
@@ -18,6 +19,11 @@ function urlBase64ToUint8Array(base64String) {
 
 // Register Service Worker and subscribe user to Web Push
 export const initPushNotifications = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, reason: 'unauthenticated', error: 'No authentication token present.' };
+  }
+
   if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     console.warn('Web Push API requires HTTPS or localhost.');
     return { 
@@ -68,8 +74,15 @@ export const initPushNotifications = async () => {
 
     // 5. Send subscription object to backend database
     const subJSON = subscription.toJSON();
-    await api.post('/notifications/subscribe', subJSON);
-    console.log('✅ Mobile push subscription registered successfully');
+    try {
+      await api.post('/notifications/subscribe', subJSON);
+      console.log('✅ Mobile push subscription registered successfully');
+    } catch (subErr) {
+      if (subErr?.status === 401 || subErr?.statusCode === 401) {
+        return { success: false, reason: 'unauthenticated', error: 'Authentication token expired or missing.' };
+      }
+      throw subErr;
+    }
 
     return { success: true, registration, subscription };
   } catch (error) {
