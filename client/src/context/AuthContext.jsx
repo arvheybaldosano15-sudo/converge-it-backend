@@ -35,23 +35,15 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         const httpStatus = err?.status || err?.statusCode;
-        const msg = (err?.message || '').toLowerCase();
-        const isAuthError =
-          httpStatus === 401 ||
-          msg.includes('token') ||
-          msg.includes('unauthorized') ||
-          msg.includes('expired') ||
-          msg.includes('no token') ||
-          msg.includes('invalid') ||
-          msg.includes('timeout');
+        const isExplicit401 = httpStatus === 401;
 
-        if (isAuthError) {
+        if (isExplicit401) {
           queryClient.clear();
           clearAuthSession('all');
           delete api.defaults.headers.common['Authorization'];
           setUser(null);
         } else {
-          // Keep session — server may be temporarily unavailable (e.g. 5xx / temporary network glitch)
+          // Keep session — server may be cold-starting or temporarily lagging
           console.warn('Auth check notice (keeping session):', err?.message || err);
         }
       } finally {
