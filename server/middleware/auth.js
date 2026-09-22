@@ -5,8 +5,13 @@ const { createError } = require('./errorHandler');
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) throw createError('No token provided', 401);
-    const token = authHeader.split(' ')[1];
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
+    }
+    if (!token) throw createError('No token provided', 401);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const result = await query(
       'SELECT id, full_name, email, role, status, profile_image_url FROM users WHERE id = $1',
