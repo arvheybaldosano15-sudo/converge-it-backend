@@ -40,6 +40,8 @@ const getInitialTicketsFromStorage = () => {
     const keys = [
       LOCAL_TICKETS_CACHE_KEY,
       LOCAL_STORAGE_TICKETS_CACHE_KEY,
+      'CONVERGE_TICKETS_MANAGEMENT_CACHE',
+      'CONVERGE_TICKETS_MAIN_CACHE',
     ];
     const stats = getInitialStatsFromStorage();
     const statsTotal = parseInt(stats?.total || stats?.total_tickets || 0);
@@ -809,6 +811,8 @@ const TicketManagement = () => {
                     </div>
                   </td>
                 </tr>
+              ) : (fetching || !hasLoaded.current) && tickets.length === 0 ? (
+                null
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
