@@ -31,7 +31,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
     if (wasTech) {
       navigate('/technician-login');
     } else {
-      navigate('/');
+      navigate('/login');
     }
   };
 

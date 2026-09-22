@@ -5,6 +5,14 @@ import { getAuthToken, getCachedUser, setAuthSession, clearAuthSession } from '.
 import { prefetchAdminData, prefetchTechData } from '../utils/prefetch';
 import toast from 'react-hot-toast';
 
+// Detects if the app is running as an installed PWA (standalone) vs a regular browser tab
+const isPWA = () =>
+  typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://')
+  );
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -129,6 +137,8 @@ export const AuthProvider = ({ children }) => {
       clearAuthSession(user?.role);
       setUser(null);
       toast.success('Logged out successfully');
+      // Desktop browser → back to landing page; PWA/app → stay at login
+      window.location.href = isPWA() ? '/login' : '/';
     }
   };
 
