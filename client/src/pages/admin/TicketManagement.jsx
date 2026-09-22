@@ -40,7 +40,6 @@ const getInitialTicketsFromStorage = () => {
     const keys = [
       LOCAL_TICKETS_CACHE_KEY,
       LOCAL_STORAGE_TICKETS_CACHE_KEY,
-      'CONVERGE_ADMIN_DASHBOARD_CACHE',
     ];
     for (const key of keys) {
       const cached = localStorage.getItem(key);
@@ -210,13 +209,25 @@ const TicketManagement = () => {
 
           const merged = [...pendingSocketPrepends, ...freshTickets];
 
-          ticketMemoryCache.tickets = merged;
-          ticketMemoryCache.totalPages = freshPages;
-          ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
-          try {
-            localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(merged));
-            localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(merged));
-          } catch (e) {}
+          const isFiltered = Boolean(
+            params.status ||
+            params.priority ||
+            params.category ||
+            params.assignedTo ||
+            params.slaStatus ||
+            params.search ||
+            (params.page && params.page > 1)
+          );
+
+          if (!isFiltered) {
+            ticketMemoryCache.tickets = merged;
+            ticketMemoryCache.totalPages = freshPages;
+            ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
+            try {
+              localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(merged));
+              localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(merged));
+            } catch (e) {}
+          }
 
           return merged;
         });

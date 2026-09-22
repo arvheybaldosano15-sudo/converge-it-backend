@@ -19,7 +19,7 @@ const safeSave = (key, data) => {
 export const prefetchAdminData = () => {
   Promise.allSettled([
       api.get('/tickets', {
-        params: { excludeCategoryName: 'Installation Request', limit: 10, page: 1, sortBy: 'created_at', sortOrder: 'DESC' },
+        params: { excludeCategoryName: 'Installation Request', limit: 50, page: 1, sortBy: 'created_at', sortOrder: 'DESC' },
       }),
       api.get('/tickets', {
         params: { categoryName: 'Installation Request', limit: 50 },
