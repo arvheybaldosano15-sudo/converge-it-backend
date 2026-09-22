@@ -58,7 +58,7 @@ const getInitialTicketsFromStorage = () => {
         if (Array.isArray(list) && list.length > 0) {
           const validList = list.filter((t) => {
             if (!t || (!t.id && !t.ticket_number && !t.subject)) return false;
-            const catName = (t.category_name || t.categoryName || '').toLowerCase();
+            const catName = (t.category_name || t.categoryName || t.category?.name || t.category || '').toString().toLowerCase();
             return !catName.includes('installation');
           });
 
@@ -858,7 +858,14 @@ const TicketManagement = () => {
                   </td>
                 </tr>
               ) : (!hasLoaded.current && tickets.length === 0) ? (
-                null
+                <tr>
+                  <td colSpan="9" className="p-8 text-center text-slate-400">
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
+                      <span className="text-xs font-medium text-slate-300">Loading live support tickets...</span>
+                    </div>
+                  </td>
+                </tr>
               ) : tickets.length === 0 && hasLoaded.current && !fetching ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
