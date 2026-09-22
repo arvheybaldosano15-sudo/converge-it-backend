@@ -75,27 +75,24 @@ const getInitialTicketsFromStorage = () => {
     if (tanstackCache) {
       const parsed = JSON.parse(tanstackCache);
       const queries = parsed?.clientState?.queries || [];
-      const ticketQuery = queries.find((q) =>
-        Array.isArray(q?.queryKey) &&
-        q.queryKey[0] === 'tickets' &&
-        (q.queryKey.length === 1 || !q.queryKey[1] || Object.keys(q.queryKey[1]).length === 0)
-      );
-      if (ticketQuery?.state?.data) {
-        const list = Array.isArray(ticketQuery.state.data)
-          ? ticketQuery.state.data
-          : (ticketQuery.state.data.data || []);
-        if (Array.isArray(list) && list.length > 0) {
-          const validList = list.filter((t) => {
-            if (!t || (!t.id && !t.ticket_number && !t.subject)) return false;
-            const catName = (t.category_name || t.categoryName || '').toLowerCase();
-            return !catName.includes('installation');
-          });
-
-          if (statsTotal > 1 && validList.length < Math.min(statsTotal, 2)) {
-            // Partial cache detected in TanStack cache
-          } else if (validList.length > 0) {
-            ticketMemoryCache.tickets = validList;
-            return validList;
+      for (const q of queries) {
+        if (Array.isArray(q?.queryKey) && (q.queryKey[0] === 'tickets' || q.queryKey[0] === 'dashboard')) {
+          const rawData = q?.state?.data;
+          if (rawData) {
+            const list = Array.isArray(rawData)
+              ? rawData
+              : (rawData.data || rawData.tickets || rawData.recentTickets || []);
+            if (Array.isArray(list) && list.length > 0) {
+              const validList = list.filter((t) => {
+                if (!t || (!t.id && !t.ticket_number && !t.subject)) return false;
+                const catName = (t.category_name || t.categoryName || t.category?.name || t.category || '').toString().toLowerCase();
+                return !catName.includes('installation');
+              });
+              if (validList.length > 0) {
+                ticketMemoryCache.tickets = validList;
+                return validList;
+              }
+            }
           }
         }
       }
@@ -854,15 +851,6 @@ const TicketManagement = () => {
                       >
                         Retry Loading
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (!hasLoaded.current && tickets.length === 0) ? (
-                <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-400">
-                    <div className="flex items-center justify-center space-x-2 py-4">
-                      <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
-                      <span className="text-xs font-medium text-slate-300">Loading live support tickets...</span>
                     </div>
                   </td>
                 </tr>
