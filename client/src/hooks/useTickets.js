@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 import toast from 'react-hot-toast';
 
-const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE';
+const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE_V2';
 
 let memoryTicketsCache = (() => {
   try {

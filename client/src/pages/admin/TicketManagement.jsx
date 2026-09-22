@@ -20,9 +20,9 @@ import {
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
-const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE';
-const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE';
-const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE';
+const LOCAL_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MANAGEMENT_CACHE_V2';
+const LOCAL_STORAGE_TICKETS_CACHE_KEY = 'CONVERGE_TICKETS_MAIN_CACHE_V2';
+const LOCAL_TICKETS_STATS_KEY = 'CONVERGE_TICKETS_STATS_CACHE_V2';
 
 // Persistent memory cache across page tab navigation & browser reloads
 let ticketMemoryCache = {
@@ -41,13 +41,16 @@ const getInitialTicketsFromStorage = () => {
       LOCAL_TICKETS_CACHE_KEY,
       LOCAL_STORAGE_TICKETS_CACHE_KEY,
     ];
+    const stats = getInitialStatsFromStorage();
+    const statsTotal = parseInt(stats?.total || stats?.total_tickets || 0);
+
     for (const key of keys) {
       const cached = localStorage.getItem(key);
       if (cached) {
         const parsed = JSON.parse(cached);
         const list = Array.isArray(parsed)
           ? parsed
-          : (parsed?.data || parsed?.tickets || parsed?.recentTickets || parsed?.assignedTickets || []);
+          : (parsed?.data || parsed?.tickets || parsed?.assignedTickets || []);
 
         if (Array.isArray(list) && list.length > 0) {
           const validList = list.filter((t) => {
@@ -55,6 +58,13 @@ const getInitialTicketsFromStorage = () => {
             const catName = (t.category_name || t.categoryName || '').toLowerCase();
             return !catName.includes('installation');
           });
+
+          // Safeguard: Purge & ignore partial/stale filter caches (e.g., 1 ticket when total >= 2)
+          if (statsTotal > 1 && validList.length < Math.min(statsTotal, 2)) {
+            try { localStorage.removeItem(key); } catch (_) {}
+            continue;
+          }
+
           if (validList.length > 0) {
             ticketMemoryCache.tickets = validList;
             return validList;
@@ -68,7 +78,11 @@ const getInitialTicketsFromStorage = () => {
     if (tanstackCache) {
       const parsed = JSON.parse(tanstackCache);
       const queries = parsed?.clientState?.queries || [];
-      const ticketQuery = queries.find((q) => Array.isArray(q?.queryKey) && q.queryKey[0] === 'tickets');
+      const ticketQuery = queries.find((q) =>
+        Array.isArray(q?.queryKey) &&
+        q.queryKey[0] === 'tickets' &&
+        (q.queryKey.length === 1 || !q.queryKey[1] || Object.keys(q.queryKey[1]).length === 0)
+      );
       if (ticketQuery?.state?.data) {
         const list = Array.isArray(ticketQuery.state.data)
           ? ticketQuery.state.data
@@ -79,7 +93,10 @@ const getInitialTicketsFromStorage = () => {
             const catName = (t.category_name || t.categoryName || '').toLowerCase();
             return !catName.includes('installation');
           });
-          if (validList.length > 0) {
+
+          if (statsTotal > 1 && validList.length < Math.min(statsTotal, 2)) {
+            // Partial cache detected in TanStack cache
+          } else if (validList.length > 0) {
             ticketMemoryCache.tickets = validList;
             return validList;
           }

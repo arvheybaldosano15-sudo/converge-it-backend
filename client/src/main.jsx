@@ -91,8 +91,8 @@ const preSeedCache = (localKey, queryKey) => {
   } catch (_) {}
 };
 
-preSeedCache('CONVERGE_TICKETS_MANAGEMENT_CACHE', ['tickets']);
-preSeedCache('CONVERGE_TICKETS_MAIN_CACHE',       ['tickets']);
+preSeedCache('CONVERGE_TICKETS_MANAGEMENT_CACHE_V2', ['tickets']);
+preSeedCache('CONVERGE_TICKETS_MAIN_CACHE_V2',       ['tickets']);
 preSeedCache('CONVERGE_INSTALLATION_REQUESTS_CACHE', ['installation-requests']);
 preSeedCache('CONVERGE_TECH_DASHBOARD_CACHE',        ['dashboard', 'technician']);
 preSeedCache('CONVERGE_ADMIN_DASHBOARD_CACHE',       ['dashboard', 'admin']);
