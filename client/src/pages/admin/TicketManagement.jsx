@@ -61,12 +61,6 @@ const getInitialTicketsFromStorage = () => {
             return !catName.includes('installation');
           });
 
-          // Safeguard: Purge & ignore partial/stale filter caches (e.g., 1 ticket when total >= 2)
-          if (statsTotal > 1 && validList.length < Math.min(statsTotal, 2)) {
-            try { localStorage.removeItem(key); } catch (_) {}
-            continue;
-          }
-
           if (validList.length > 0) {
             ticketMemoryCache.tickets = validList;
             return validList;
@@ -812,7 +806,14 @@ const TicketManagement = () => {
                   </td>
                 </tr>
               ) : (fetching || !hasLoaded.current) && tickets.length === 0 ? (
-                null
+                <tr>
+                  <td colSpan="9" className="p-8 text-center text-slate-400">
+                    <div className="flex items-center justify-center space-x-2 py-4">
+                      <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
+                      <span className="text-xs font-medium text-slate-300">Syncing live support tickets...</span>
+                    </div>
+                  </td>
+                </tr>
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
