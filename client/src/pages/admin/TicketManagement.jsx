@@ -117,9 +117,47 @@ const getInitialStatsFromStorage = () => {
   }
 };
 
-// Populate initial memory cache on module load
+// ─── Module-level immediate prefetch ─────────────────────────────────────────
+// Fires raw fetch() as soon as this JS module loads — BEFORE React mounts.
+// On hard refresh the API response typically arrives in ~150-400ms.
+// By the time the component's useEffect fires, data is already in memory cache.
+const _moduleTicketFetch = (() => {
+  try {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+    if (!token) return Promise.resolve();
+    const baseUrl = window.location.origin;
+    return fetch(
+      `${baseUrl}/api/tickets?excludeCategoryName=Installation%20Request&limit=50&page=1&sortBy=created_at&sortOrder=DESC`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          const filtered = res.data.filter((t) => {
+            const cat = (t.category_name || '').toLowerCase();
+            return !cat.includes('installation');
+          });
+          if (filtered.length > 0) {
+            ticketMemoryCache.tickets = filtered;
+            ticketMemoryCache.totalPages = res.pagination?.totalPages || 1;
+            ticketMemoryCache.totalItems = res.pagination?.total || filtered.length;
+            try {
+              localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(filtered));
+              localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(filtered));
+            } catch (_) {}
+          }
+        }
+      })
+      .catch(() => {});
+  } catch (_) {
+    return Promise.resolve();
+  }
+})();
+
+// Populate initial memory cache on module load (from any existing localStorage cache)
 ticketMemoryCache.tickets = getInitialTicketsFromStorage();
 ticketMemoryCache.stats = getInitialStatsFromStorage();
+
 
 const TicketManagement = () => {
   const { searchQuery: globalSearch } = useOutletContext() || {};
@@ -302,6 +340,17 @@ const TicketManagement = () => {
 
   useEffect(() => {
     fetchAuxiliaryData();
+
+    // Apply data from module-level prefetch if it resolved after mount
+    let cancelled = false;
+    _moduleTicketFetch?.then?.(() => {
+      if (!cancelled && ticketMemoryCache.tickets.length > 0 && !hasLoaded.current) {
+        setTickets([...ticketMemoryCache.tickets]);
+        setTotalPages(ticketMemoryCache.totalPages || 1);
+        setTotalItems(ticketMemoryCache.totalItems || ticketMemoryCache.tickets.length);
+        hasLoaded.current = true;
+      }
+    });
 
     // Background polling fallback (5s) so table always stays in sync even if socket misses an event
     const pollInterval = setInterval(() => {
