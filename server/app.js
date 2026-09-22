@@ -78,11 +78,14 @@ app.use('/uploads', (req, res) => {
 
 app.use('/api/', generalLimiter);
 
-app.get('/health', (req, res) => res.json({
+const healthCheckHandler = (req, res) => res.json({
   status: 'ok',
   timestamp: new Date().toISOString(),
   service: 'Converge IT Solutions Ticketing System'
-}));
+});
+
+app.get('/health', healthCheckHandler);
+app.get('/api/health', healthCheckHandler);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);

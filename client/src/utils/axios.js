@@ -86,6 +86,10 @@ api.interceptors.response.use(
       url.includes('/auth/refresh-token') ||
       url.includes('/health');
 
+    const isAuxiliaryUrl =
+      url.includes('/notifications/') ||
+      url.includes('/health');
+
     if (status === 401 && !originalRequest._retry && !isAuthUrl) {
       originalRequest._retry = true;
       const refreshToken = getRefreshToken();
@@ -106,6 +110,15 @@ api.interceptors.response.use(
         } catch (refreshErr) {
           // Token refresh failed
         }
+      }
+
+      // Do NOT force logout/clear session for non-critical background auxiliary requests
+      if (isAuxiliaryUrl) {
+        return Promise.reject({
+          ...(typeof error.response?.data === 'object' ? error.response.data : { message: error.message }),
+          status: error.response?.status,
+          statusCode: error.response?.status,
+        });
       }
 
       // Token invalid / expired — clear current role's session and redirect cleanly
