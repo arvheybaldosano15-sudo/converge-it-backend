@@ -75,9 +75,10 @@ const ProfileDropdown = () => {
           <div className="border-t border-slate-800 my-1" />
 
           <button
-            onClick={() => {
+            onClick={async () => {
               setIsOpen(false);
-              logout();
+              await logout();
+              navigate(isAdmin ? '/' : '/technician-login');
             }}
             className="flex items-center space-x-2.5 w-full px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
           >
