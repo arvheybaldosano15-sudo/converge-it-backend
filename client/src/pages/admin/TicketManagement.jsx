@@ -855,19 +855,7 @@ const TicketManagement = () => {
                   </td>
                 </tr>
               ) : (!hasLoaded.current && tickets.length === 0) ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={`skel-${i}`} className="animate-pulse border-b border-slate-800/40">
-                    <td className="p-3"><div className="h-4 w-24 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-32 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-28 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-16 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-20 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-24 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-20 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3"><div className="h-4 w-20 bg-slate-800/70 rounded-md" /></td>
-                    <td className="p-3 text-right"><div className="h-4 w-12 bg-slate-800/70 rounded-md ml-auto" /></td>
-                  </tr>
-                ))
+                null
               ) : tickets.length === 0 && hasLoaded.current && !fetching ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-500">
