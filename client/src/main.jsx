@@ -38,6 +38,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// ─── Server pre-warm ping ─────────────────────────────────────────────────────
+// Render free tier sleeps after ~15 min of inactivity. Fire a silent GET to
+// /api/health as soon as the JS bundle loads so the server is warm by the time
+// the user finishes typing their credentials and hits Login.
+(function prewarmServer() {
+  try {
+    const base = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '') || '';
+    const url = base ? `${base}/health` : '/api/health';
+    fetch(url, { method: 'GET', cache: 'no-store' }).catch(() => {/* silent — server may still be sleeping */});
+  } catch (_) {}
+})();
+
 // Register Service Worker for PWA capabilities & push notifications
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
