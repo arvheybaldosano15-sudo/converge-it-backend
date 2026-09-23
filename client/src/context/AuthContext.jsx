@@ -71,8 +71,11 @@ export const AuthProvider = ({ children }) => {
     try {
       res = await api.post('/auth/login', { email, password }, { timeout: 15000 });
     } catch (err) {
-      // Fast retry once if temporary connection drop occurs
-      if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
+      // Axios transforms errors to plain objects — check err.status, not err.response
+      const httpStatus = err?.status || err?.statusCode;
+      // Only retry on genuine network drop (no status) — NOT on server errors (503/502/504/401/etc.)
+      const isNetworkDrop = !httpStatus && (err?.message?.includes('timeout') || err?.message?.includes('Network') || err?.message?.includes('network'));
+      if (isNetworkDrop) {
         await new Promise((r) => setTimeout(r, 800));
         res = await api.post('/auth/login', { email, password }, { timeout: 15000 });
       } else {
@@ -100,8 +103,9 @@ export const AuthProvider = ({ children }) => {
     try {
       res = await api.post('/auth/pin-login', { pin }, { timeout: 15000 });
     } catch (err) {
-      // Fast retry once if temporary connection drop occurs
-      if (!err.response || err.message?.includes('timeout') || err.message?.includes('Network')) {
+      const httpStatus = err?.status || err?.statusCode;
+      const isNetworkDrop = !httpStatus && (err?.message?.includes('timeout') || err?.message?.includes('Network') || err?.message?.includes('network'));
+      if (isNetworkDrop) {
         await new Promise((r) => setTimeout(r, 800));
         res = await api.post('/auth/pin-login', { pin }, { timeout: 15000 });
       } else {
