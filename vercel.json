@@ -9,15 +9,15 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://converge-it-backend.onrender.com/api/$1"
+      "dest": "https://convergeitbackend-8c7v8t4n.b4a.run/api/$1"
     },
     {
       "src": "/uploads/(.*)",
-      "dest": "https://converge-it-backend.onrender.com/uploads/$1"
+      "dest": "https://convergeitbackend-8c7v8t4n.b4a.run/uploads/$1"
     },
     {
       "src": "/socket.io/(.*)",
-      "dest": "https://converge-it-backend.onrender.com/socket.io/$1"
+      "dest": "https://convergeitbackend-8c7v8t4n.b4a.run/socket.io/$1"
     },
     {
       "handle": "filesystem"
