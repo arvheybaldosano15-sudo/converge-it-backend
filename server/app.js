@@ -57,7 +57,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Default fallback to allow connection
+    // Default fallback to allow all connections
     callback(null, true);
   },
   credentials: true,
