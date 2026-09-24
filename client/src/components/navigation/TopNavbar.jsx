@@ -67,14 +67,22 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     const handleTicketCreated = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
       if (ticket && ticket.ticket_number) {
+        const catName = (ticket.category_name || ticket.category?.name || '').toLowerCase();
+        const subjectLower = (ticket.subject || '').toLowerCase();
+        const descLower = (ticket.description || '').toLowerCase();
+        const isInstall = catName.includes('installation') || subjectLower.includes('installation') || descLower.includes('installation');
+
         const notifItem = {
           id: 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-          title: `New Ticket #${ticket.ticket_number}`,
-          message: `Ticket #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`,
-          type: 'ticket',
+          title: isInstall ? `New Installation Request #${ticket.ticket_number}` : `New Ticket #${ticket.ticket_number}`,
+          message: isInstall
+            ? `Installation Request #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`
+            : `Ticket #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`,
+          type: isInstall ? 'installation' : 'ticket',
           is_read: false,
           created_at: new Date().toISOString(),
           reference_id: ticket.id,
+          category_name: ticket.category_name
         };
         // Instant 0ms prepend — no HTTP needed for badge (SocketContext handles that)
         setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
@@ -131,7 +139,19 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     if (user?.role === 'admin') {
       const titleLower = (n.title || '').toLowerCase();
       const bodyLower = (n.body || n.message || '').toLowerCase();
-      if (titleLower.includes('installation') || bodyLower.includes('installation')) {
+      const typeLower = (n.type || '').toLowerCase();
+      const catLower = (n.category_name || '').toLowerCase();
+
+      const isInstallation =
+        typeLower.includes('install') ||
+        catLower.includes('install') ||
+        titleLower.includes('installation') ||
+        bodyLower.includes('installation') ||
+        titleLower.includes('install request') ||
+        bodyLower.includes('install request') ||
+        titleLower.includes('new installation');
+
+      if (isInstallation) {
         navigate('/admin/installation-requests');
       } else {
         navigate('/admin/tickets');
