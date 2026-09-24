@@ -13,12 +13,14 @@ const checkIsInstallation = (n) => {
   const catLower = (n.category_name || '').toLowerCase();
   const titleLower = (n.title || '').toLowerCase();
   const bodyLower = (n.body || n.message || '').toLowerCase();
+  const subjectLower = (n.ticket_subject || '').toLowerCase();
 
   return (
     typeLower.includes('install') ||
     catLower.includes('install') ||
     titleLower.includes('installation') ||
     bodyLower.includes('installation') ||
+    subjectLower.includes('installation') ||
     titleLower.includes('install request') ||
     bodyLower.includes('install request') ||
     titleLower.includes('new installation')

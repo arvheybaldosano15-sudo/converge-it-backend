@@ -179,10 +179,14 @@ exports.createTicket = async (req, res, next) => {
     // Run audit log + DB notifications in background (non-blocking)
     logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number }).catch(() => {});
 
+    const catNameLower = (fullPayload.category_name || '').toLowerCase();
+    const isInstallCat = catNameLower.includes('installation');
     notifyAdmins({
-      type: 'ticket',
-      title: `New Ticket Created #${ticket.ticket_number}`,
-      message: `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}.`,
+      type: isInstallCat ? 'installation' : 'ticket',
+      title: isInstallCat ? `New Installation Request #${ticket.ticket_number}` : `New Ticket Created #${ticket.ticket_number}`,
+      message: isInstallCat
+        ? `Installation Request #${ticket.ticket_number} created for ${fullPayload.customer_name || 'Customer'}.`
+        : `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}.`,
       referenceId: ticket.id,
     }).catch(() => {});
 

@@ -8,14 +8,25 @@ exports.getNotifications = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, unreadOnly } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    const conditions = [`user_id = $1`];
+    const conditions = [`n.user_id = $1`];
     const params = [req.user.id];
     let idx = 2;
-    if (unreadOnly === 'true') { conditions.push(`is_read = FALSE`); }
+    if (unreadOnly === 'true') { conditions.push(`n.is_read = FALSE`); }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const [data, count] = await Promise.all([
-      query(`SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx}`, [...params, parseInt(limit), offset]),
-      query(`SELECT COUNT(*) FROM notifications ${where}`, params)
+      query(`
+        SELECT n.*,
+               t.ticket_number,
+               t.subject AS ticket_subject,
+               cat.name AS category_name
+        FROM notifications n
+        LEFT JOIN tickets t ON n.reference_id = t.id
+        LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+        ${where}
+        ORDER BY n.created_at DESC
+        LIMIT $${idx++} OFFSET $${idx}
+      `, [...params, parseInt(limit), offset]),
+      query(`SELECT COUNT(*) FROM notifications n ${where}`, params)
     ]);
     res.json({ success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count) } });
   } catch (error) { next(error); }

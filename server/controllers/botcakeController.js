@@ -315,12 +315,14 @@ exports.handleWebhook = async (req, res) => {
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
 
-    // Run DB notifications in background (non-blocking)
+    const isInstallNotif = (categoryName || '').toLowerCase().includes('installation');
     notifyAdmins({
-      type: 'ticket',
-      title: 'New Messenger Ticket',
-      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
-      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+      type: isInstallNotif ? 'installation' : 'ticket',
+      title: isInstallNotif ? `New Installation Request #${createdTicket.ticket_number}` : `New Messenger Ticket #${createdTicket.ticket_number}`,
+      body: isInstallNotif
+        ? `Installation Request #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`
+        : `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number, isInstallation: isInstallNotif }
     }).catch(err => logger.error('notifyAdmins error:', err));
 
     // Send confirmation reply back to customer on Messenger
@@ -710,12 +712,14 @@ exports.createTicket = async (req, res) => {
     emitToAll('ticket:created', { ticket: fullTicketPayload });
     emitToAll('ticket_created', { ticket: fullTicketPayload });
 
-    // Run DB notifications in background (non-blocking)
+    const isInstallNotif = (categoryName || '').toLowerCase().includes('installation');
     notifyAdmins({
-      type: 'ticket',
-      title: 'New Messenger Ticket',
-      body: `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
-      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number }
+      type: isInstallNotif ? 'installation' : 'ticket',
+      title: isInstallNotif ? `New Installation Request #${createdTicket.ticket_number}` : `New Messenger Ticket #${createdTicket.ticket_number}`,
+      body: isInstallNotif
+        ? `Installation Request #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`
+        : `Ticket #${createdTicket.ticket_number} created via Messenger for ${customer.full_name || 'Customer'}.`,
+      data: { ticketId: createdTicket.id, ticketNumber: createdTicket.ticket_number, isInstallation: isInstallNotif }
     }).catch(err => logger.error('notifyAdmins error:', err));
 
     const replyMsg = `🤖 Support Ticket Generated!\n\n📋 Ticket Number: ${createdTicket.ticket_number}\n📌 Category: ${categoryName}\n⚡ Priority: ${priorityEnum.toUpperCase()}\n⏱️ Estimated Resolution: ${aiResult.etaHours || 24} hours\n\nOur team has received your request and a technician will be assigned shortly.`;
