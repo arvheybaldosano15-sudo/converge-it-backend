@@ -3,9 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import ProfileDropdown from './ProfileDropdown';
-import { Bell, Sun, Moon, X, CheckCheck, Trash2, Clock, Menu, ExternalLink } from 'lucide-react';
+import { Bell, Sun, Moon, X, CheckCheck, Trash2, Clock, Menu, ExternalLink, Ticket, Wrench } from 'lucide-react';
 import api from '../../utils/axios';
 import { formatDistanceToNow } from 'date-fns';
+
+const checkIsInstallation = (n) => {
+  if (!n) return false;
+  const typeLower = (n.type || '').toLowerCase();
+  const catLower = (n.category_name || '').toLowerCase();
+  const titleLower = (n.title || '').toLowerCase();
+  const bodyLower = (n.body || n.message || '').toLowerCase();
+
+  return (
+    typeLower.includes('install') ||
+    catLower.includes('install') ||
+    titleLower.includes('installation') ||
+    bodyLower.includes('installation') ||
+    titleLower.includes('install request') ||
+    bodyLower.includes('install request') ||
+    titleLower.includes('new installation')
+  );
+};
 
 const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMenuToggle }) => {
   const { user } = useAuth();
@@ -137,20 +155,7 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     if (!n.is_read) markOneRead(n.id);
     setNotifOpen(false);
     if (user?.role === 'admin') {
-      const titleLower = (n.title || '').toLowerCase();
-      const bodyLower = (n.body || n.message || '').toLowerCase();
-      const typeLower = (n.type || '').toLowerCase();
-      const catLower = (n.category_name || '').toLowerCase();
-
-      const isInstallation =
-        typeLower.includes('install') ||
-        catLower.includes('install') ||
-        titleLower.includes('installation') ||
-        bodyLower.includes('installation') ||
-        titleLower.includes('install request') ||
-        bodyLower.includes('install request') ||
-        titleLower.includes('new installation');
-
+      const isInstallation = checkIsInstallation(n);
       if (isInstallation) {
         navigate('/admin/installation-requests');
       } else {
@@ -271,36 +276,53 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                     <p className="text-xs">No notifications yet</p>
                   </div>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => handleNotifClick(n)}
-                      className={`flex items-start gap-3 px-4 py-3 border-b border-slate-800/60 transition-colors cursor-pointer group ${
-                        n.is_read ? 'opacity-60' : 'hover:bg-slate-800/40'
-                      }`}
-                    >
-                      {/* Unread dot */}
-                      <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-blue-400 animate-pulse'}`} />
+                  notifications.map((n) => {
+                    const isInstallation = checkIsInstallation(n);
+                    const isTicketNotif = n.type === 'ticket' || n.type === 'installation' || n.title?.includes('#') || n.reference_id;
 
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-semibold ${n.is_read ? 'text-slate-400' : 'text-slate-100'} leading-snug`}>
-                          {n.title}
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.body || n.message}</p>
-                        <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
-                          <Clock className="w-3 h-3" />
-                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={(e) => deleteNotif(n.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all shrink-0"
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotifClick(n)}
+                        className={`flex items-start gap-3 px-4 py-3 border-b border-slate-800/60 transition-colors cursor-pointer group ${
+                          n.is_read ? 'opacity-60' : 'hover:bg-slate-800/40'
+                        }`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
+                        {/* Unread dot */}
+                        <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-blue-400 animate-pulse'}`} />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                            {isInstallation ? (
+                              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 flex items-center gap-1">
+                                <Wrench className="w-2.5 h-2.5" /> Installation Request
+                              </span>
+                            ) : isTicketNotif ? (
+                              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0 flex items-center gap-1">
+                                <Ticket className="w-2.5 h-2.5" /> Tickets Management
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <p className={`text-xs font-semibold ${n.is_read ? 'text-slate-400' : 'text-slate-100'} leading-snug`}>
+                            {n.title}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.body || n.message}</p>
+                          <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
+                            <Clock className="w-3 h-3" />
+                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => deleteNotif(n.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
