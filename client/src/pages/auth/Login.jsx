@@ -63,8 +63,8 @@ const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) 
     }
   };
 
-  if (isModal && modalView === 'pin') {
-    return (
+  if (modalView === 'pin') {
+    const pinContent = (
       <div className="w-full">
         <button
           type="button"
@@ -73,13 +73,20 @@ const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) 
         >
           <span>← Back to Sign In</span>
         </button>
-        <TechnicianPinLogin isModal onClose={onClose} />
+        <TechnicianPinLogin isModal={isModal} onClose={onClose} />
       </div>
+    );
+
+    if (isModal) return pinContent;
+    return (
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-8 max-w-sm w-full mx-auto my-auto" glow>
+        {pinContent}
+      </Card>
     );
   }
 
-  if (isModal && modalView === 'register') {
-    return (
+  if (modalView === 'register') {
+    const registerContent = (
       <div className="w-full">
         <button
           type="button"
@@ -88,8 +95,15 @@ const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) 
         >
           <span>← Back to Sign In</span>
         </button>
-        <TechnicianSignUp isModal onClose={onClose} />
+        <TechnicianSignUp isModal={isModal} onClose={onClose} />
       </div>
+    );
+
+    if (isModal) return registerContent;
+    return (
+      <Card className="shadow-2xl border-blue-500/20 backdrop-blur-2xl bg-slate-900/90 p-5 sm:p-7 max-w-lg w-full mx-auto my-auto" glow>
+        {registerContent}
+      </Card>
     );
   }
 
@@ -171,6 +185,8 @@ const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) 
             onClick={() => {
               if (onOpenPinModal) {
                 onOpenPinModal();
+              } else if (!isModal) {
+                navigate('/pin-login');
               } else {
                 setModalView('pin');
               }
@@ -186,6 +202,8 @@ const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) 
             onClick={() => {
               if (onOpenSignUpModal) {
                 onOpenSignUpModal();
+              } else if (!isModal) {
+                navigate('/register-technician');
               } else {
                 setModalView('register');
               }
