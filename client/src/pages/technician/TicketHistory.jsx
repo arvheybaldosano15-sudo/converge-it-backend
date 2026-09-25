@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 
 const TicketHistory = () => {
   const [tickets, setTickets] = useState([]);
@@ -58,14 +59,25 @@ const TicketHistory = () => {
     }
   };
 
-  const handleDelete = async (ticket, e) => {
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [ticketToDelete, setTicketToDelete] = useState(null);
+
+  const confirmDelete = (ticket, e) => {
     if (e) e.stopPropagation();
-    if (!window.confirm(`Delete ticket ${ticket.ticket_number}? This action cannot be undone.`)) return;
+    setTicketToDelete(ticket);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!ticketToDelete) return;
+    const ticket = ticketToDelete;
     try {
       setDeletingId(ticket.id);
       await api.delete(`/tickets/${ticket.id}`);
       setTickets(prev => prev.filter(t => t.id !== ticket.id));
       toast.success(`Ticket ${ticket.ticket_number} deleted from history.`);
+      setIsDeleteConfirmOpen(false);
+      setTicketToDelete(null);
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete ticket. Please try again.');
@@ -298,7 +310,7 @@ const TicketHistory = () => {
           </button>
 
           <button
-            onClick={(e) => handleDelete(row, e)}
+            onClick={(e) => confirmDelete(row, e)}
             disabled={deletingId === row.id}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete this history record"
@@ -525,7 +537,7 @@ const TicketHistory = () => {
                   <Button variant="ghost" size="sm" onClick={(e) => handleOpenView(t, e)} icon={Eye}>
                     View
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={(e) => handleDelete(t, e)} icon={Trash2} disabled={deletingId === t.id}>
+                  <Button variant="ghost" size="sm" onClick={(e) => confirmDelete(t, e)} icon={Trash2} disabled={deletingId === t.id}>
                     {deletingId === t.id ? '...' : 'Delete'}
                   </Button>
                 </div>
@@ -543,6 +555,16 @@ const TicketHistory = () => {
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         ticketId={viewTicketId}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => { setIsDeleteConfirmOpen(false); setTicketToDelete(null); }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Support Ticket"
+        message={`Are you sure you want to permanently delete ticket ${ticketToDelete?.ticket_number || ''}? This action cannot be undone.`}
+        isLoading={deletingId === ticketToDelete?.id}
       />
     </div>
   );

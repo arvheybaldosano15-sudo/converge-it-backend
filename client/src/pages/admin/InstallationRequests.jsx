@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loader from '../../components/common/Loader';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import TechnicianAssignDropdown from '../../components/common/TechnicianAssignDropdown';
 import Pagination from '../../components/common/Pagination';
 import { useSocket } from '../../context/SocketContext';
@@ -60,6 +61,8 @@ const InstallationRequests = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [ticketToDelete, setTicketToDelete] = useState(null);
 
   // Workflow action states
   const [noteText, setNoteText] = useState('');
@@ -312,21 +315,27 @@ const InstallationRequests = () => {
     refreshTicketDetail(ticket.id);
   };
 
-  const handleDeleteTicket = (ticketId) => {
-    if (
-      !window.confirm(
-        'Are you sure you want to delete this installation request? This action cannot be undone.'
-      )
-    )
-      return;
+  const confirmDeleteTicket = (ticket) => {
+    setTicketToDelete(ticket);
+    setIsDeleteConfirmOpen(true);
+  };
 
+  const handleDeleteTicket = () => {
+    if (!ticketToDelete) return;
+    const ticketId = ticketToDelete.id;
     deleteRequestMutation.mutate(ticketId, {
       onSuccess: () => {
+        setIsDeleteConfirmOpen(false);
+        setTicketToDelete(null);
         if (selectedTicket && selectedTicket.id === ticketId) {
           setIsDetailModalOpen(false);
           setSelectedTicket(null);
         }
       },
+      onError: () => {
+        setIsDeleteConfirmOpen(false);
+        setTicketToDelete(null);
+      }
     });
   };
 
@@ -777,7 +786,7 @@ const InstallationRequests = () => {
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteTicket(row.id)}
+                            onClick={() => confirmDeleteTicket(row)}
                             className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 transition-colors"
                             title="Delete Installation Request"
                           >
@@ -1080,6 +1089,14 @@ const InstallationRequests = () => {
           </div>
         </div>
       )}
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => { setIsDeleteConfirmOpen(false); setTicketToDelete(null); }}
+        onConfirm={handleDeleteTicket}
+        title="Delete Installation Request"
+        message={`Are you sure you want to permanently delete installation request ${ticketToDelete?.ticket_number || ''}? This action cannot be undone.`}
+      />
     </div>
   );
 };

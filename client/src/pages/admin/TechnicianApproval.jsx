@@ -751,6 +751,11 @@ const TechnicianApproval = () => {
         onClose={() => setApproveConfirmOpen(false)}
         onConfirm={handleApproveConfirm}
         title="Approve Technician Application"
+        variant="primary"
+        icon={CheckCircle}
+        iconColor="text-emerald-400"
+        iconBg="bg-emerald-500/20"
+        confirmText="Confirm"
         message={`Approving "${techToAction?.full_name}" (${techToAction?.employee_id}) will activate their technician account and allow them to log into the mobile portal, receive ticket assignments, and participate in field support operations. Do you want to proceed?`}
       />
 
@@ -760,13 +765,29 @@ const TechnicianApproval = () => {
         onClose={() => setReactivateConfirmOpen(false)}
         onConfirm={handleReactivateConfirm}
         title="Reactivate Technician Account"
+        variant="primary"
+        icon={CheckCircle}
+        iconColor="text-emerald-400"
+        iconBg="bg-emerald-500/20"
+        confirmText="Reactivate"
         message={`Are you sure you want to reactivate the technician account for "${techToAction?.full_name}" (${techToAction?.employee_id})? Portal access will be restored immediately.`}
       />
 
-      {/* REJECT REASON MODAL */}
-      <Modal isOpen={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Reject Technician Application">
-        <div className="space-y-4">
-          <p className="text-xs text-slate-300">
+      {/* REJECT REASON CONFIRMATION DIALOG */}
+      <ConfirmationDialog
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        onConfirm={handleReject}
+        title="Reject Technician Application"
+        variant="danger"
+        icon={XCircle}
+        iconColor="text-rose-400"
+        iconBg="bg-rose-500/20"
+        confirmText="Confirm Rejection"
+        cancelText="Cancel"
+      >
+        <div className="space-y-3 mt-2">
+          <p className="text-xs text-slate-300 leading-relaxed">
             Please enter a documented reason for rejecting the application for <span className="font-bold text-white">{techToAction?.full_name}</span>:
           </p>
           <textarea
@@ -776,12 +797,8 @@ const TechnicianApproval = () => {
             placeholder="e.g. Unverified Employee ID, missing credentials, or invalid contact information..."
             className="glass-input w-full rounded-xl p-3 text-xs bg-slate-950 text-white border-slate-700"
           />
-          <div className="flex justify-end space-x-3 pt-2">
-            <Button variant="ghost" onClick={() => setRejectModalOpen(false)}>Cancel</Button>
-            <Button variant="danger" onClick={handleReject}>Confirm Rejection</Button>
-          </div>
         </div>
-      </Modal>
+      </ConfirmationDialog>
 
       {/* SUSPEND REASON MODAL */}
       <Modal isOpen={suspendModalOpen} onClose={() => setSuspendModalOpen(false)} title="Suspend Technician Account Access">
