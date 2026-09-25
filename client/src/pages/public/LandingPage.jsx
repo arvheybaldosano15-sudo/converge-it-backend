@@ -99,6 +99,7 @@ const LandingPage = () => {
 
           {/* Action Buttons in Navbar */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <InstallPwaButton variant="navbar" />
 
             {/* PIN Login button */}
             <button
@@ -185,9 +186,9 @@ const LandingPage = () => {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </form>
-            <div className="mt-3 flex justify-center">
-              <InstallPwaButton variant="inline" />
-            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-medium">
+              Customers can check live dispatch status, assigned technician, and resolution progress anytime.
+            </p>
           </motion.div>
 
           {/* Quick Metrics Bar */}
@@ -521,17 +522,14 @@ const LandingPage = () => {
               <p className="text-xs text-slate-400">Live WebSockets, Supabase Database, and Botcake Webhooks connected.</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <InstallPwaButton variant="inline" />
-            <Link
-              to="/kb"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span>Customer Knowledge Base</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <Link
+            to="/kb"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors shrink-0"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span>Customer Knowledge Base</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
         </section>
 
       </main>

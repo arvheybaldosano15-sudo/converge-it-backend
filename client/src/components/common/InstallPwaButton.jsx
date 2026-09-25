@@ -3,7 +3,7 @@ import { Download, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import usePwaInstall from '../../hooks/usePwaInstall';
 
-const InstallPwaButton = ({ variant = 'floating', className = '' }) => {
+const InstallPwaButton = ({ variant = 'navbar', className = '' }) => {
   const { showInstallButton, installApp } = usePwaInstall();
 
   if (!showInstallButton) return null;
@@ -47,7 +47,7 @@ const InstallPwaButton = ({ variant = 'floating', className = '' }) => {
     );
   }
 
-  if (variant === 'inline' || variant === 'floating' || variant === 'default') {
+  if (variant === 'inline' || variant === 'card') {
     return (
       <button
         type="button"
@@ -59,15 +59,10 @@ const InstallPwaButton = ({ variant = 'floating', className = '' }) => {
                    backdrop-blur-xl shadow-xl shadow-cyan-950/40 hover:shadow-cyan-500/20 
                    transition-all duration-300 active:scale-95 cursor-pointer touch-manipulation ${className}`}
       >
-        {/* Glow effect overlay */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-        {/* App Logo Icon with subtle zoom on hover */}
         <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-cyan-400/50 overflow-hidden group-hover:scale-105 transition-transform duration-300 shrink-0">
           <img src="/logo16.png" alt="Converge IT Logo" className="w-full h-full object-cover" />
         </div>
-
-        {/* Text Details */}
         <div className="flex flex-col text-left">
           <span className="text-xs sm:text-sm font-extrabold tracking-wide text-white group-hover:text-cyan-200 transition-colors flex items-center gap-1.5">
             <span>Install App</span>
