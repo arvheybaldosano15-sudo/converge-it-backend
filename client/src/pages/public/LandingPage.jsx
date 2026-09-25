@@ -6,7 +6,7 @@ import {
   KeyRound,
   LogIn,
   Search,
-  CheckCircle,
+  CheckCircle2,
   Clock,
   ShieldCheck,
   Zap,
@@ -18,12 +18,22 @@ import {
   UserPlus,
   HelpCircle,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Wifi,
+  Camera,
+  Cpu,
+  Smartphone,
+  Shield,
+  Layers,
+  Award,
+  Users,
+  Headset,
+  MessageSquare,
+  ChevronRight,
+  Check
 } from 'lucide-react';
 
 import Modal from '../../components/common/Modal';
-import Button from '../../components/common/Button';
-import Card from '../../components/common/Card';
 import InstallPwaButton from '../../components/common/InstallPwaButton';
 import Login from '../auth/Login';
 import TechnicianPinLogin from '../auth/TechnicianPinLogin';
@@ -48,71 +58,105 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col relative overflow-hidden font-sans">
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f1e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f1e_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col relative overflow-hidden font-sans selection:bg-cyan-500 selection:text-white">
+      {/* Dynamic Background Tech Patterns */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b1e_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1e_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-      {/* Ambient Glow Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
-      <div className="absolute bottom-1/3 right-1/4 w-[30rem] h-[30rem] bg-blue-600/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+      {/* Ambient Neon Glow Spheres */}
+      <div className="absolute -top-24 left-1/4 w-[36rem] h-[36rem] bg-cyan-600/15 rounded-full blur-[128px] pointer-events-none animate-pulse-glow" />
+      <div className="absolute top-1/3 -right-24 w-[32rem] h-[32rem] bg-blue-600/15 rounded-full blur-[128px] pointer-events-none animate-pulse-glow" />
+      <div className="absolute bottom-10 left-10 w-[30rem] h-[30rem] bg-teal-600/10 rounded-full blur-[128px] pointer-events-none" />
 
-      {/* Header Navigation Bar */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800/80">
+      {/* Top Header Navigation Bar */}
+      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 p-0.5 shadow-lg shadow-cyan-500/20 shrink-0">
-              <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                <img src="/CSiLogo.png" alt="Converge IT Logo" className="w-7 h-7 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
-                <Wrench className="w-5 h-5 text-cyan-400 hidden" />
+          {/* Brand Logo & Tagline */}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/25 shrink-0">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <img
+                  src="/CSiLogo.png"
+                  alt="Converge Logo"
+                  className="w-7 h-7 object-contain drop-shadow"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
               </div>
             </div>
             <div>
-              <span className="text-base sm:text-lg font-extrabold font-display tracking-tight text-white block leading-tight">
-                Converge IT <span className="text-cyan-400">Solutions</span>
-              </span>
-              <span className="text-[10px] sm:text-xs font-semibold text-slate-400 block">
-                Mobile Ticketing & Dispatch System
+              <div className="flex items-center gap-2">
+                <span className="text-base sm:text-lg font-black font-display tracking-tight text-white leading-none">
+                  CONVERGE <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">IT SOLUTIONS</span>
+                </span>
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                  Pro
+                </span>
+              </div>
+              <span className="text-[10px] sm:text-xs font-semibold text-slate-400 block mt-0.5">
+                Mobile Ticketing & Dispatch Infrastructure
               </span>
             </div>
           </div>
 
-          {/* Action CTAs in Top Navbar */}
+          {/* Quick Nav Links (Desktop) */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-300">
+            <a href="#services" className="hover:text-cyan-400 transition-colors">Services</a>
+            <a href="#features" className="hover:text-cyan-400 transition-colors">Features</a>
+            <Link to="/kb" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
+              Knowledge Base
+            </Link>
+            <Link to="/track" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
+              Track Ticket
+            </Link>
+          </nav>
+
+          {/* Action Buttons in Navbar */}
           <div className="flex items-center gap-2 sm:gap-3">
             <InstallPwaButton variant="navbar" />
 
+            {/* PIN Login button */}
+            <button
+              onClick={() => setIsPinOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-slate-200 transition-all active:scale-95"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+              <span>PIN Portal</span>
+            </button>
+
+            {/* Admin/User Sign In */}
             <button
               onClick={() => setIsLoginOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
             >
-              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <LogIn className="w-4 h-4" />
               <span>Sign In</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Hero Section */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-16 sm:space-y-24 relative z-10">
-        <section className="text-center space-y-6 sm:space-y-8 max-w-4xl mx-auto pt-4 sm:pt-8">
-          {/* Badge */}
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-20 sm:space-y-28 relative z-10">
+
+        {/* ── 1. HERO SECTION ── */}
+        <section className="text-center space-y-6 sm:space-y-8 max-w-4xl mx-auto pt-2 sm:pt-6">
+          {/* Animated Announcement Badge */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold tracking-wide"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold tracking-wide shadow-inner shadow-cyan-500/10"
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-            <span>Automated Field Service & Installation Management</span>
+            <span>Automated Messenger Ticketing & GPS Field Dispatch</span>
           </motion.div>
 
-          {/* Heading */}
+          {/* Hero Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-3xl sm:text-5xl md:text-6xl font-black font-display text-white tracking-tight leading-tight sm:leading-none"
+            className="text-3xl sm:text-5xl md:text-6xl font-black font-display text-white tracking-tight leading-[1.15]"
           >
-            Smart Mobile Support & <br className="hidden sm:inline" />
+            Smart Mobile Ticketing & <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
               Instant Technician Dispatch
             </span>
@@ -125,87 +169,369 @@ const LandingPage = () => {
             transition={{ delay: 0.2 }}
             className="text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed"
           >
-            Unified ticketing, real-time SLA tracking, GPS service reports, and automated Messenger notifications for Converge IT Solutions.
+            Empowering Converge IT Solutions with automated Facebook Messenger ticket creation, Starlink & CCTV installation management, real-time SLA tracking, and GPS service reports.
           </motion.p>
 
-          {/* Quick Ticket Tracker Bar */}
+          {/* 🔍 Quick Ticket Reference Tracker Bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="pt-6 max-w-xl mx-auto"
+            transition={{ delay: 0.3 }}
+            className="pt-4 max-w-xl mx-auto"
           >
-            <form onSubmit={handleTrackSubmit} className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 border border-cyan-500/30 shadow-2xl backdrop-blur-xl">
+            <form onSubmit={handleTrackSubmit} className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 border border-cyan-500/40 shadow-2xl shadow-cyan-950/40 backdrop-blur-2xl">
               <div className="pl-3 text-cyan-400 shrink-0">
                 <Search className="w-5 h-5" />
               </div>
               <input
                 type="text"
-                placeholder="Enter Ticket Reference ID (e.g. TICK-1002)..."
+                placeholder="Enter Ticket Reference ID (e.g. TKT-100293)..."
                 value={trackTicketId}
                 onChange={(e) => setTrackTicketId(e.target.value)}
-                className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 focus:outline-none px-2"
+                className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 focus:outline-none px-2 font-medium"
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-xs font-bold text-cyan-300 transition-all shrink-0 active:scale-95"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 transition-all shrink-0 active:scale-95 flex items-center gap-1.5"
               >
-                Track Ticket
+                <span>Track Ticket</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </form>
+            <p className="text-[11px] text-slate-400 mt-2 font-medium">
+              Customers can check live dispatch status, assigned technician, and resolution progress anytime.
+            </p>
+          </motion.div>
+
+          {/* Quick Metrics Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto"
+          >
+            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
+              <span className="text-xl sm:text-2xl font-black text-white font-display block">99.8%</span>
+              <span className="text-[11px] text-slate-400 font-bold">SLA Compliance</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
+              <span className="text-xl sm:text-2xl font-black text-cyan-400 font-display block">&lt; 15 min</span>
+              <span className="text-[11px] text-slate-400 font-bold">Critical Dispatch</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
+              <span className="text-xl sm:text-2xl font-black text-emerald-400 font-display block">100%</span>
+              <span className="text-[11px] text-slate-400 font-bold">GPS Verified</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
+              <span className="text-xl sm:text-2xl font-black text-blue-400 font-display block">24 / 7</span>
+              <span className="text-[11px] text-slate-400 font-bold">Botcake AI Active</span>
+            </div>
           </motion.div>
         </section>
 
-        {/* Feature Cards Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-6 bg-slate-900/70 border-slate-800/80 hover:border-cyan-500/40 transition-all duration-300 group">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-110 transition-transform">
-              <Zap className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-extrabold text-white font-display mb-2">Automated Dispatch</h3>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Instant request routing for installation and technical repair requests with category auto-matching.
+        {/* ── 2. SERVICES PORTFOLIO ── */}
+        <section id="services" className="space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black font-display text-white tracking-tight">
+              Supported Service Categories
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">
+              Converge IT Solutions provides end-to-end installation, technical maintenance, and field support.
             </p>
-          </Card>
+          </div>
 
-          <Card className="p-6 bg-slate-900/70 border-slate-800/80 hover:border-blue-500/40 transition-all duration-300 group">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
-              <KeyRound className="w-6 h-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Starlink Internet */}
+            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-cyan-500/50 transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
+                <Wifi className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-extrabold text-white font-display mb-1.5">Starlink Internet</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">
+                Satellite dish alignment, router setup, high-speed fiber connectivity, and outage troubleshooting.
+              </p>
+              <div className="text-[11px] font-bold text-cyan-400 flex items-center gap-1">
+                <span>SLA Target: 8 Hours</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <h3 className="text-base font-extrabold text-white font-display mb-2">Technician PIN Portal</h3>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Field technicians log in with a fast 6-digit PIN code on mobile devices for zero-delay ticket resolution.
-            </p>
-          </Card>
 
-          <Card className="p-6 bg-slate-900/70 border-slate-800/80 hover:border-emerald-500/40 transition-all duration-300 group">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
-              <MapPin className="w-6 h-6" />
+            {/* CCTV System */}
+            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-purple-500/50 transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition-transform">
+                <Camera className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-extrabold text-white font-display mb-1.5">CCTV Systems</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">
+                Surveillance camera installation, NVR/DVR configuration, live remote viewing setup, and maintenance.
+              </p>
+              <div className="text-[11px] font-bold text-purple-400 flex items-center gap-1">
+                <span>SLA Target: 12 Hours</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <h3 className="text-base font-extrabold text-white font-display mb-2">GPS Service Reports</h3>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              On-site GPS verification, work completion photo uploads, and customer digital signature captures.
-            </p>
-          </Card>
 
-          <Card className="p-6 bg-slate-900/70 border-slate-800/80 hover:border-amber-500/40 transition-all duration-300 group">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
-              <Bot className="w-6 h-6" />
+            {/* Smart Devices */}
+            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-cyan-500/50 transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-110 transition-transform">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-extrabold text-white font-display mb-1.5">Smart Home & IoT</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">
+                Smart automation devices, biometric locks, network access points, and hardware integration.
+              </p>
+              <div className="text-[11px] font-bold text-cyan-400 flex items-center gap-1">
+                <span>SLA Target: 16 Hours</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
             </div>
-            <h3 className="text-base font-extrabold text-white font-display mb-2">Botcake Messenger</h3>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Automated Messenger integration pushes real-time status updates directly to customers on Facebook.
-            </p>
-          </Card>
+
+            {/* Installation Request */}
+            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-amber-500/50 transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
+                <Wrench className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-extrabold text-white font-display mb-1.5">Installation Requests</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium mb-4">
+                New customer service applications, site survey assessments, cable laying, and initial activation.
+              </p>
+              <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                <span>SLA Target: 24 Hours</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* System Status Banner */}
-        <section className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-900 border border-cyan-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* ── 3. CORE ECOSYSTEM FEATURES ── */}
+        <section id="features" className="space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black font-display text-white tracking-tight">
+              Powerful Field Service Features
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">
+              Engineered for seamless communication between customers, support agents, and field engineers.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Feature 1: Botcake Messenger Automation */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Bot className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white font-display">
+                  Automated Messenger & Botcake AI Integration
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                  Customers submit inquiries directly on Facebook Messenger. The Botcake webhook automatically verifies customer account numbers, classifies problem urgency, and generates support tickets with instant real-time socket updates.
+                </p>
+                <ul className="space-y-2 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Instant Account Number Verification (`ACC-XXXXX`)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>AI Priority Classification & Resolution Hour Estimation</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Automated Messenger Confirmation Reply</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Feature 2: Technician PIN Portal */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/40 transition-all flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white font-display">
+                  Technician Mobile PIN Portal & PWA
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                  Field technicians log in with a fast 6-digit PIN code on mobile devices. Installable as a Progressive Web App (PWA) with zero-loading cached UI for offline availability on remote job sites.
+                </p>
+                <ul className="space-y-2 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>Fast 6-Digit PIN Security Access</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>3-Active Work Order Assignment Enforcement</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>Offline PWA Caching & Instant Service Report Filing</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Feature 3: GPS Service Reports & Customer Sign-off */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <MapPin className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white font-display">
+                  GPS Verification & Digital Signatures
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                  Every completed service report includes automatically captured GPS latitude/longitude coordinates, high-resolution photo attachments of installed equipment, and digital touch-screen customer signatures.
+                </p>
+                <ul className="space-y-2 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>On-Site GPS Geolocation Verification</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Multiple Work Completion Photo Uploads</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Digital Canvas Customer Touch Signature Capture</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Feature 4: Real-time Admin Dashboard & SLA Engine */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white font-display">
+                  SLA Monitoring & Separate Ticket Workflows
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                  Intelligent separation between Installation Requests and Support Tickets Management. Admins receive real-time navbar alerts categorized with explicit badges for immediate dispatch.
+                </p>
+                <ul className="space-y-2 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Dedicated Installation Requests Management Portal</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Real-Time Socket Notifications with Category Badges</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>SLA Breach Warning & Countdown Monitors</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 4. QUICK ACCESS ACTION PORTALS ── */}
+        <section className="space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black font-display text-white tracking-tight">
+              Select Your Access Portal
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">
+              Choose your role below to launch your system workspace.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Admin & Support Staff */}
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/60 transition-all space-y-5 flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-white font-display">System Administrators</h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Full control over ticket dispatch, technician workload management, category configuration, and PDF reporting.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsLoginOpen(true)}
+                className="w-full py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-xs font-bold text-cyan-300 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Admin Sign In</span>
+              </button>
+            </div>
+
+            {/* Field Service Technicians */}
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-blue-500/60 transition-all space-y-5 flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-white font-display">Field Service Technicians</h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Fast 6-digit PIN login, view assigned installation & repair jobs, update work status, and submit service reports.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setIsPinOpen(true)}
+                  className="w-full py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-bold text-blue-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>PIN Login</span>
+                </button>
+                <button
+                  onClick={() => setIsSignUpOpen(true)}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Register</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Customers Self-Service */}
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/60 transition-all space-y-5 flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Headset className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-white font-display">Customer Self-Service</h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Track your pending ticket status online or read troubleshooting guides in our public knowledge base.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/track"
+                  className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Track Ticket</span>
+                </Link>
+                <Link
+                  to="/kb"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>Help Base</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* System Operational Status Footer Bar */}
+        <section className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-cyan-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-white font-display">System Status: All Services Operational</h4>
-              <p className="text-xs text-slate-400">Real-time socket engine, API endpoints, and PWA cache are active.</p>
+              <h4 className="text-sm font-bold text-white font-display">Converge IT Solutions Server Status: Operational</h4>
+              <p className="text-xs text-slate-400">Live WebSockets, Supabase Database, and Botcake Webhooks connected.</p>
             </div>
           </div>
           <Link
@@ -217,10 +543,11 @@ const LandingPage = () => {
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
         </section>
+
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-6 text-center text-xs text-slate-500 relative z-10">
+      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/90 py-6 text-center text-xs text-slate-500 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} Converge IT Solutions Inc. All rights reserved.</p>
           <div className="flex items-center gap-4">
@@ -232,7 +559,7 @@ const LandingPage = () => {
 
       {/* ─── MODALS ───────────────────────────────────────────────────────────── */}
 
-      {/* 1. Sign In Modal */}
+      {/* 1. Admin/User Sign In Modal */}
       <Modal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
