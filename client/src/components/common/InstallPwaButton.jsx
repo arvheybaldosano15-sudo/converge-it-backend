@@ -31,18 +31,26 @@ const InstallPwaButton = ({ variant = 'navbar', className = '' }) => {
     }
   };
 
-  if (variant === 'navbar') {
+  if (variant === 'navbar' || variant === 'default') {
     return (
       <button
         type="button"
         onClick={handleClick}
         aria-label="Install Converge IT App"
-        className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/40 text-xs font-bold text-cyan-300 hover:text-white transition-all active:scale-95 shadow-sm cursor-pointer ${className}`}
+        className={`group relative inline-flex items-center gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800/95 text-white border border-cyan-500/50 hover:border-cyan-400 backdrop-blur-xl shadow-lg shadow-cyan-950/40 hover:shadow-cyan-500/25 transition-all duration-300 active:scale-95 cursor-pointer touch-manipulation ${className}`}
       >
-        <div className="w-4 h-4 rounded-md bg-slate-900 border border-cyan-400/60 overflow-hidden shrink-0 flex items-center justify-center">
-          <img src="/logo16.png" alt="Logo" className="w-full h-full object-cover" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg bg-slate-800 border border-cyan-400/50 overflow-hidden group-hover:scale-105 transition-transform duration-300 shrink-0">
+          <img src="/logo16.png" alt="Converge IT Logo" className="w-full h-full object-cover" />
         </div>
-        <span>Install App</span>
+        <div className="flex flex-col text-left leading-tight">
+          <span className="text-xs font-extrabold tracking-wide text-white group-hover:text-cyan-200 transition-colors flex items-center gap-1">
+            <span>Install App</span>
+            <Sparkles className="w-3 h-3 text-amber-400" />
+          </span>
+          <span className="text-[9px] font-semibold text-cyan-400/90">
+            Mobile & Desktop PWA
+          </span>
+        </div>
       </button>
     );
   }
