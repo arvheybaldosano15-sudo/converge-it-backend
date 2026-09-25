@@ -545,7 +545,18 @@ const LandingPage = () => {
         maxWidth="max-w-md"
         noBackdrop={true}
       >
-        <Login isModal={true} onClose={() => setIsLoginOpen(false)} />
+        <Login
+          isModal={true}
+          onClose={() => setIsLoginOpen(false)}
+          onOpenPinModal={() => {
+            setIsLoginOpen(false);
+            setIsPinOpen(true);
+          }}
+          onOpenSignUpModal={() => {
+            setIsLoginOpen(false);
+            setIsSignUpOpen(true);
+          }}
+        />
       </Modal>
 
       {/* 2. Technician PIN Login Modal */}

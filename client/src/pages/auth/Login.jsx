@@ -19,7 +19,7 @@ const schema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-const Login = ({ isModal = false, onClose }) => {
+const Login = ({ isModal = false, onClose, onOpenPinModal, onOpenSignUpModal }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -168,7 +168,13 @@ const Login = ({ isModal = false, onClose }) => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
           <button
             type="button"
-            onClick={() => setModalView('pin')}
+            onClick={() => {
+              if (onOpenPinModal) {
+                onOpenPinModal();
+              } else {
+                setModalView('pin');
+              }
+            }}
             className="inline-flex items-center justify-center space-x-2 px-4 py-3 sm:py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs font-bold text-blue-400 hover:bg-blue-500/20 transition-all shadow-md shadow-blue-500/10 cursor-pointer active:scale-95 touch-manipulation"
           >
             <KeyRound className="w-4 h-4 text-blue-400" />
@@ -177,7 +183,13 @@ const Login = ({ isModal = false, onClose }) => {
 
           <button
             type="button"
-            onClick={() => setModalView('register')}
+            onClick={() => {
+              if (onOpenSignUpModal) {
+                onOpenSignUpModal();
+              } else {
+                setModalView('register');
+              }
+            }}
             className="inline-flex items-center justify-center space-x-2 px-4 py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-800 to-indigo-700 hover:from-blue-700 hover:to-indigo-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/30 border border-blue-400/30 active:scale-95 cursor-pointer touch-manipulation"
           >
             <Wrench className="w-4 h-4 text-blue-300" />
