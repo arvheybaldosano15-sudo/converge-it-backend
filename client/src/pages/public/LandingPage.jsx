@@ -58,14 +58,13 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col relative overflow-hidden font-sans selection:bg-cyan-500 selection:text-white">
-      {/* Dynamic Background Tech Patterns */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b1e_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1e_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col relative overflow-hidden font-sans">
+      {/* Background Grid Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f1e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f1e_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-      {/* Ambient Neon Glow Spheres */}
-      <div className="absolute -top-24 left-1/4 w-[36rem] h-[36rem] bg-cyan-600/15 rounded-full blur-[128px] pointer-events-none animate-pulse-glow" />
-      <div className="absolute top-1/3 -right-24 w-[32rem] h-[32rem] bg-blue-600/15 rounded-full blur-[128px] pointer-events-none animate-pulse-glow" />
-      <div className="absolute bottom-10 left-10 w-[30rem] h-[30rem] bg-teal-600/10 rounded-full blur-[128px] pointer-events-none" />
+      {/* Ambient Glow Effects */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+      <div className="absolute bottom-1/3 right-1/4 w-[30rem] h-[30rem] bg-blue-600/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
 
       {/* Top Header Navigation Bar */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
