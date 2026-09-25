@@ -9,7 +9,7 @@ import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import { Wrench, Mail, Lock, User, Phone, BadgeCheck, ArrowLeft, KeyRound, ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { Wrench, Mail, Lock, User, Phone, BadgeCheck, ArrowLeft, KeyRound, ArrowRight, Check, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -92,15 +92,22 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
   };
 
   const content = (
-    <div className="w-full select-none">
+    <div className="w-full select-none relative">
+      {/* Top Right Close 'X' Button */}
+      <button
+        type="button"
+        onClick={() => {
+          if (onClose) onClose();
+          else navigate('/login');
+        }}
+        className="absolute top-0 right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
       {/* Header */}
-      <div className="mb-4">
-        {!isModal && (
-          <Link to="/login" className="inline-flex items-center text-xs text-slate-400 hover:text-blue-400 transition-colors mb-3">
-            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-            Back to Login
-          </Link>
-        )}
+      <div className="mb-4 pr-8">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white font-display">Technician Registration</h2>

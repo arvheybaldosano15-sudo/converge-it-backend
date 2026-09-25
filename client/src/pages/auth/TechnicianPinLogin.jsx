@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
-import { KeyRound, ShieldAlert, Delete, ArrowRight, Lock } from 'lucide-react';
+import { KeyRound, ShieldAlert, Delete, ArrowRight, Lock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TechnicianPinLogin = ({ isModal = false, onClose }) => {
@@ -59,7 +59,7 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
     }
   };
 
-  // Enable physical keyboard entry (numpad / number keys)
+  // Enable physical keyboard entry for desktop numpad / number keys
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (isLoading) return;
@@ -78,9 +78,22 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   }, [pin, isLoading]);
 
   const content = (
-    <div className="w-full">
+    <div className="w-full relative">
+      {/* Top Right Close 'X' Button */}
+      <button
+        type="button"
+        onClick={() => {
+          if (onClose) onClose();
+          else navigate('/login');
+        }}
+        className="absolute top-0 right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
       {/* Header */}
-      <div className="text-center mb-5 sm:mb-6">
+      <div className="text-center mb-5 sm:mb-6 pr-8">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-700 to-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 mx-auto mb-2.5">
           <KeyRound className="w-6 h-6" />
         </div>
@@ -88,30 +101,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         <p className="text-xs text-blue-400 mt-1">Enter your 6-digit Security PIN to access dashboard</p>
       </div>
 
-      {/* Native PIN input overlayed transparently on top of the visual dots display */}
+      {/* Visual PIN Dots Display — Strictly uses on-screen keypad, no native phone keyboard */}
       <div className="relative my-5 sm:my-6 py-2">
-        <input
-          id="native-pin-input"
-          type="password"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={6}
-          value={pin}
-          onChange={(e) => {
-            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-            setPin(val);
-            setErrorMessage('');
-            if (val.length === 6) {
-              handleSubmit(null, val);
-            }
-          }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20 text-base"
-          disabled={isLoading}
-          autoComplete="one-time-code"
-          autoFocus={!isModal}
-        />
-        
-        {/* Visual PIN Dots Display */}
         <div className="flex justify-center items-center gap-3 sm:gap-3.5 relative z-10 pointer-events-none">
           {[0, 1, 2, 3, 4, 5].map((index) => {
             const filled = index < pin.length;
