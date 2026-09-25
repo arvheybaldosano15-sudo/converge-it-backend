@@ -23,7 +23,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           {/* Semi-transparent Backdrop Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -31,24 +31,21 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/65 sm:backdrop-blur-md'}`}
+            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/70 sm:backdrop-blur-md'}`}
           />
 
-          {/* Modal Box */}
+          {/* Modal Box — Centered & Viewport-Optimized for Mobile Phones & PWA */}
           <motion.div
-            initial={{ opacity: 0, y: isMobile ? 50 : 20, scale: isMobile ? 1 : 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: isMobile ? 50 : 20, scale: isMobile ? 1 : 0.98 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-700/60 z-10 my-0 sm:my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/98 sm:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-700/80 z-10 my-auto max-h-[88dvh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
           >
-            {/* Mobile Grab Bar */}
-            <div className="w-12 h-1.5 bg-slate-700/60 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
-
             {/* Top Right Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-20 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 active:scale-95 transition-all touch-manipulation"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -62,7 +59,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
             )}
 
             {/* Body */}
-            <div className="p-4 sm:p-6 pb-8 sm:pb-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
+            <div className="p-4 sm:p-6 pb-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
           </motion.div>
         </div>
       )}
