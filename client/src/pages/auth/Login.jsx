@@ -174,6 +174,7 @@ const Login = ({ isModal = false }) => {
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         maxWidth="max-w-sm"
+        noBackdrop={true}
       >
         <TechnicianPinLogin isModal onClose={() => setIsPinModalOpen(false)} />
       </Modal>
@@ -183,6 +184,7 @@ const Login = ({ isModal = false }) => {
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
         maxWidth="max-w-lg"
+        noBackdrop={true}
       >
         <TechnicianSignUp isModal onClose={() => setIsRegisterModalOpen(false)} />
       </Modal>
