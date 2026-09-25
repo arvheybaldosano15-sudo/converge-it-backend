@@ -100,23 +100,23 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
           if (onClose) onClose();
           else navigate('/login');
         }}
-        className="absolute top-0 right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+        className="absolute -top-1 -right-1 sm:top-0 sm:right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
         aria-label="Close"
       >
         <X className="w-5 h-5" />
       </button>
 
       {/* Header */}
-      <div className="mb-4 pr-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white font-display">Technician Registration</h2>
-            <p className="text-xs text-blue-400 mt-0.5">Join Converge IT Solutions Field Support Team</p>
+      <div className="mb-4 pr-10">
+        <div className="flex flex-col">
+          <h2 className="text-lg sm:text-xl font-extrabold text-white font-display">Technician Registration</h2>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-blue-400">Join Converge IT Solutions Field Support Team</p>
+            {/* Mobile step badge */}
+            <span className="sm:hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+              Step {currentStep} of 3
+            </span>
           </div>
-          {/* Mobile step badge */}
-          <span className="sm:hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Step {currentStep} of 3
-          </span>
         </div>
 
         {/* Mobile-only Progress Bar */}

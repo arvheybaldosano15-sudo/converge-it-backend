@@ -92,8 +92,8 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
         <X className="w-5 h-5" />
       </button>
 
-      {/* Header */}
-      <div className="text-center mb-5 sm:mb-6 pr-8">
+      {/* Header — 100% Perfectly Centered */}
+      <div className="text-center mb-5 sm:mb-6 w-full">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-700 to-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 mx-auto mb-2.5">
           <KeyRound className="w-6 h-6" />
         </div>
