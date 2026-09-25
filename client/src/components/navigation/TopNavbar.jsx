@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import ProfileDropdown from './ProfileDropdown';
-import { Bell, Sun, Moon, X, CheckCheck, Trash2, Clock, Menu, ExternalLink, Ticket, Wrench } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, Clock, Menu, ExternalLink, Ticket, Wrench } from 'lucide-react';
 import api from '../../utils/axios';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -221,15 +221,6 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
 
       {/* Right: Quick Actions & Profile */}
       <div className="flex items-center space-x-3">
-        {/* Dark/Light Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-xl glass-panel hover:bg-slate-800 text-slate-300 transition-colors"
-          title="Toggle Theme"
-        >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-300" />}
-        </button>
-
         {/* Notifications Bell — opens inline panel */}
         <div className="relative" ref={panelRef}>
           <button
