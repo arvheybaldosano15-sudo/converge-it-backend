@@ -101,15 +101,6 @@ const LandingPage = () => {
           <div className="flex items-center gap-2 sm:gap-3">
             <InstallPwaButton variant="navbar" />
 
-            {/* PIN Login button */}
-            <button
-              onClick={() => setIsPinOpen(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-slate-200 transition-all active:scale-95"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
-              <span>PIN Portal</span>
-            </button>
-
             {/* Admin/User Sign In */}
             <button
               onClick={() => setIsLoginOpen(true)}
