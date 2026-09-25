@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBackdrop = false }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBackdrop = false, showCloseButton = true }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && showCloseButton) onClose();
     };
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -15,7 +15,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showCloseButton]);
 
   // Hardware-accelerated lightweight mobile animation variants
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
@@ -30,8 +30,8 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            onClick={onClose}
-            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/70 sm:backdrop-blur-md'}`}
+            onClick={showCloseButton ? onClose : undefined}
+            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/75 sm:backdrop-blur-md'}`}
           />
 
           {/* Modal Box — Centered & Viewport-Optimized for Mobile Phones & PWA */}
@@ -43,13 +43,15 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
             className={`relative w-full ${maxWidth} glass-panel bg-slate-900/98 sm:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-700/80 z-10 my-auto max-h-[88dvh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
           >
             {/* Top Right Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
-              aria-label="Close modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {showCloseButton && (
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Header */}
             {title && (
