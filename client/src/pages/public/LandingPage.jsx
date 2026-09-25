@@ -99,7 +99,6 @@ const LandingPage = () => {
 
           {/* Action Buttons in Navbar */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <InstallPwaButton variant="navbar" />
 
             {/* PIN Login button */}
             <button
@@ -186,9 +185,9 @@ const LandingPage = () => {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </form>
-            <p className="text-[11px] text-slate-400 mt-2 font-medium">
-              Customers can check live dispatch status, assigned technician, and resolution progress anytime.
-            </p>
+            <div className="mt-3 flex justify-center">
+              <InstallPwaButton variant="inline" />
+            </div>
           </motion.div>
 
           {/* Quick Metrics Bar */}
