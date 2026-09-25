@@ -69,31 +69,19 @@ const LandingPage = () => {
       {/* Top Header Navigation Bar */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-          {/* Brand Logo & Tagline */}
+          {/* Brand Logo */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/25 shrink-0">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <img
-                  src="/CSiLogo.png"
-                  alt="Converge Logo"
-                  className="w-7 h-7 object-contain drop-shadow"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              </div>
+            <div className="shrink-0 rounded-xl bg-white/95 px-2.5 py-1.5 shadow-lg shadow-cyan-500/20 border border-white/30 flex items-center justify-center" style={{minWidth: '120px', height: '44px'}}>
+              <img
+                src="/CSiLogo.png"
+                alt="Converge IT Solutions Logo"
+                className="h-8 w-auto object-contain"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-black font-display tracking-tight text-white leading-none">
-                  CONVERGE <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">IT SOLUTIONS</span>
-                </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                  Pro
-                </span>
-              </div>
-              <span className="text-[10px] sm:text-xs font-semibold text-slate-400 block mt-0.5">
-                Mobile Ticketing & Dispatch Infrastructure
-              </span>
-            </div>
+            <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              Pro
+            </span>
           </div>
 
           {/* Quick Nav Links (Desktop) */}

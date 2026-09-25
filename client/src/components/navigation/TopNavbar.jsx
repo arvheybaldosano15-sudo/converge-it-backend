@@ -195,12 +195,13 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
         {/* Mobile: brand-only for technician OR hamburger for admin */}
         {hideMobileMenu ? (
           <div className="md:hidden flex items-center space-x-2.5">
-            <img
-              src="/CSiLogo.png"
-              alt="Converge Logo"
-              className="w-8 h-8 object-contain drop-shadow-md"
-            />
-            <span className="font-display font-extrabold text-base text-white tracking-wide">CONVERGE</span>
+            <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center shadow-md" style={{height: '36px', minWidth: '80px'}}>
+              <img
+                src="/CSiLogo.png"
+                alt="Converge IT Solutions Logo"
+                className="h-6 w-auto object-contain"
+              />
+            </div>
           </div>
         ) : (
           <>
