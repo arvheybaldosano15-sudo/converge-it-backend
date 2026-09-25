@@ -543,10 +543,9 @@ const LandingPage = () => {
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         maxWidth="max-w-md"
+        noBackdrop={true}
       >
-        <div className="py-2">
-          <Login />
-        </div>
+        <Login isModal={true} onClose={() => setIsLoginOpen(false)} />
       </Modal>
 
       {/* 2. Technician PIN Login Modal */}
@@ -554,10 +553,9 @@ const LandingPage = () => {
         isOpen={isPinOpen}
         onClose={() => setIsPinOpen(false)}
         maxWidth="max-w-md"
+        noBackdrop={true}
       >
-        <div className="py-2">
-          <TechnicianPinLogin isModal={true} onClose={() => setIsPinOpen(false)} />
-        </div>
+        <TechnicianPinLogin isModal={true} onClose={() => setIsPinOpen(false)} />
       </Modal>
 
       {/* 3. Technician Registration Modal */}
@@ -565,10 +563,9 @@ const LandingPage = () => {
         isOpen={isSignUpOpen}
         onClose={() => setIsSignUpOpen(false)}
         maxWidth="max-w-xl"
+        noBackdrop={true}
       >
-        <div className="py-2">
-          <TechnicianSignUp isModal={true} onClose={() => setIsSignUpOpen(false)} />
-        </div>
+        <TechnicianSignUp isModal={true} onClose={() => setIsSignUpOpen(false)} />
       </Modal>
     </div>
   );

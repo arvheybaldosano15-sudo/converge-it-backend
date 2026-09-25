@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBackdrop = false }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -24,14 +24,14 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-          {/* Backdrop — Solid dark slate on mobile for instant 60fps opening */}
+          {/* Backdrop — Clean transparent overlay if noBackdrop is true */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/90 sm:backdrop-blur-md"
+            className={`fixed inset-0 ${noBackdrop ? 'bg-black/20 backdrop-blur-sm' : 'bg-slate-950/60 sm:backdrop-blur-md'}`}
           />
 
           {/* Modal Box */}
@@ -40,7 +40,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: isMobile ? 50 : 20, scale: isMobile ? 1 : 0.98 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-blue-500/20 z-10 my-0 sm:my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
+            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/95 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-700/60 z-10 my-0 sm:my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
           >
             {/* Mobile Grab Bar */}
             <div className="w-12 h-1.5 bg-slate-700/60 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
