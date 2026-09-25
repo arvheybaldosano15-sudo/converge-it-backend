@@ -19,18 +19,17 @@ const schema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-const Login = ({ isModal = false }) => {
+const Login = ({ isModal = false, onClose }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [modalView, setModalView] = useState('login'); // 'login' | 'pin' | 'register'
+  const [showPassword, setShowPassword] = useState(false);
 
   // Pre-wake Render backend container on mount while user types credentials
   useEffect(() => {
     api.get('/health').catch(() => {});
   }, []);
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -63,6 +62,36 @@ const Login = ({ isModal = false }) => {
       setIsLoading(false);
     }
   };
+
+  if (isModal && modalView === 'pin') {
+    return (
+      <div className="w-full">
+        <button
+          type="button"
+          onClick={() => setModalView('login')}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors mb-4 cursor-pointer"
+        >
+          <span>← Back to Sign In</span>
+        </button>
+        <TechnicianPinLogin isModal onClose={onClose} />
+      </div>
+    );
+  }
+
+  if (isModal && modalView === 'register') {
+    return (
+      <div className="w-full">
+        <button
+          type="button"
+          onClick={() => setModalView('login')}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors mb-4 cursor-pointer"
+        >
+          <span>← Back to Sign In</span>
+        </button>
+        <TechnicianSignUp isModal onClose={onClose} />
+      </div>
+    );
+  }
 
   const content = (
     <div className="w-full">
@@ -139,7 +168,7 @@ const Login = ({ isModal = false }) => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
           <button
             type="button"
-            onClick={() => setIsPinModalOpen(true)}
+            onClick={() => setModalView('pin')}
             className="inline-flex items-center justify-center space-x-2 px-4 py-3 sm:py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs font-bold text-blue-400 hover:bg-blue-500/20 transition-all shadow-md shadow-blue-500/10 cursor-pointer active:scale-95 touch-manipulation"
           >
             <KeyRound className="w-4 h-4 text-blue-400" />
@@ -148,7 +177,7 @@ const Login = ({ isModal = false }) => {
 
           <button
             type="button"
-            onClick={() => setIsRegisterModalOpen(true)}
+            onClick={() => setModalView('register')}
             className="inline-flex items-center justify-center space-x-2 px-4 py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-800 to-indigo-700 hover:from-blue-700 hover:to-indigo-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-900/30 border border-blue-400/30 active:scale-95 cursor-pointer touch-manipulation"
           >
             <Wrench className="w-4 h-4 text-blue-300" />
@@ -168,26 +197,6 @@ const Login = ({ isModal = false }) => {
           {content}
         </Card>
       )}
-
-      {/* Technician PIN Login Modal */}
-      <Modal
-        isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
-        maxWidth="max-w-sm"
-        noBackdrop={true}
-      >
-        <TechnicianPinLogin isModal onClose={() => setIsPinModalOpen(false)} />
-      </Modal>
-
-      {/* Technician Registration Modal */}
-      <Modal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        maxWidth="max-w-lg"
-        noBackdrop={true}
-      >
-        <TechnicianSignUp isModal onClose={() => setIsRegisterModalOpen(false)} />
-      </Modal>
     </>
   );
 };
