@@ -24,14 +24,14 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-          {/* Backdrop — Fully transparent overlay if noBackdrop is true */}
+          {/* Semi-transparent Backdrop Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className={`fixed inset-0 ${noBackdrop ? 'bg-transparent' : 'bg-slate-950/60 sm:backdrop-blur-md'}`}
+            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/65 sm:backdrop-blur-md'}`}
           />
 
           {/* Modal Box */}
