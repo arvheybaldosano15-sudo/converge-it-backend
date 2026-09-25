@@ -522,14 +522,17 @@ const LandingPage = () => {
               <p className="text-xs text-slate-400">Live WebSockets, Supabase Database, and Botcake Webhooks connected.</p>
             </div>
           </div>
-          <Link
-            to="/kb"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors shrink-0"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span>Customer Knowledge Base</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-4 shrink-0">
+            <InstallPwaButton variant="inline" />
+            <Link
+              to="/kb"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Customer Knowledge Base</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </section>
 
       </main>
