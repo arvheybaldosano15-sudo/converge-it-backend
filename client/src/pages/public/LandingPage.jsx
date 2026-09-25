@@ -69,9 +69,16 @@ const LandingPage = () => {
       {/* Top Header Navigation Bar */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="shrink-0 rounded-xl bg-white/95 px-2.5 py-1.5 shadow-lg shadow-cyan-500/20 border border-white/30 flex items-center justify-center" style={{minWidth: '120px', height: '44px'}}>
+
+          {/* Mobile: compact logo on the left */}
+          <div className="md:hidden shrink-0 rounded-lg bg-white/95 px-2 py-1 flex items-center justify-center shadow-md cursor-pointer" style={{height: '36px', minWidth: '80px'}} onClick={() => navigate('/')}>
+            <img src="/CSiLogo.png" alt="Converge IT Solutions Logo" className="h-6 w-auto object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+          </div>
+
+          {/* Desktop: Logo sits right beside nav links (near Services) */}
+          <nav className="hidden md:flex items-center gap-5 text-xs font-bold text-slate-300">
+            {/* Logo inline with nav */}
+            <div className="shrink-0 rounded-xl bg-white/95 px-2.5 py-1.5 shadow-lg shadow-cyan-500/20 border border-white/20 flex items-center justify-center cursor-pointer mr-2" style={{minWidth: '120px', height: '44px'}} onClick={() => navigate('/')}>
               <img
                 src="/CSiLogo.png"
                 alt="Converge IT Solutions Logo"
@@ -79,13 +86,7 @@ const LandingPage = () => {
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             </div>
-            <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-              Pro
-            </span>
-          </div>
-
-          {/* Quick Nav Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-300">
+            {/* Nav Links */}
             <a href="#services" className="hover:text-cyan-400 transition-colors">Services</a>
             <a href="#features" className="hover:text-cyan-400 transition-colors">Features</a>
             <Link to="/kb" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
