@@ -37,12 +37,11 @@ router.post('/upload-logo', authenticate, authorize('admin'), uploadLogo, async 
     const dataUrl = `data:${mime};base64,${b64}`;
 
     const jsonValue = JSON.stringify(dataUrl);
-    const result = await query(
+    await query(
       `INSERT INTO settings (key, value, updated_by, updated_at)
        VALUES ('company_logo', $1::jsonb, $2, NOW())
        ON CONFLICT (key) DO UPDATE
-       SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()
-       RETURNING *`,
+       SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
       [jsonValue, req.user?.id || null]
     );
 
@@ -52,7 +51,41 @@ router.post('/upload-logo', authenticate, authorize('admin'), uploadLogo, async 
   }
 });
 
-// PUT /api/settings/:key - Upsert setting by key
+// PUT /api/settings - Bulk upsert all settings in a single request
+router.put('/', authenticate, authorize('admin'), async (req, res, next) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      throw { statusCode: 400, message: 'Settings payload object is required' };
+    }
+
+    const userId = req.user?.id || null;
+    const updatedSettings = {};
+
+    for (const [key, val] of Object.entries(settings)) {
+      const jsonValue = JSON.stringify(val !== undefined ? val : '');
+      const result = await query(
+        `INSERT INTO settings (key, value, updated_by, updated_at)
+         VALUES ($1, $2::jsonb, $3, NOW())
+         ON CONFLICT (key) DO UPDATE
+         SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+         RETURNING *`,
+        [key, jsonValue, userId]
+      );
+      let resVal = result.rows[0].value;
+      if (typeof resVal === 'string') {
+        try { resVal = JSON.parse(resVal); } catch (e) {}
+      }
+      updatedSettings[key] = resVal;
+    }
+
+    res.json({ success: true, data: updatedSettings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/settings/:key - Single setting upsert fallback
 router.put('/:key', authenticate, authorize('admin'), async (req, res, next) => {
   try {
     const { value } = req.body;

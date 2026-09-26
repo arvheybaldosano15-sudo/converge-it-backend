@@ -157,27 +157,22 @@ const Settings = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Save All Changes Action - Single Batch Save Button
+  // Save All Changes Action - Single Atomic API Call
   const handleSaveAll = async (e) => {
     if (e) e.preventDefault();
     setSaving(true);
     try {
-      const promises = Object.keys(settings).map((key) =>
-        api.put(`/settings/${key}`, { value: settings[key] })
-      );
-      await Promise.all(promises);
-      toast.success('All system settings saved successfully!');
-      setHasUnsavedChanges(false);
-
-      // Re-fetch settings from backend to lock in saved database records
-      const res = await api.get('/settings');
+      const res = await api.put('/settings', { settings });
       if (res.success && res.data) {
         setSettings((prev) => ({
           ...prev,
           ...res.data
         }));
+        setHasUnsavedChanges(false);
+        toast.success('All system settings saved successfully!');
       }
     } catch (e) {
+      console.error('Save settings error:', e);
       toast.error('Failed to save settings changes');
     } finally {
       setSaving(false);
