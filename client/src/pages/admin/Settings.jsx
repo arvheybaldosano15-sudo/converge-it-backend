@@ -117,17 +117,9 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  // Update single key setting directly
-  const handleUpdateSetting = async (key, value) => {
-    try {
-      const res = await api.put(`/settings/${key}`, { value });
-      if (res.success) {
-        toast.success(`Updated ${key.replace(/_/g, ' ')}`);
-        setHasUnsavedChanges(false);
-      }
-    } catch (e) {
-      toast.error(`Failed to update ${key.replace(/_/g, ' ')}`);
-    }
+  const handleInputChange = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    setHasUnsavedChanges(true);
   };
 
   // Handle Logo Upload File Selection
@@ -142,31 +134,10 @@ const Settings = () => {
 
     setUploadingLogo(true);
     try {
-      // 1. Try uploading to backend via API endpoint first
-      const formData = new FormData();
-      formData.append('logo', file);
-
-      try {
-        const res = await api.post('/settings/upload-logo', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        if (res.success && res.data?.company_logo) {
-          setSettings((prev) => ({ ...prev, company_logo: res.data.company_logo }));
-          toast.success('Company brand logo uploaded & saved!');
-          setUploadingLogo(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Backend multipart logo upload fallback to Data URI', err);
-      }
-
-      // 2. Fallback to client-side Data URL conversion
       const reader = new FileReader();
-      reader.onload = async (evt) => {
+      reader.onload = (evt) => {
         const dataUrl = evt.target.result;
-        setSettings((prev) => ({ ...prev, company_logo: dataUrl }));
-        await handleUpdateSetting('company_logo', dataUrl);
-        toast.success('Company brand logo uploaded successfully!');
+        handleInputChange('company_logo', dataUrl);
         setUploadingLogo(false);
       };
       reader.onerror = () => {
@@ -181,14 +152,12 @@ const Settings = () => {
   };
 
   // Remove Company Logo
-  const handleRemoveLogo = async () => {
-    setSettings((prev) => ({ ...prev, company_logo: '' }));
-    await handleUpdateSetting('company_logo', '');
-    toast.success('Company logo removed');
+  const handleRemoveLogo = () => {
+    handleInputChange('company_logo', '');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Save All Changes Action
+  // Save All Changes Action - Single Batch Save Button
   const handleSaveAll = async (e) => {
     if (e) e.preventDefault();
     setSaving(true);
@@ -204,11 +173,6 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleInputChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    setHasUnsavedChanges(true);
   };
 
   const copyWebhookUrl = () => {
@@ -472,7 +436,6 @@ const Settings = () => {
                       label="Company Name *"
                       value={settings.company_name ?? ''}
                       onChange={(e) => handleInputChange('company_name', e.target.value)}
-                      onBlur={(e) => handleUpdateSetting('company_name', e.target.value)}
                       placeholder="e.g. Converge IT Solutions Inc."
                       icon={Building}
                     />
@@ -485,7 +448,6 @@ const Settings = () => {
                       type="email"
                       value={settings.company_email ?? ''}
                       onChange={(e) => handleInputChange('company_email', e.target.value)}
-                      onBlur={(e) => handleUpdateSetting('company_email', e.target.value)}
                       placeholder="e.g. support@convergeit.ph"
                       icon={Mail}
                     />
@@ -497,7 +459,6 @@ const Settings = () => {
                       label="Support Hotline / Phone"
                       value={settings.company_phone ?? ''}
                       onChange={(e) => handleInputChange('company_phone', e.target.value)}
-                      onBlur={(e) => handleUpdateSetting('company_phone', e.target.value)}
                       placeholder="e.g. 09171234567"
                       icon={Phone}
                     />
@@ -509,7 +470,6 @@ const Settings = () => {
                       label="Headquarters Address"
                       value={settings.company_address ?? ''}
                       onChange={(e) => handleInputChange('company_address', e.target.value)}
-                      onBlur={(e) => handleUpdateSetting('company_address', e.target.value)}
                       placeholder="e.g. Metro Manila, Philippines"
                       icon={MapPin}
                     />
@@ -554,11 +514,7 @@ const Settings = () => {
                   </div>
                   <ToggleSwitch
                     checked={getBool('ai_enabled', true)}
-                    onChange={(checked) => {
-                      const val = checked ? 'true' : 'false';
-                      handleInputChange('ai_enabled', val);
-                      handleUpdateSetting('ai_enabled', val);
-                    }}
+                    onChange={(checked) => handleInputChange('ai_enabled', checked ? 'true' : 'false')}
                     ariaLabel="Toggle OpenAI Ticket Automation"
                   />
                 </div>
@@ -577,11 +533,7 @@ const Settings = () => {
                       </div>
                       <ToggleSwitch
                         checked={getBool('ai_auto_categorize', true)}
-                        onChange={(checked) => {
-                          const val = checked ? 'true' : 'false';
-                          handleInputChange('ai_auto_categorize', val);
-                          handleUpdateSetting('ai_auto_categorize', val);
-                        }}
+                        onChange={(checked) => handleInputChange('ai_auto_categorize', checked ? 'true' : 'false')}
                         ariaLabel="Toggle Auto Categorization"
                       />
                     </div>
@@ -593,11 +545,7 @@ const Settings = () => {
                       </div>
                       <ToggleSwitch
                         checked={getBool('ai_priority_prediction', true)}
-                        onChange={(checked) => {
-                          const val = checked ? 'true' : 'false';
-                          handleInputChange('ai_priority_prediction', val);
-                          handleUpdateSetting('ai_priority_prediction', val);
-                        }}
+                        onChange={(checked) => handleInputChange('ai_priority_prediction', checked ? 'true' : 'false')}
                         ariaLabel="Toggle Priority Prediction"
                       />
                     </div>
@@ -639,11 +587,7 @@ const Settings = () => {
                   </div>
                   <ToggleSwitch
                     checked={getBool('messenger_enabled', true)}
-                    onChange={(checked) => {
-                      const val = checked ? 'true' : 'false';
-                      handleInputChange('messenger_enabled', val);
-                      handleUpdateSetting('messenger_enabled', val);
-                    }}
+                    onChange={(checked) => handleInputChange('messenger_enabled', checked ? 'true' : 'false')}
                     ariaLabel="Toggle Meta Messenger Integration"
                   />
                 </div>
@@ -684,11 +628,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('twilio_sms_enabled', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('twilio_sms_enabled', val);
-                        handleUpdateSetting('twilio_sms_enabled', val);
-                      }}
+                      onChange={(checked) => handleInputChange('twilio_sms_enabled', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Twilio SMS Gateway"
                     />
                   </div>
@@ -703,11 +643,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('smtp_email_enabled', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('smtp_email_enabled', val);
-                        handleUpdateSetting('smtp_email_enabled', val);
-                      }}
+                      onChange={(checked) => handleInputChange('smtp_email_enabled', checked ? 'true' : 'false')}
                       ariaLabel="Toggle SMTP Email Server"
                     />
                   </div>
@@ -739,11 +675,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('sla_critical_email', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('sla_critical_email', val);
-                        handleUpdateSetting('sla_critical_email', val);
-                      }}
+                      onChange={(checked) => handleInputChange('sla_critical_email', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Critical SLA Email"
                     />
                   </div>
@@ -755,11 +687,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('tech_assignment_push', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('tech_assignment_push', val);
-                        handleUpdateSetting('tech_assignment_push', val);
-                      }}
+                      onChange={(checked) => handleInputChange('tech_assignment_push', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Tech Assignment Push"
                     />
                   </div>
@@ -771,11 +699,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('daily_sla_digest', false)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('daily_sla_digest', val);
-                        handleUpdateSetting('daily_sla_digest', val);
-                      }}
+                      onChange={(checked) => handleInputChange('daily_sla_digest', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Executive Digest"
                     />
                   </div>
@@ -806,11 +730,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('enforce_2fa', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('enforce_2fa', val);
-                        handleUpdateSetting('enforce_2fa', val);
-                      }}
+                      onChange={(checked) => handleInputChange('enforce_2fa', checked ? 'true' : 'false')}
                       ariaLabel="Toggle 2FA"
                     />
                   </div>
@@ -823,11 +743,7 @@ const Settings = () => {
                     <div className="flex items-center space-x-2">
                       <select
                         value={settings.session_timeout_minutes || '30'}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handleInputChange('session_timeout_minutes', val);
-                          handleUpdateSetting('session_timeout_minutes', val);
-                        }}
+                        onChange={(e) => handleInputChange('session_timeout_minutes', e.target.value)}
                         className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
                       >
                         <option value="15">15 Minutes</option>
@@ -845,11 +761,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('audit_logging_enabled', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('audit_logging_enabled', val);
-                        handleUpdateSetting('audit_logging_enabled', val);
-                      }}
+                      onChange={(checked) => handleInputChange('audit_logging_enabled', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Audit Logging"
                     />
                   </div>
@@ -881,11 +793,7 @@ const Settings = () => {
                     <div className="flex items-center space-x-2">
                       <select
                         value={settings.standard_sla_hours || '24'}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handleInputChange('standard_sla_hours', val);
-                          handleUpdateSetting('standard_sla_hours', val);
-                        }}
+                        onChange={(e) => handleInputChange('standard_sla_hours', e.target.value)}
                         className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
                       >
                         <option value="12">12 Hours</option>
@@ -904,11 +812,7 @@ const Settings = () => {
                     <div className="flex items-center space-x-2">
                       <select
                         value={settings.auto_close_hours || '48'}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handleInputChange('auto_close_hours', val);
-                          handleUpdateSetting('auto_close_hours', val);
-                        }}
+                        onChange={(e) => handleInputChange('auto_close_hours', e.target.value)}
                         className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
                       >
                         <option value="24">24 Hours</option>
@@ -926,11 +830,7 @@ const Settings = () => {
                     </div>
                     <ToggleSwitch
                       checked={getBool('auto_manager_escalation', true)}
-                      onChange={(checked) => {
-                        const val = checked ? 'true' : 'false';
-                        handleInputChange('auto_manager_escalation', val);
-                        handleUpdateSetting('auto_manager_escalation', val);
-                      }}
+                      onChange={(checked) => handleInputChange('auto_manager_escalation', checked ? 'true' : 'false')}
                       ariaLabel="Toggle Auto Manager Escalation"
                     />
                   </div>
