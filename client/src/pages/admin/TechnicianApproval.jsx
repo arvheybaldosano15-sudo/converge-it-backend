@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -19,6 +20,7 @@ import toast from 'react-hot-toast';
 
 const TechnicianApproval = () => {
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   // Data States
   const [techs, setTechs] = useState([]);
@@ -62,6 +64,33 @@ const TechnicianApproval = () => {
   useEffect(() => {
     fetchTechs();
   }, []);
+
+  // Auto-refresh table display in real-time when a technician registers or status changes
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleRealtimeUpdate = () => {
+      fetchTechs();
+    };
+
+    socket.on('technician:new_pending', handleRealtimeUpdate);
+    socket.on('technician:approved', handleRealtimeUpdate);
+    socket.on('technician:rejected', handleRealtimeUpdate);
+    socket.on('technician:suspended', handleRealtimeUpdate);
+    socket.on('technician:status_changed', handleRealtimeUpdate);
+    socket.on('technician:deleted', handleRealtimeUpdate);
+    socket.on('technician_deleted', handleRealtimeUpdate);
+
+    return () => {
+      socket.off('technician:new_pending', handleRealtimeUpdate);
+      socket.off('technician:approved', handleRealtimeUpdate);
+      socket.off('technician:rejected', handleRealtimeUpdate);
+      socket.off('technician:suspended', handleRealtimeUpdate);
+      socket.off('technician:status_changed', handleRealtimeUpdate);
+      socket.off('technician:deleted', handleRealtimeUpdate);
+      socket.off('technician_deleted', handleRealtimeUpdate);
+    };
+  }, [socket]);
 
   // Action Handlers
   const handleApproveConfirm = async () => {

@@ -305,6 +305,7 @@ exports.rejectTechnician = async (req, res, next) => {
     });
 
     res.json({ success: true, message: `${tech.full_name}'s application has been rejected` });
+    emitToAdmins('technician:rejected', { technicianId: id, fullName: tech.full_name });
   } catch (error) {
     next(error);
   }
@@ -338,6 +339,7 @@ exports.suspendTechnician = async (req, res, next) => {
       targetDescription: `Suspended technician: ${tech.full_name}`
     });
 
+    emitToAdmins('technician:suspended', { technicianId: id, fullName: tech.full_name });
     res.json({ success: true, message: `${tech.full_name}'s account has been suspended` });
   } catch (error) {
     next(error);
@@ -356,6 +358,7 @@ exports.updateTechnicianStatus = async (req, res, next) => {
       [status, req.params.id]
     );
     if (!result.rows[0]) throw createError('Technician not found', 404);
+    emitToAdmins('technician:status_changed', { technicianId: req.params.id, status });
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     next(error);

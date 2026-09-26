@@ -300,20 +300,30 @@ const TechnicianManagement = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleDeleted = ({ id } = {}) => {
+    const handleRealtimeUpdate = ({ id } = {}) => {
       if (id) {
         setTechnicians((prev) => prev.filter((t) => t.id !== id));
       }
       fetchTechnicians();
     };
 
-    socket.on('technician:deleted', handleDeleted);
-    socket.on('technician_deleted', handleDeleted);
+    socket.on('technician:new_pending', handleRealtimeUpdate);
+    socket.on('technician:approved', handleRealtimeUpdate);
+    socket.on('technician:rejected', handleRealtimeUpdate);
+    socket.on('technician:suspended', handleRealtimeUpdate);
+    socket.on('technician:status_changed', handleRealtimeUpdate);
+    socket.on('technician:deleted', handleRealtimeUpdate);
+    socket.on('technician_deleted', handleRealtimeUpdate);
 
     return () => {
       if (typeof socket.off === 'function') {
-        socket.off('technician:deleted', handleDeleted);
-        socket.off('technician_deleted', handleDeleted);
+        socket.off('technician:new_pending', handleRealtimeUpdate);
+        socket.off('technician:approved', handleRealtimeUpdate);
+        socket.off('technician:rejected', handleRealtimeUpdate);
+        socket.off('technician:suspended', handleRealtimeUpdate);
+        socket.off('technician:status_changed', handleRealtimeUpdate);
+        socket.off('technician:deleted', handleRealtimeUpdate);
+        socket.off('technician_deleted', handleRealtimeUpdate);
       }
     };
   }, [socket]);
