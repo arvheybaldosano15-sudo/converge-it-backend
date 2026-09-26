@@ -92,7 +92,35 @@ exports.registerTechnician = async (req, res, next) => {
       [newTech.id, employeeId]
     );
 
-    emitToAdmins('technician:new_pending', { technicianId: newTech.id, fullName: newTech.full_name, employeeId: newTech.employee_id });
+    // Create DB notification for all active admin users so it appears in TopNavbar & unread badge
+    const adminRes = await query(`SELECT id FROM users WHERE role = 'admin' AND status = 'active'`);
+    const notifTitle = 'Pending Technician Approval';
+    const notifMessage = `New technician ${newTech.full_name} (${newTech.employee_id}) registered and is awaiting administrator approval.`;
+
+    for (const adminRow of adminRes.rows) {
+      await query(
+        `INSERT INTO notifications (user_id, title, message, type, reference_id, is_read, created_at)
+         VALUES ($1, $2, $3, 'technician_approval', $4, FALSE, NOW())`,
+        [adminRow.id, notifTitle, notifMessage, newTech.id]
+      );
+    }
+
+    emitToAdmins('technician:new_pending', {
+      technicianId: newTech.id,
+      fullName: newTech.full_name,
+      employeeId: newTech.employee_id,
+      title: notifTitle,
+      message: notifMessage,
+      type: 'technician_approval',
+      reference_id: newTech.id
+    });
+
+    emitToAdmins('notification:new', {
+      title: notifTitle,
+      message: notifMessage,
+      type: 'technician_approval',
+      reference_id: newTech.id
+    });
 
     res.status(201).json({
       success: true,

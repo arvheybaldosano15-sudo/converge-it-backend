@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import ProfileDropdown from './ProfileDropdown';
-import { Bell, X, CheckCheck, Trash2, Clock, Menu, ExternalLink, Ticket, Wrench } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, Clock, Menu, ExternalLink, Ticket, Wrench, UserCheck } from 'lucide-react';
 import api from '../../utils/axios';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -24,6 +24,21 @@ const checkIsInstallation = (n) => {
     titleLower.includes('install request') ||
     bodyLower.includes('install request') ||
     titleLower.includes('new installation')
+  );
+};
+
+const checkIsTechnicianApproval = (n) => {
+  if (!n) return false;
+  const typeLower = (n.type || '').toLowerCase();
+  const titleLower = (n.title || '').toLowerCase();
+  const bodyLower = (n.body || n.message || '').toLowerCase();
+
+  return (
+    typeLower.includes('technician') ||
+    typeLower.includes('approval') ||
+    titleLower.includes('technician') ||
+    bodyLower.includes('technician') ||
+    titleLower.includes('approval')
   );
 };
 
@@ -104,21 +119,37 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
           reference_id: ticket.id,
           category_name: ticket.category_name
         };
-        // Instant 0ms prepend — no HTTP needed for badge (SocketContext handles that)
         setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
       }
-      // Delayed sync to replace temp item with real DB record
       setTimeout(() => fetchNotifications(false), 2000);
+    };
+
+    const handleNewPendingTechnician = (payload = {}) => {
+      if (payload) {
+        const notifItem = {
+          id: 'temp-tech-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          title: payload.title || 'Pending Technician Approval',
+          message: payload.message || `New technician ${payload.fullName || ''} (${payload.employeeId || ''}) registered and is awaiting administrator approval.`,
+          type: 'technician_approval',
+          is_read: false,
+          created_at: new Date().toISOString(),
+          reference_id: payload.technicianId
+        };
+        setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
+      }
+      setTimeout(() => fetchNotifications(false), 1500);
     };
 
     socket.on('notification:new', handleNewNotification);
     socket.on('ticket:created', handleTicketCreated);
     socket.on('ticket_created', handleTicketCreated);
+    socket.on('technician:new_pending', handleNewPendingTechnician);
 
     return () => {
       socket.off('notification:new', handleNewNotification);
       socket.off('ticket:created', handleTicketCreated);
       socket.off('ticket_created', handleTicketCreated);
+      socket.off('technician:new_pending', handleNewPendingTechnician);
     };
   }, [socket]);
 
@@ -157,8 +188,11 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     if (!n.is_read) markOneRead(n.id);
     setNotifOpen(false);
     if (user?.role === 'admin') {
+      const isTechApproval = checkIsTechnicianApproval(n);
       const isInstallation = checkIsInstallation(n);
-      if (isInstallation) {
+      if (isTechApproval) {
+        navigate('/admin/approvals');
+      } else if (isInstallation) {
         navigate('/admin/installation-requests');
       } else {
         navigate('/admin/tickets');
@@ -271,6 +305,7 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                   </div>
                 ) : (
                   notifications.map((n) => {
+                    const isTechApproval = checkIsTechnicianApproval(n);
                     const isInstallation = checkIsInstallation(n);
                     const isTicketNotif = n.type === 'ticket' || n.type === 'installation' || n.title?.includes('#') || n.reference_id;
 
@@ -287,7 +322,11 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            {isInstallation ? (
+                            {isTechApproval ? (
+                              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
+                                <UserCheck className="w-2.5 h-2.5" /> Technician Approval
+                              </span>
+                            ) : isInstallation ? (
                               <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 flex items-center gap-1">
                                 <Wrench className="w-2.5 h-2.5" /> Installation Request
                               </span>
