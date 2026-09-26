@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
@@ -31,7 +31,8 @@ import {
   Check,
   AlertTriangle,
   SlidersHorizontal,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -58,11 +59,13 @@ const ToggleSwitch = ({ checked, onChange, disabled = false, ariaLabel }) => (
 
 const Settings = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   // Data & State
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -98,6 +101,64 @@ const Settings = () => {
     } catch (e) {
       toast.error(`Failed to update ${key.replace(/_/g, ' ')}`);
     }
+  };
+
+  // Handle Logo Upload File Selection
+  const handleLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      // 1. Try uploading to backend via API endpoint first
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      try {
+        const res = await api.post('/settings/upload-logo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (res.success && res.data?.company_logo) {
+          setSettings((prev) => ({ ...prev, company_logo: res.data.company_logo }));
+          toast.success('Company brand logo uploaded & saved!');
+          setUploadingLogo(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend multipart logo upload fallback to Data URI', err);
+      }
+
+      // 2. Fallback to client-side Data URL conversion
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const dataUrl = evt.target.result;
+        setSettings((prev) => ({ ...prev, company_logo: dataUrl }));
+        await handleUpdateSetting('company_logo', dataUrl);
+        toast.success('Company brand logo uploaded successfully!');
+        setUploadingLogo(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image file');
+        setUploadingLogo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      toast.error('Failed to process image file');
+      setUploadingLogo(false);
+    }
+  };
+
+  // Remove Company Logo
+  const handleRemoveLogo = async () => {
+    setSettings((prev) => ({ ...prev, company_logo: '' }));
+    await handleUpdateSetting('company_logo', '');
+    toast.success('Company logo removed');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Save All Changes Action
@@ -325,24 +386,56 @@ const Settings = () => {
 
                 {/* Company Logo Card Area */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center shrink-0 shadow-inner">
-                    <Building className="w-8 h-8 text-cyan-400" />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative">
+                    {settings.company_logo ? (
+                      <img
+                        src={settings.company_logo}
+                        alt="Company Logo"
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <Building className="w-8 h-8 text-cyan-400" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider">Company Brand Logo</h4>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      PNG, SVG, or JPG formats recommended (max 800x800px, 2MB).
+                      PNG, SVG, or JPG formats recommended (max 800x800px, 5MB).
                     </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={Upload}
-                    onClick={() => toast.success('Brand logo upload saved')}
-                    className="shrink-0 text-xs"
-                  >
-                    Upload Logo
-                  </Button>
+
+                  {/* Hidden File Input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleLogoFileChange}
+                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                    className="hidden"
+                  />
+
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {settings.company_logo && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={Trash2}
+                        onClick={handleRemoveLogo}
+                        className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border-rose-500/30"
+                      >
+                        Remove
+                      </Button>
+                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={Upload}
+                      isLoading={uploadingLogo}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs"
+                    >
+                      {settings.company_logo ? 'Change Logo' : 'Upload Logo'}
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Input Fields */}

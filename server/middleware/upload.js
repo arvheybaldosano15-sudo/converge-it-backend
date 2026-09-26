@@ -6,7 +6,7 @@ const { createError } = require('./errorHandler');
 const memStorage = multer.memoryStorage();
 
 const imageFilter = (req, file, cb) => {
-  if (['image/jpeg','image/png','image/webp','image/gif'].includes(file.mimetype)) cb(null, true);
+  if (['image/jpeg','image/png','image/webp','image/gif','image/svg+xml'].includes(file.mimetype)) cb(null, true);
   else cb(createError('Only image files are allowed', 400), false);
 };
 
@@ -20,5 +20,13 @@ const uploadServiceReportImages = multer({ storage: memStorage, limits: { fileSi
 const uploadTicketAttachments = multer({ storage: memStorage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: documentFilter }).array('attachments', 5);
 const uploadKnowledgeBaseImages = multer({ storage: memStorage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: imageFilter }).single('image');
 const uploadSignature = multer({ storage: memStorage, limits: { fileSize: 2 * 1024 * 1024 }, fileFilter: imageFilter }).single('signature');
+const uploadLogo = multer({ storage: memStorage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: imageFilter }).single('logo');
 
-module.exports = { uploadProfileImage, uploadServiceReportImages, uploadTicketAttachments, uploadKnowledgeBaseImages, uploadSignature };
+module.exports = {
+  uploadProfileImage,
+  uploadServiceReportImages,
+  uploadTicketAttachments,
+  uploadKnowledgeBaseImages,
+  uploadSignature,
+  uploadLogo
+};
