@@ -14,13 +14,13 @@ const syncPendingTechnicianNotifications = async (userId, role) => {
     `);
     for (const tech of pendingTechs.rows) {
       const existing = await query(
-        `SELECT id FROM notifications WHERE user_id = $1 AND type = 'technician_approval' AND reference_id = $2`,
+        `SELECT id FROM notifications WHERE user_id = $1 AND type = 'approval' AND reference_id = $2`,
         [userId, tech.id]
       );
       if (existing.rows.length === 0) {
         await query(
           `INSERT INTO notifications (user_id, title, message, type, reference_id, is_read, created_at)
-           VALUES ($1, $2, $3, 'technician_approval', $4, FALSE, $5)`,
+           VALUES ($1, $2, $3, 'approval', $4, FALSE, $5)`,
           [
             userId,
             'Pending Technician Approval',

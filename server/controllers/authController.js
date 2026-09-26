@@ -100,7 +100,7 @@ exports.registerTechnician = async (req, res, next) => {
     for (const adminRow of adminRes.rows) {
       await query(
         `INSERT INTO notifications (user_id, title, message, type, reference_id, is_read, created_at)
-         VALUES ($1, $2, $3, 'technician_approval', $4, FALSE, NOW())`,
+         VALUES ($1, $2, $3, 'approval', $4, FALSE, NOW())`,
         [adminRow.id, notifTitle, notifMessage, newTech.id]
       );
     }
