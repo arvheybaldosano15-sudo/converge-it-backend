@@ -26,13 +26,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed = false }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const wasTech = !isAdmin;
     await logout();
-    if (wasTech) {
-      navigate('/technician-login');
-    } else {
-      navigate('/login');
-    }
   };
 
   const adminNavItems = [

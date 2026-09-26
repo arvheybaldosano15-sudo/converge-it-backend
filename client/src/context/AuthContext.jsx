@@ -51,7 +51,6 @@ export const AuthProvider = ({ children }) => {
           delete api.defaults.headers.common['Authorization'];
           setUser(null);
         } else {
-          // Keep session — server may be cold-starting or temporarily lagging
           console.warn('Auth check notice (keeping session):', err?.message || err);
         }
       } finally {
@@ -63,7 +62,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     queryClient.clear();
-    // Instantly wipe any stale tokens from previous session to prevent 401 header interference
     clearAuthSession('all');
     delete api.defaults.headers.common['Authorization'];
 
@@ -71,9 +69,7 @@ export const AuthProvider = ({ children }) => {
     try {
       res = await api.post('/auth/login', { email, password }, { timeout: 15000 });
     } catch (err) {
-      // Axios transforms errors to plain objects — check err.status, not err.response
       const httpStatus = err?.status || err?.statusCode;
-      // Only retry on genuine network drop (no status) — NOT on server errors (503/502/504/401/etc.)
       const isNetworkDrop = !httpStatus && (err?.message?.includes('timeout') || err?.message?.includes('Network') || err?.message?.includes('network'));
       if (isNetworkDrop) {
         await new Promise((r) => setTimeout(r, 800));
@@ -87,7 +83,6 @@ export const AuthProvider = ({ children }) => {
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
       toast.success(`Welcome back, ${userData.fullName}!`);
-      // Pre-warm all page caches in the background so first navigation is instant
       if (userData.role === 'admin') prefetchAdminData();
       return userData;
     }
@@ -95,7 +90,6 @@ export const AuthProvider = ({ children }) => {
 
   const pinLogin = async (pin) => {
     queryClient.clear();
-    // Instantly wipe any stale tokens from previous session to prevent 401 header interference
     clearAuthSession('all');
     delete api.defaults.headers.common['Authorization'];
 
@@ -117,7 +111,6 @@ export const AuthProvider = ({ children }) => {
       setAuthSession(userData, accessToken, refreshToken);
       setUser(userData);
       toast.success(`Welcome back, ${userData.fullName || 'Technician'}!`);
-      // Pre-warm technician dashboard cache
       prefetchTechData();
       return userData;
     }
@@ -132,17 +125,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    const isTech = user?.role === 'technician';
     try {
       await api.post('/auth/logout');
     } catch (e) {
       // ignore
     } finally {
       queryClient.clear();
-      clearAuthSession(user?.role);
+      clearAuthSession(user?.role || 'all');
       setUser(null);
       toast.success('Logged out successfully');
-      // Desktop browser → back to landing page; PWA/app → stay at login
-      window.location.href = isPWA() ? '/login' : '/';
+
+      // Allow 350ms for toast alert animation to render smoothly before navigating
+      setTimeout(() => {
+        const target = isTech ? '/technician-login' : '/login';
+        window.location.href = target;
+      }, 350);
     }
   };
 
