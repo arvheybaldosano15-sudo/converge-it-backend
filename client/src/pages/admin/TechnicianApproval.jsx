@@ -46,8 +46,8 @@ const TechnicianApproval = () => {
   const [modalReason, setModalReason] = useState('');
   const [techToAction, setTechToAction] = useState(null);
 
-  const fetchTechs = async () => {
-    setLoading(true);
+  const fetchTechs = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await api.get('/technicians/pending');
       if (res.success) {
@@ -57,71 +57,106 @@ const TechnicianApproval = () => {
       console.error(e);
       toast.error('Failed to load technician applications');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTechs();
+    fetchTechs(true);
   }, []);
 
   // Auto-refresh table display in real-time when a technician registers or status changes
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleRealtimeUpdate = () => {
-      fetchTechs();
+    const handleRealtimeUpdate = (payload = {}) => {
+      const techId = payload?.technicianId || payload?.id;
+      if (techId && payload.status) {
+        setTechs((prev) => prev.map((t) => (t.id === techId ? { ...t, status: payload.status } : t)));
+      }
+      fetchTechs(false);
     };
 
-    socket.on('technician:new_pending', handleRealtimeUpdate);
-    socket.on('technician:approved', handleRealtimeUpdate);
-    socket.on('technician:rejected', handleRealtimeUpdate);
-    socket.on('technician:suspended', handleRealtimeUpdate);
+    const handleNewPending = (payload = {}) => {
+      const techId = payload?.technicianId || payload?.id;
+      if (techId) {
+        setTechs((prev) => {
+          if (prev.some((t) => t.id === techId)) return prev;
+          return [{
+            id: techId,
+            full_name: payload.fullName || 'New Technician',
+            employee_id: payload.employeeId || 'TEMP',
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }, ...prev];
+        });
+      }
+      fetchTechs(false);
+    };
+
+    socket.on('technician:new_pending', handleNewPending);
+    socket.on('technician:approved', (p) => handleRealtimeUpdate({ ...p, status: 'active' }));
+    socket.on('technician:rejected', (p) => handleRealtimeUpdate({ ...p, status: 'rejected' }));
+    socket.on('technician:suspended', (p) => handleRealtimeUpdate({ ...p, status: 'inactive' }));
     socket.on('technician:status_changed', handleRealtimeUpdate);
     socket.on('technician:deleted', handleRealtimeUpdate);
     socket.on('technician_deleted', handleRealtimeUpdate);
 
     return () => {
-      socket.off('technician:new_pending', handleRealtimeUpdate);
-      socket.off('technician:approved', handleRealtimeUpdate);
-      socket.off('technician:rejected', handleRealtimeUpdate);
-      socket.off('technician:suspended', handleRealtimeUpdate);
-      socket.off('technician:status_changed', handleRealtimeUpdate);
-      socket.off('technician:deleted', handleRealtimeUpdate);
-      socket.off('technician_deleted', handleRealtimeUpdate);
+      socket.off('technician:new_pending', handleNewPending);
+      socket.off('technician:approved');
+      socket.off('technician:rejected');
+      socket.off('technician:suspended');
+      socket.off('technician:status_changed');
+      socket.off('technician:deleted');
+      socket.off('technician_deleted');
     };
   }, [socket]);
 
-  // Action Handlers
+  // Action Handlers — Instant 0ms Optimistic Updates
   const handleApproveConfirm = async () => {
     if (!techToAction) return;
+    const targetId = techToAction.id;
+    const targetName = techToAction.full_name;
+
+    // ⚡ Instant Optimistic Local Update (0ms UI latency)
+    setTechs((prev) =>
+      prev.map((t) => (t.id === targetId ? { ...t, status: 'active' } : t))
+    );
+    toast.success(`Approved technician account for ${targetName}! Status is now Active.`);
+    setApproveConfirmOpen(false);
+    setIsDetailModalOpen(false);
+    setTechToAction(null);
+
     try {
-      const res = await api.post(`/technicians/${techToAction.id}/approve`);
-      if (res.success) {
-        toast.success(`Approved technician account for ${techToAction.full_name}! Status is now Active.`);
-        setApproveConfirmOpen(false);
-        setIsDetailModalOpen(false);
-        setTechToAction(null);
-        fetchTechs();
-      }
+      await api.post(`/technicians/${targetId}/approve`);
+      fetchTechs(false);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to approve technician');
+      fetchTechs(false);
     }
   };
 
   const handleReactivateConfirm = async () => {
     if (!techToAction) return;
+    const targetId = techToAction.id;
+    const targetName = techToAction.full_name;
+
+    // ⚡ Instant Optimistic Update
+    setTechs((prev) =>
+      prev.map((t) => (t.id === targetId ? { ...t, status: 'active' } : t))
+    );
+    toast.success(`Reactivated technician account for ${targetName}.`);
+    setReactivateConfirmOpen(false);
+    setIsDetailModalOpen(false);
+    setTechToAction(null);
+
     try {
-      const res = await api.put(`/technicians/${techToAction.id}/status`, { status: 'active' });
-      if (res.success) {
-        toast.success(`Reactivated technician account for ${techToAction.full_name}.`);
-        setReactivateConfirmOpen(false);
-        setIsDetailModalOpen(false);
-        setTechToAction(null);
-        fetchTechs();
-      }
+      await api.put(`/technicians/${targetId}/status`, { status: 'active' });
+      fetchTechs(false);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to reactivate technician');
+      fetchTechs(false);
     }
   };
 
@@ -131,18 +166,26 @@ const TechnicianApproval = () => {
       toast.error('Please enter a rejection reason');
       return;
     }
+    const targetId = techToAction.id;
+    const targetName = techToAction.full_name;
+    const reason = modalReason;
+
+    // ⚡ Instant Optimistic Update
+    setTechs((prev) =>
+      prev.map((t) => (t.id === targetId ? { ...t, status: 'rejected' } : t))
+    );
+    toast.success(`Rejected application for ${targetName}`);
+    setRejectModalOpen(false);
+    setIsDetailModalOpen(false);
+    setModalReason('');
+    setTechToAction(null);
+
     try {
-      const res = await api.post(`/technicians/${techToAction.id}/reject`, { reason: modalReason });
-      if (res.success) {
-        toast.success(`Rejected application for ${techToAction.full_name}`);
-        setRejectModalOpen(false);
-        setIsDetailModalOpen(false);
-        setModalReason('');
-        setTechToAction(null);
-        fetchTechs();
-      }
+      await api.post(`/technicians/${targetId}/reject`, { reason });
+      fetchTechs(false);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to reject technician');
+      fetchTechs(false);
     }
   };
 
@@ -152,18 +195,26 @@ const TechnicianApproval = () => {
       toast.error('Please enter a suspension reason');
       return;
     }
+    const targetId = techToAction.id;
+    const targetName = techToAction.full_name;
+    const reason = modalReason;
+
+    // ⚡ Instant Optimistic Update
+    setTechs((prev) =>
+      prev.map((t) => (t.id === targetId ? { ...t, status: 'inactive' } : t))
+    );
+    toast.success(`Suspended account for ${targetName}`);
+    setSuspendModalOpen(false);
+    setIsDetailModalOpen(false);
+    setModalReason('');
+    setTechToAction(null);
+
     try {
-      const res = await api.post(`/technicians/${techToAction.id}/suspend`, { reason: modalReason });
-      if (res.success) {
-        toast.success(`Suspended account for ${techToAction.full_name}`);
-        setSuspendModalOpen(false);
-        setIsDetailModalOpen(false);
-        setModalReason('');
-        setTechToAction(null);
-        fetchTechs();
-      }
+      await api.post(`/technicians/${targetId}/suspend`, { reason });
+      fetchTechs(false);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to suspend technician');
+      fetchTechs(false);
     }
   };
 
