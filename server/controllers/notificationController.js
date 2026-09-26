@@ -4,8 +4,42 @@ const pushService = require('../services/pushService');
 
 // Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
 
+const syncPendingTechnicianNotifications = async (userId, role) => {
+  if (role !== 'admin') return;
+  try {
+    const pendingTechs = await query(`
+      SELECT id, full_name, employee_id, created_at
+      FROM users
+      WHERE role = 'technician' AND status = 'pending'
+    `);
+    for (const tech of pendingTechs.rows) {
+      const existing = await query(
+        `SELECT id FROM notifications WHERE user_id = $1 AND type = 'technician_approval' AND reference_id = $2`,
+        [userId, tech.id]
+      );
+      if (existing.rows.length === 0) {
+        await query(
+          `INSERT INTO notifications (user_id, title, message, type, reference_id, is_read, created_at)
+           VALUES ($1, $2, $3, 'technician_approval', $4, FALSE, $5)`,
+          [
+            userId,
+            'Pending Technician Approval',
+            `New technician ${tech.full_name} (${tech.employee_id}) registered and is awaiting administrator approval.`,
+            tech.id,
+            tech.created_at || new Date()
+          ]
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Error auto-syncing pending tech notifications:', err);
+  }
+};
+
 exports.getNotifications = async (req, res, next) => {
   try {
+    await syncPendingTechnicianNotifications(req.user.id, req.user.role);
+
     const { page = 1, limit = 20, unreadOnly } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = [`n.user_id = $1`];
@@ -34,6 +68,7 @@ exports.getNotifications = async (req, res, next) => {
 
 exports.getUnreadCount = async (req, res, next) => {
   try {
+    await syncPendingTechnicianNotifications(req.user.id, req.user.role);
     const result = await query('SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE', [req.user.id]);
     res.json({ success: true, data: { count: parseInt(result.rows[0].count) } });
   } catch (error) { next(error); }
