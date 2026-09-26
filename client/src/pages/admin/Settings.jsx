@@ -57,12 +57,35 @@ const ToggleSwitch = ({ checked, onChange, disabled = false, ariaLabel }) => (
   </button>
 );
 
+const DEFAULT_SETTINGS = {
+  company_name: 'Converge IT Solutions Inc.',
+  company_email: 'support@convergeit.ph',
+  company_phone: '09171234567',
+  company_address: 'National Capital Region, Philippines',
+  company_logo: '',
+  ai_enabled: 'true',
+  ai_auto_categorize: 'true',
+  ai_priority_prediction: 'true',
+  messenger_enabled: 'true',
+  twilio_sms_enabled: 'true',
+  smtp_email_enabled: 'true',
+  sla_critical_email: 'true',
+  tech_assignment_push: 'true',
+  daily_sla_digest: 'false',
+  enforce_2fa: 'true',
+  session_timeout_minutes: '30',
+  audit_logging_enabled: 'true',
+  standard_sla_hours: '24',
+  auto_close_hours: '48',
+  auto_manager_escalation: 'true'
+};
+
 const Settings = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   // Data & State
-  const [settings, setSettings] = useState({});
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -76,7 +99,11 @@ const Settings = () => {
     try {
       const res = await api.get('/settings');
       if (res.success) {
-        setSettings(res.data || {});
+        const loaded = res.data || {};
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...loaded
+        });
       }
     } catch (e) {
       console.error(e);
@@ -443,7 +470,7 @@ const Settings = () => {
                   <div>
                     <Input
                       label="Company Name *"
-                      value={settings.company_name || 'Converge IT Solutions Inc.'}
+                      value={settings.company_name ?? ''}
                       onChange={(e) => handleInputChange('company_name', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_name', e.target.value)}
                       placeholder="e.g. Converge IT Solutions Inc."
@@ -456,7 +483,7 @@ const Settings = () => {
                     <Input
                       label="Support Email Address *"
                       type="email"
-                      value={settings.company_email || 'support@convergeit.ph'}
+                      value={settings.company_email ?? ''}
                       onChange={(e) => handleInputChange('company_email', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_email', e.target.value)}
                       placeholder="e.g. support@convergeit.ph"
@@ -468,7 +495,7 @@ const Settings = () => {
                   <div>
                     <Input
                       label="Support Hotline / Phone"
-                      value={settings.company_phone || '09171234567'}
+                      value={settings.company_phone ?? ''}
                       onChange={(e) => handleInputChange('company_phone', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_phone', e.target.value)}
                       placeholder="e.g. 09171234567"
@@ -480,7 +507,7 @@ const Settings = () => {
                   <div>
                     <Input
                       label="Headquarters Address"
-                      value={settings.company_address || 'National Capital Region, Philippines'}
+                      value={settings.company_address ?? ''}
                       onChange={(e) => handleInputChange('company_address', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_address', e.target.value)}
                       placeholder="e.g. Metro Manila, Philippines"
