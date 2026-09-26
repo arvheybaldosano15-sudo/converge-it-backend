@@ -168,6 +168,15 @@ const Settings = () => {
       await Promise.all(promises);
       toast.success('All system settings saved successfully!');
       setHasUnsavedChanges(false);
+
+      // Re-fetch settings from backend to lock in saved database records
+      const res = await api.get('/settings');
+      if (res.success && res.data) {
+        setSettings((prev) => ({
+          ...prev,
+          ...res.data
+        }));
+      }
     } catch (e) {
       toast.error('Failed to save settings changes');
     } finally {
