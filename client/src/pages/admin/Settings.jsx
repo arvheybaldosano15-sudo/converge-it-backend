@@ -84,8 +84,19 @@ const Settings = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  // Data & State
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  // Initialize Data & State from LocalStorage cache to prevent flash of old default values
+  const [settings, setSettings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('converge_settings');
+      if (cached) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(cached) };
+      }
+    } catch (e) {
+      console.warn('LocalStorage settings read error:', e);
+    }
+    return DEFAULT_SETTINGS;
+  });
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -100,10 +111,14 @@ const Settings = () => {
       const res = await api.get('/settings');
       if (res.success) {
         const loaded = res.data || {};
-        setSettings({
+        const updated = {
           ...DEFAULT_SETTINGS,
           ...loaded
-        });
+        };
+        setSettings(updated);
+        try {
+          localStorage.setItem('converge_settings', JSON.stringify(updated));
+        } catch (e) {}
       }
     } catch (e) {
       console.error(e);
@@ -118,7 +133,13 @@ const Settings = () => {
   }, []);
 
   const handleInputChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettings((prev) => {
+      const updated = { ...prev, [key]: value };
+      try {
+        localStorage.setItem('converge_settings', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -164,11 +185,15 @@ const Settings = () => {
     try {
       const res = await api.put('/settings', { settings });
       if (res.success && res.data) {
-        setSettings((prev) => ({
-          ...prev,
+        const newSettings = {
+          ...settings,
           ...res.data
-        }));
+        };
+        setSettings(newSettings);
         setHasUnsavedChanges(false);
+        try {
+          localStorage.setItem('converge_settings', JSON.stringify(newSettings));
+        } catch (e) {}
         toast.success('All system settings saved successfully!');
       }
     } catch (e) {
