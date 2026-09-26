@@ -3,23 +3,46 @@ const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const { query } = require('../config/database');
 
+// GET /api/settings - Fetch all settings
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const isAdmin = req.user.role === 'admin';
-    const result = await query(isAdmin ? 'SELECT * FROM system_settings ORDER BY key' : 'SELECT * FROM system_settings WHERE is_public = TRUE ORDER BY key');
+    const result = await query('SELECT * FROM settings ORDER BY key');
     const settings = {};
-    result.rows.forEach(row => { settings[row.key] = row.value; });
+    result.rows.forEach(row => {
+      let val = row.value;
+      // If PostgreSQL returned a JSON-encoded string or primitive inside jsonb
+      if (typeof val === 'string') {
+        try {
+          val = JSON.parse(val);
+        } catch (e) {
+          // Keep as string
+        }
+      }
+      settings[row.key] = val;
+    });
     res.json({ success: true, data: settings });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
+// PUT /api/settings/:key - Upsert setting by key
 router.put('/:key', authenticate, authorize('admin'), async (req, res, next) => {
   try {
     const { value } = req.body;
-    const result = await query(`UPDATE system_settings SET value = $1, updated_by = $2, updated_at = NOW() WHERE key = $3 RETURNING *`, [value, req.user.id, req.params.key]);
-    if (!result.rows[0]) throw { statusCode: 404, message: 'Setting not found' };
+    const jsonValue = JSON.stringify(value !== undefined ? value : '');
+    const result = await query(
+      `INSERT INTO settings (key, value, updated_by, updated_at)
+       VALUES ($1, $2::jsonb, $3, NOW())
+       ON CONFLICT (key) DO UPDATE
+       SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+       RETURNING *`,
+      [req.params.key, jsonValue, req.user?.id || null]
+    );
     res.json({ success: true, data: result.rows[0] });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

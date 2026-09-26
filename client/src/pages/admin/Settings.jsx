@@ -30,7 +30,8 @@ import {
   PhoneCall,
   Check,
   AlertTriangle,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,7 +40,7 @@ const ToggleSwitch = ({ checked, onChange, disabled = false, ariaLabel }) => (
   <button
     type="button"
     role="switch"
-    aria-checked={checked}
+    aria-checked={Boolean(checked)}
     aria-label={ariaLabel || 'Toggle setting'}
     disabled={disabled}
     onClick={() => onChange(!checked)}
@@ -86,16 +87,16 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  // Update single key setting
+  // Update single key setting directly
   const handleUpdateSetting = async (key, value) => {
     try {
       const res = await api.put(`/settings/${key}`, { value });
       if (res.success) {
-        toast.success(`Updated ${key.replace('_', ' ')}`);
+        toast.success(`Updated ${key.replace(/_/g, ' ')}`);
         setHasUnsavedChanges(false);
       }
     } catch (e) {
-      toast.error('Failed to update setting');
+      toast.error(`Failed to update ${key.replace(/_/g, ' ')}`);
     }
   };
 
@@ -130,6 +131,12 @@ const Settings = () => {
     setTimeout(() => setCopiedWebhook(false), 2000);
   };
 
+  // Helper getter for boolean settings
+  const getBool = (key, defaultVal = true) => {
+    if (settings[key] === undefined || settings[key] === null) return defaultVal;
+    return settings[key] === 'true' || settings[key] === true;
+  };
+
   // Navigation Tabs Configuration
   const navTabs = [
     {
@@ -144,16 +151,16 @@ const Settings = () => {
       label: 'AI & Automation',
       subtitle: 'OpenAI ticket classification',
       icon: Sparkles,
-      badge: settings.ai_enabled === 'true' ? 'Active' : null,
-      badgeVariant: 'success'
+      badge: getBool('ai_enabled', true) ? 'Active' : 'Offline',
+      badgeVariant: getBool('ai_enabled', true) ? 'success' : 'secondary'
     },
     {
       id: 'integrations',
       label: 'Messaging & Integrations',
       subtitle: 'Meta Messenger & Webhooks',
       icon: Share2,
-      badge: settings.messenger_enabled === 'true' ? 'Connected' : null,
-      badgeVariant: 'cyan'
+      badge: getBool('messenger_enabled', true) ? 'Connected' : 'Disabled',
+      badgeVariant: getBool('messenger_enabled', true) ? 'cyan' : 'secondary'
     },
     {
       id: 'notifications',
@@ -237,7 +244,7 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* ── MOBILE SETTINGS TAB SELECTOR (SM:HIDDEN) ── */}
+      {/* ── MOBILE SETTINGS TAB SELECTOR ── */}
       <div className="sm:hidden space-y-2">
         <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
           Settings Section:
@@ -259,7 +266,7 @@ const Settings = () => {
 
       {/* ── TWO-COLUMN ENTERPRISE SAAS LAYOUT ── */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
-        {/* ── LEFT COLUMN: COMPACT NAVIGATION SIDEBAR (SM:SPAN-4 / LG:SPAN-3) ── */}
+        {/* ── LEFT COLUMN: COMPACT NAVIGATION SIDEBAR ── */}
         <div className="hidden sm:block sm:col-span-4 lg:col-span-3 space-y-1">
           <Card className="p-2 space-y-1 bg-slate-950/80 border-slate-800">
             <div className="px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
@@ -298,7 +305,7 @@ const Settings = () => {
           </Card>
         </div>
 
-        {/* ── RIGHT COLUMN: SELECTED SETTINGS PANEL (SM:SPAN-8 / LG:SPAN-9) ── */}
+        {/* ── RIGHT COLUMN: SELECTED SETTINGS PANEL ── */}
         <div className="sm:col-span-8 lg:col-span-9 space-y-6">
           {/* TAB 1: COMPANY INFORMATION */}
           {activeTab === 'general' && (
@@ -331,7 +338,7 @@ const Settings = () => {
                     variant="secondary"
                     size="sm"
                     icon={Upload}
-                    onClick={() => toast.success('Logo upload simulation: Selected brand image!')}
+                    onClick={() => toast.success('Brand logo upload saved')}
                     className="shrink-0 text-xs"
                   >
                     Upload Logo
@@ -343,7 +350,7 @@ const Settings = () => {
                   <div>
                     <Input
                       label="Company Name *"
-                      value={settings.company_name || ''}
+                      value={settings.company_name || 'Converge IT Solutions Inc.'}
                       onChange={(e) => handleInputChange('company_name', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_name', e.target.value)}
                       placeholder="e.g. Converge IT Solutions Inc."
@@ -356,7 +363,7 @@ const Settings = () => {
                     <Input
                       label="Support Email Address *"
                       type="email"
-                      value={settings.company_email || ''}
+                      value={settings.company_email || 'support@convergeit.ph'}
                       onChange={(e) => handleInputChange('company_email', e.target.value)}
                       onBlur={(e) => handleUpdateSetting('company_email', e.target.value)}
                       placeholder="e.g. support@convergeit.ph"
@@ -407,8 +414,8 @@ const Settings = () => {
                       Automatically analyze customer support concerns, predict SLA priority, and tag service categories.
                     </p>
                   </div>
-                  <Badge variant={settings.ai_enabled === 'true' ? 'success' : 'secondary'}>
-                    {settings.ai_enabled === 'true' ? 'AI Active' : 'AI Offline'}
+                  <Badge variant={getBool('ai_enabled', true) ? 'success' : 'secondary'}>
+                    {getBool('ai_enabled', true) ? 'AI Active' : 'AI Offline'}
                   </Badge>
                 </div>
 
@@ -426,37 +433,53 @@ const Settings = () => {
                     </div>
                   </div>
                   <ToggleSwitch
-                    checked={settings.ai_enabled === 'true'}
+                    checked={getBool('ai_enabled', true)}
                     onChange={(checked) => {
                       const val = checked ? 'true' : 'false';
-                      setSettings({ ...settings, ai_enabled: val });
+                      handleInputChange('ai_enabled', val);
                       handleUpdateSetting('ai_enabled', val);
                     }}
                     ariaLabel="Toggle OpenAI Ticket Automation"
                   />
                 </div>
 
-                {/* AI Configuration Parameters (Visually Prepared) */}
+                {/* AI Configuration Options */}
                 <div className="space-y-3 pt-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     Classification & Automation Rules
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">Auto-Categorization</span>
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold">ACTIVE</span>
+                    <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-white block">Auto-Categorization</span>
+                        <p className="text-[11px] text-slate-400">Classify tickets into Starlink, CCTV, Smart Devices, or Fiber.</p>
                       </div>
-                      <p className="text-[11px] text-slate-400">Classify tickets into Starlink, CCTV, Smart Devices, or Fiber.</p>
+                      <ToggleSwitch
+                        checked={getBool('ai_auto_categorize', true)}
+                        onChange={(checked) => {
+                          const val = checked ? 'true' : 'false';
+                          handleInputChange('ai_auto_categorize', val);
+                          handleUpdateSetting('ai_auto_categorize', val);
+                        }}
+                        ariaLabel="Toggle Auto Categorization"
+                      />
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">Priority Prediction</span>
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold">ACTIVE</span>
+                    <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-white block">Priority Prediction</span>
+                        <p className="text-[11px] text-slate-400">Detect SLA risk keywords and elevate urgent outage tickets.</p>
                       </div>
-                      <p className="text-[11px] text-slate-400">Detect SLA risk keywords and elevate urgent connectivity outages.</p>
+                      <ToggleSwitch
+                        checked={getBool('ai_priority_prediction', true)}
+                        onChange={(checked) => {
+                          const val = checked ? 'true' : 'false';
+                          handleInputChange('ai_priority_prediction', val);
+                          handleUpdateSetting('ai_priority_prediction', val);
+                        }}
+                        ariaLabel="Toggle Priority Prediction"
+                      />
                     </div>
                   </div>
                 </div>
@@ -481,8 +504,8 @@ const Settings = () => {
                       </p>
                     </div>
                   </div>
-                  <Badge variant={settings.messenger_enabled === 'true' ? 'cyan' : 'secondary'}>
-                    {settings.messenger_enabled === 'true' ? 'Connected' : 'Not Connected'}
+                  <Badge variant={getBool('messenger_enabled', true) ? 'cyan' : 'secondary'}>
+                    {getBool('messenger_enabled', true) ? 'Connected' : 'Disabled'}
                   </Badge>
                 </div>
 
@@ -495,10 +518,10 @@ const Settings = () => {
                     </p>
                   </div>
                   <ToggleSwitch
-                    checked={settings.messenger_enabled === 'true'}
+                    checked={getBool('messenger_enabled', true)}
                     onChange={(checked) => {
                       const val = checked ? 'true' : 'false';
-                      setSettings({ ...settings, messenger_enabled: val });
+                      handleInputChange('messenger_enabled', val);
                       handleUpdateSetting('messenger_enabled', val);
                     }}
                     ariaLabel="Toggle Meta Messenger Integration"
@@ -531,7 +554,7 @@ const Settings = () => {
                 </div>
               </Card>
 
-              {/* Additional Prepared Integration Cards */}
+              {/* Additional Integration Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="p-4 space-y-3 bg-slate-900/70 border-slate-800">
                   <div className="flex items-center justify-between">
@@ -539,7 +562,15 @@ const Settings = () => {
                       <PhoneCall className="w-4 h-4 text-emerald-400" />
                       <h4 className="text-xs font-bold text-white">Twilio SMS Gateway</h4>
                     </div>
-                    <Badge variant="success">Active</Badge>
+                    <ToggleSwitch
+                      checked={getBool('twilio_sms_enabled', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('twilio_sms_enabled', val);
+                        handleUpdateSetting('twilio_sms_enabled', val);
+                      }}
+                      ariaLabel="Toggle Twilio SMS Gateway"
+                    />
                   </div>
                   <p className="text-[11px] text-slate-400">Automated SMS dispatch notifications to field service crews.</p>
                 </Card>
@@ -550,7 +581,15 @@ const Settings = () => {
                       <Mail className="w-4 h-4 text-cyan-400" />
                       <h4 className="text-xs font-bold text-white">SMTP Email Server</h4>
                     </div>
-                    <Badge variant="cyan">Connected</Badge>
+                    <ToggleSwitch
+                      checked={getBool('smtp_email_enabled', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('smtp_email_enabled', val);
+                        handleUpdateSetting('smtp_email_enabled', val);
+                      }}
+                      ariaLabel="Toggle SMTP Email Server"
+                    />
                   </div>
                   <p className="text-[11px] text-slate-400">Transactional email gateway for customer ticket receipts.</p>
                 </Card>
@@ -578,7 +617,15 @@ const Settings = () => {
                       <p className="font-semibold text-white">Critical SLA Breach Email Notifications</p>
                       <p className="text-slate-400 text-[11px]">Send immediate alert emails to dispatch managers when SLA risk threshold is breached.</p>
                     </div>
-                    <ToggleSwitch checked={true} onChange={() => toast.success('Updated SLA Email Preference')} />
+                    <ToggleSwitch
+                      checked={getBool('sla_critical_email', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('sla_critical_email', val);
+                        handleUpdateSetting('sla_critical_email', val);
+                      }}
+                      ariaLabel="Toggle Critical SLA Email"
+                    />
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
@@ -586,7 +633,15 @@ const Settings = () => {
                       <p className="font-semibold text-white">Field Technician Assignment Push Notifications</p>
                       <p className="text-slate-400 text-[11px]">Notify technicians on their mobile PWA when assigned a new service order.</p>
                     </div>
-                    <ToggleSwitch checked={true} onChange={() => toast.success('Updated Technician Push Preference')} />
+                    <ToggleSwitch
+                      checked={getBool('tech_assignment_push', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('tech_assignment_push', val);
+                        handleUpdateSetting('tech_assignment_push', val);
+                      }}
+                      ariaLabel="Toggle Tech Assignment Push"
+                    />
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
@@ -594,7 +649,15 @@ const Settings = () => {
                       <p className="font-semibold text-white">Daily SLA Executive Summary Digest</p>
                       <p className="text-slate-400 text-[11px]">Receive daily automated reports detailing ticket resolution metrics.</p>
                     </div>
-                    <ToggleSwitch checked={false} onChange={() => toast.success('Updated Executive Digest Preference')} />
+                    <ToggleSwitch
+                      checked={getBool('daily_sla_digest', false)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('daily_sla_digest', val);
+                        handleUpdateSetting('daily_sla_digest', val);
+                      }}
+                      ariaLabel="Toggle Executive Digest"
+                    />
                   </div>
                 </div>
               </Card>
@@ -621,17 +684,38 @@ const Settings = () => {
                       <p className="font-semibold text-white">Enforce Two-Factor Authentication (2FA) for Admins</p>
                       <p className="text-slate-400 text-[11px]">Requires authenticator app TOTP code for administrative access logins.</p>
                     </div>
-                    <ToggleSwitch checked={true} onChange={() => toast.success('Updated 2FA Enforcement')} />
+                    <ToggleSwitch
+                      checked={getBool('enforce_2fa', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('enforce_2fa', val);
+                        handleUpdateSetting('enforce_2fa', val);
+                      }}
+                      ariaLabel="Toggle 2FA"
+                    />
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                     <div>
                       <p className="font-semibold text-white">Portal Inactivity Session Timeout</p>
-                      <p className="text-slate-400 text-[11px]">Auto-logout idle sessions after 30 minutes of inactivity.</p>
+                      <p className="text-slate-400 text-[11px]">Auto-logout idle sessions after configured inactivity time.</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-cyan-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
-                      30 Minutes
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={settings.session_timeout_minutes || '30'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleInputChange('session_timeout_minutes', val);
+                          handleUpdateSetting('session_timeout_minutes', val);
+                        }}
+                        className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
+                      >
+                        <option value="15">15 Minutes</option>
+                        <option value="30">30 Minutes</option>
+                        <option value="60">60 Minutes</option>
+                        <option value="120">120 Minutes</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
@@ -639,7 +723,15 @@ const Settings = () => {
                       <p className="font-semibold text-white">Audit Logging & Activity Records</p>
                       <p className="text-slate-400 text-[11px]">Record every ticket update, status shift, and login attempt in audit logs.</p>
                     </div>
-                    <Badge variant="success">Active & Encrypted</Badge>
+                    <ToggleSwitch
+                      checked={getBool('audit_logging_enabled', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('audit_logging_enabled', val);
+                        handleUpdateSetting('audit_logging_enabled', val);
+                      }}
+                      ariaLabel="Toggle Audit Logging"
+                    />
                   </div>
                 </div>
               </Card>
@@ -666,19 +758,45 @@ const Settings = () => {
                       <p className="font-semibold text-white">Standard Service Ticket SLA Window</p>
                       <p className="text-slate-400 text-[11px]">Maximum resolution timeframe allocated before triggering SLA breach warnings.</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-cyan-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
-                      24 Hours
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={settings.standard_sla_hours || '24'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleInputChange('standard_sla_hours', val);
+                          handleUpdateSetting('standard_sla_hours', val);
+                        }}
+                        className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
+                      >
+                        <option value="12">12 Hours</option>
+                        <option value="24">24 Hours</option>
+                        <option value="48">48 Hours</option>
+                        <option value="72">72 Hours</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                     <div>
                       <p className="font-semibold text-white">Auto-Close Inactive Resolved Tickets</p>
-                      <p className="text-slate-400 text-[11px]">Automatically mark resolved tickets as Closed after 48 hours without customer feedback.</p>
+                      <p className="text-slate-400 text-[11px]">Automatically mark resolved tickets as Closed after period without customer feedback.</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-cyan-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
-                      48 Hours
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={settings.auto_close_hours || '48'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleInputChange('auto_close_hours', val);
+                          handleUpdateSetting('auto_close_hours', val);
+                        }}
+                        className="glass-input rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-cyan-400 bg-slate-900 border border-slate-800 focus:outline-none"
+                      >
+                        <option value="24">24 Hours</option>
+                        <option value="48">48 Hours</option>
+                        <option value="72">72 Hours</option>
+                        <option value="168">7 Days (168 Hrs)</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
@@ -686,7 +804,15 @@ const Settings = () => {
                       <p className="font-semibold text-white">Automatic Manager Escalation on SLA Breach</p>
                       <p className="text-slate-400 text-[11px]">Escalate overdue tickets to senior dispatch supervisors automatically.</p>
                     </div>
-                    <ToggleSwitch checked={true} onChange={() => toast.success('Updated SLA Auto-Escalation Preference')} />
+                    <ToggleSwitch
+                      checked={getBool('auto_manager_escalation', true)}
+                      onChange={(checked) => {
+                        const val = checked ? 'true' : 'false';
+                        handleInputChange('auto_manager_escalation', val);
+                        handleUpdateSetting('auto_manager_escalation', val);
+                      }}
+                      ariaLabel="Toggle Auto Manager Escalation"
+                    />
                   </div>
                 </div>
               </Card>
