@@ -10,7 +10,7 @@ import { SocketProvider } from './context/SocketContext';
 import App from './App';
 import './index.css';
 
-// Suppress unhandled errors from browser extensions / Web Vitals scripts (e.g. reportAllChanges / VM scripts)
+// Suppress unhandled errors from browser extensions / Web Vitals scripts
 if (typeof window !== 'undefined') {
   window.addEventListener(
     'error',
@@ -39,14 +39,11 @@ if (typeof window !== 'undefined') {
 }
 
 // ─── Server pre-warm ping ─────────────────────────────────────────────────────
-// Render free tier sleeps after ~15 min of inactivity. Fire a silent GET to
-// /api/health as soon as the JS bundle loads so the server is warm by the time
-// the user finishes typing their credentials and hits Login.
 (function prewarmServer() {
   try {
     const base = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '') || '';
     const url = base ? `${base}/health` : '/api/health';
-    fetch(url, { method: 'GET', cache: 'no-store' }).catch(() => {/* silent — server may still be sleeping */});
+    fetch(url, { method: 'GET', cache: 'no-store' }).catch(() => {/* silent */});
   } catch (_) {}
 })();
 
@@ -76,21 +73,17 @@ if (savedTheme === 'light') {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 15, // 15 minutes fresh cache — zero loading spinners!
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours persistent local storage retention
+      staleTime: 1000 * 60 * 15,
+      gcTime: 1000 * 60 * 60 * 24,
       refetchOnWindowFocus: false,
-      refetchOnMount: false, // Serve cached data immediately without blocking UI
-      placeholderData: (previousData) => previousData, // Instant smooth transitions between pages & filters
+      refetchOnMount: false,
+      placeholderData: (previousData) => previousData,
       retry: 1,
     },
   },
 });
 
-// ─── Synchronous localStorage pre-seed ────────────────────────────────────────
-// PersistQueryClientProvider restores the TanStack cache asynchronously,
-// which creates a brief window where data is missing (shows loader / zeros).
-// By seeding the queryClient synchronously here, data is available IMMEDIATELY
-// on hard refresh — before any component mounts or any effect fires.
+// Synchronous localStorage pre-seed
 const preSeedCache = (localKey, queryKey) => {
   try {
     const cached = localStorage.getItem(localKey);
@@ -109,7 +102,6 @@ preSeedCache('CONVERGE_INSTALLATION_REQUESTS_CACHE', ['installation-requests']);
 preSeedCache('CONVERGE_TECH_DASHBOARD_CACHE',        ['dashboard', 'technician']);
 preSeedCache('CONVERGE_ADMIN_DASHBOARD_CACHE',       ['dashboard', 'admin']);
 
-// Persist query cache to localStorage for instant offline access and zero-loading reloads
 const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   key: 'CONVERGE_TANSTACK_QUERY_CACHE',
@@ -128,15 +120,56 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <App />
             <Toaster
               position="top-right"
+              gutter={10}
               toastOptions={{
-                duration: 4000,
+                duration: 3500,
                 style: {
-                  background: 'rgba(15, 23, 42, 0.95)',
+                  background: 'rgba(11, 19, 41, 0.94)',
                   color: '#f8fafc',
-                  border: '1px solid rgba(6, 182, 212, 0.3)',
-                  backdropFilter: 'blur(16px)',
-                  borderRadius: '12px',
+                  border: '1px solid rgba(6, 182, 212, 0.35)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 20px 0 rgba(6, 182, 212, 0.15)',
+                  borderRadius: '16px',
                   fontSize: '13px',
+                  fontWeight: '600',
+                  padding: '12px 18px',
+                  maxWidth: '420px',
+                },
+                success: {
+                  duration: 3500,
+                  iconTheme: {
+                    primary: '#10b981',
+                    secondary: '#070b1e',
+                  },
+                  style: {
+                    background: 'rgba(6, 24, 38, 0.95)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px 0 rgba(16, 185, 129, 0.25)',
+                  },
+                },
+                error: {
+                  duration: 4500,
+                  iconTheme: {
+                    primary: '#f43f5e',
+                    secondary: '#070b1e',
+                  },
+                  style: {
+                    background: 'rgba(30, 10, 20, 0.95)',
+                    border: '1px solid rgba(244, 63, 94, 0.4)',
+                    boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px 0 rgba(244, 63, 94, 0.25)',
+                  },
+                },
+                loading: {
+                  iconTheme: {
+                    primary: '#38bdf8',
+                    secondary: '#070b1e',
+                  },
+                  style: {
+                    background: 'rgba(11, 19, 41, 0.95)',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px 0 rgba(56, 189, 248, 0.2)',
+                  },
                 },
               }}
             />
