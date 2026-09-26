@@ -4,7 +4,7 @@ import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
-import { Bell, CheckCheck, ExternalLink, Ticket, Wrench } from 'lucide-react';
+import { Bell, CheckCheck, ExternalLink, Ticket, Wrench, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const checkIsInstallation = (n) => {
@@ -24,6 +24,21 @@ const checkIsInstallation = (n) => {
     titleLower.includes('install request') ||
     bodyLower.includes('install request') ||
     titleLower.includes('new installation')
+  );
+};
+
+const checkIsTechnicianApproval = (n) => {
+  if (!n) return false;
+  const typeLower = (n.type || '').toLowerCase();
+  const titleLower = (n.title || '').toLowerCase();
+  const bodyLower = (n.body || n.message || '').toLowerCase();
+
+  return (
+    typeLower.includes('technician') ||
+    typeLower.includes('approval') ||
+    titleLower.includes('technician') ||
+    bodyLower.includes('technician') ||
+    titleLower.includes('approval')
   );
 };
 
@@ -66,8 +81,11 @@ const Notifications = () => {
       } catch (e) {}
     }
 
+    const isTechApproval = checkIsTechnicianApproval(n);
     const isInstallation = checkIsInstallation(n);
-    if (isInstallation) {
+    if (isTechApproval) {
+      navigate('/admin/approvals');
+    } else if (isInstallation) {
       navigate('/admin/installation-requests');
     } else {
       navigate('/admin/tickets');
@@ -96,8 +114,9 @@ const Notifications = () => {
           </Card>
         ) : (
           notifications.map((n) => {
-            const isInstallation = checkIsInstallation(n);
-            const isTicketNotif = n.type === 'ticket' || n.type === 'installation' || n.title?.includes('#') || n.reference_id;
+            const isTechApproval = checkIsTechnicianApproval(n);
+            const isInstallation = !isTechApproval && checkIsInstallation(n);
+            const isTicketNotif = !isTechApproval && !isInstallation && (n.type === 'ticket' || n.type === 'installation' || n.title?.includes('#') || n.reference_id);
 
             return (
               <Card
@@ -109,7 +128,11 @@ const Notifications = () => {
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                    {isInstallation ? (
+                    {isTechApproval ? (
+                      <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" /> Technician Approval
+                      </span>
+                    ) : isInstallation ? (
                       <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
                         <Wrench className="w-3 h-3" /> Installation Request
                       </span>
