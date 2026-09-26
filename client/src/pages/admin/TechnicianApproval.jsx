@@ -67,7 +67,15 @@ const TechnicianApproval = () => {
 
   // Auto-refresh table display in real-time when a technician registers or status changes
   useEffect(() => {
-    if (!socket || typeof socket.on !== 'function') return;
+    // Window focus listener: Whenever admin switches tabs or returns to window, refresh table silently
+    const handleFocus = () => {
+      fetchTechs(false);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    if (!socket || typeof socket.on !== 'function') {
+      return () => window.removeEventListener('focus', handleFocus);
+    }
 
     const handleRealtimeUpdate = (payload = {}) => {
       const techId = payload?.technicianId || payload?.id;
@@ -77,24 +85,24 @@ const TechnicianApproval = () => {
       fetchTechs(false);
     };
 
-    const handleNewPending = (payload = {}) => {
-      const techId = payload?.technicianId || payload?.id;
-      if (techId) {
-        setTechs((prev) => {
-          if (prev.some((t) => t.id === techId)) return prev;
-          return [{
-            id: techId,
-            full_name: payload.fullName || 'New Technician',
-            employee_id: payload.employeeId || 'TEMP',
-            status: 'pending',
-            created_at: new Date().toISOString()
-          }, ...prev];
-        });
+    const handleNotificationNew = (notification = {}) => {
+      const typeLower = (notification.type || '').toLowerCase();
+      const titleLower = (notification.title || '').toLowerCase();
+      const bodyLower = (notification.body || notification.message || '').toLowerCase();
+
+      if (
+        typeLower.includes('approval') ||
+        typeLower.includes('technician') ||
+        titleLower.includes('technician') ||
+        bodyLower.includes('technician') ||
+        titleLower.includes('approval')
+      ) {
+        fetchTechs(false);
       }
-      fetchTechs(false);
     };
 
-    socket.on('technician:new_pending', handleNewPending);
+    socket.on('notification:new', handleNotificationNew);
+    socket.on('technician:new_pending', handleNotificationNew);
     socket.on('technician:approved', (p) => handleRealtimeUpdate({ ...p, status: 'active' }));
     socket.on('technician:rejected', (p) => handleRealtimeUpdate({ ...p, status: 'rejected' }));
     socket.on('technician:suspended', (p) => handleRealtimeUpdate({ ...p, status: 'inactive' }));
@@ -103,7 +111,9 @@ const TechnicianApproval = () => {
     socket.on('technician_deleted', handleRealtimeUpdate);
 
     return () => {
-      socket.off('technician:new_pending', handleNewPending);
+      window.removeEventListener('focus', handleFocus);
+      socket.off('notification:new', handleNotificationNew);
+      socket.off('technician:new_pending', handleNotificationNew);
       socket.off('technician:approved');
       socket.off('technician:rejected');
       socket.off('technician:suspended');
