@@ -21,12 +21,8 @@ exports.createNotification = async ({ userId, type, title, body, message, data }
 
     const notification = result?.rows[0];
     if (notification) {
-      // 1. In-app WebSocket notification (to user room and admins room)
+      // 1. In-app WebSocket notification (to target user room only)
       emitToUser(userId, 'notification:new', notification);
-      const { emitToAdmins } = require('./socketService');
-      if (typeof emitToAdmins === 'function') {
-        emitToAdmins('notification:new', notification);
-      }
 
       // 2. Real Mobile Device Push Notification (Lock-screen alert)
       sendPushToUser(userId, {
