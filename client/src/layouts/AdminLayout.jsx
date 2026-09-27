@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/navigation/Sidebar';
 import TopNavbar from '../components/navigation/TopNavbar';
+import NotificationPermissionBanner from '../components/common/NotificationPermissionBanner';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 
@@ -54,6 +55,9 @@ const AdminLayout = () => {
           onMenuToggle={() => setSidebarOpen(true)}
           onDesktopMenuToggle={() => setSidebarCollapsed((prev) => !prev)}
         />
+
+        {/* Desktop notification permission nudge — shows only if Edge/Chrome hasn't granted permission */}
+        <NotificationPermissionBanner />
 
         {/* Page Body */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
