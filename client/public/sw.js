@@ -156,43 +156,48 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push Notification Listeners (Preserved 100%)
+// Push Notification Listeners — Suppresses desktop OS banners when app is active in browser
 self.addEventListener('push', (event) => {
-  let data = {
-    title: 'Converge Support Notification',
-    body: 'You have a new support ticket notification.',
-    icon: '/logo16.png',
-    badge: '/logo16.png',
-    url: '/technician/assigned'
-  };
-
-  if (event.data) {
-    try {
-      data = { ...data, ...event.data.json() };
-    } catch (e) {
-      data.body = event.data.text();
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: data.icon || '/CSiLogo.png',
-    badge: data.badge || '/CSiLogo.png',
-    vibrate: [300, 100, 300, 100, 300],
-    requireInteraction: true,
-    data: {
-      url: data.url || '/technician/assigned',
-      ticketId: data.data?.ticketId
-    },
-    actions: [
-      { action: 'open', title: '👁️ View Request' }
-    ],
-    tag: `converge-alert-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    renotify: true
-  };
-
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if user has app open and active in browser
+      const hasVisibleWindow = clientList.some((client) => client.visibilityState === 'visible');
+      if (hasVisibleWindow) {
+        // App is actively open in browser — in-app toasts & bell handle it cleanly; suppress desktop OS banner
+        return;
+      }
+
+      let data = {
+        title: 'Converge Support Notification',
+        body: 'You have a new support ticket notification.',
+        icon: '/CSiLogo.png',
+        badge: '/CSiLogo.png',
+        url: '/technician/assigned'
+      };
+
+      if (event.data) {
+        try {
+          data = { ...data, ...event.data.json() };
+        } catch (e) {
+          data.body = event.data.text();
+        }
+      }
+
+      const options = {
+        body: data.body,
+        icon: data.icon || '/CSiLogo.png',
+        badge: data.badge || '/CSiLogo.png',
+        vibrate: [300, 100, 300, 100, 300],
+        data: {
+          url: data.url || '/technician/assigned',
+          ticketId: data.data?.ticketId
+        },
+        tag: data.data?.ticketId ? `converge-notif-${data.data.ticketId}` : `converge-notif-${Date.now()}`,
+        renotify: false
+      };
+
+      return self.registration.showNotification(data.title, options);
+    })
   );
 });
 

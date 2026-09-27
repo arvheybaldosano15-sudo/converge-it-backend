@@ -101,6 +101,12 @@ exports.sendPushToUser = async (userId, payload) => {
     });
 
     const sendPromises = subscriptions.map(async (sub) => {
+      // Skip push to desktop browsers (Windows / Mac / Linux) so OS desktop pop-ups never trigger
+      const ua = (sub.user_agent || '').toLowerCase();
+      if (ua.includes('windows') || ua.includes('macintosh') || ua.includes('x11')) {
+        return;
+      }
+
       const pushSubscription = {
         endpoint: sub.endpoint,
         keys: {
