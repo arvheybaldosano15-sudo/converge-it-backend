@@ -7,7 +7,7 @@ import Button from '../../components/common/Button';
 import { KeyRound, ShieldAlert, Delete, ArrowRight, Lock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const TechnicianPinLogin = ({ isModal = false, onClose }) => {
+const TechnicianPinLogin = ({ isModal = false, onClose, hideCloseButton = false }) => {
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -80,17 +80,19 @@ const TechnicianPinLogin = ({ isModal = false, onClose }) => {
   const content = (
     <div className="w-full relative">
       {/* Top Right Close 'X' Button */}
-      <button
-        type="button"
-        onClick={() => {
-          if (onClose) onClose();
-          else navigate('/login');
-        }}
-        className="absolute top-0 right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
-        aria-label="Close"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {!hideCloseButton && !isModal && (
+        <button
+          type="button"
+          onClick={() => {
+            if (onClose) onClose();
+            else navigate('/login');
+          }}
+          className="absolute top-0 right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Header — 100% Perfectly Centered */}
       <div className="text-center mb-5 sm:mb-6 w-full">

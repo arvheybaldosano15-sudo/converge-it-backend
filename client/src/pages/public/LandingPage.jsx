@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wrench,
   KeyRound,
@@ -42,10 +42,8 @@ import TechnicianSignUp from '../auth/TechnicianSignUp';
 const LandingPage = () => {
   const navigate = useNavigate();
 
-  // Modal States
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isPinOpen, setIsPinOpen] = useState(false);
-  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  // Modal States — Unified for silky smooth 60fps mobile transitions
+  const [authModal, setAuthModal] = useState(null); // null | 'login' | 'pin' | 'signup'
   const [trackTicketId, setTrackTicketId] = useState('');
 
   const handleTrackSubmit = (e) => {
@@ -103,7 +101,7 @@ const LandingPage = () => {
 
             {/* Admin/User Sign In */}
             <button
-              onClick={() => setIsLoginOpen(true)}
+              onClick={() => setAuthModal('login')}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs sm:text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
             >
               <LogIn className="w-4 h-4" />
@@ -436,7 +434,7 @@ const LandingPage = () => {
                 </p>
               </div>
               <button
-                onClick={() => setIsLoginOpen(true)}
+                onClick={() => setAuthModal('login')}
                 className="w-full py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-xs font-bold text-cyan-300 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
@@ -457,14 +455,14 @@ const LandingPage = () => {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setIsPinOpen(true)}
+                  onClick={() => setAuthModal('pin')}
                   className="w-full py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-bold text-blue-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
                   <span>PIN Login</span>
                 </button>
                 <button
-                  onClick={() => setIsSignUpOpen(true)}
+                  onClick={() => setAuthModal('signup')}
                   className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
@@ -536,47 +534,80 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {/* ─── MODALS ───────────────────────────────────────────────────────────── */}
-
-      {/* 1. Admin/User Sign In Modal */}
+      {/* ─── UNIFIED AUTH MODAL ───────────────────────────────────────────────── */}
+      {/* Single modal instance — prevents backdrop flicker when switching views */}
       <Modal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        maxWidth="max-w-md"
+        isOpen={authModal !== null}
+        onClose={() => setAuthModal(null)}
+        maxWidth={authModal === 'signup' ? 'max-w-xl' : 'max-w-md'}
         noBackdrop={true}
       >
-        <Login
-          isModal={true}
-          onClose={() => setIsLoginOpen(false)}
-          onOpenPinModal={() => {
-            setIsLoginOpen(false);
-            setIsPinOpen(true);
-          }}
-          onOpenSignUpModal={() => {
-            setIsLoginOpen(false);
-            setIsSignUpOpen(true);
-          }}
-        />
-      </Modal>
+        <AnimatePresence mode="wait" initial={false}>
+          {authModal === 'login' && (
+            <motion.div
+              key="auth-login"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <Login
+                isModal={true}
+                onClose={() => setAuthModal(null)}
+                onOpenPinModal={() => setAuthModal('pin')}
+                onOpenSignUpModal={() => setAuthModal('signup')}
+              />
+            </motion.div>
+          )}
 
-      {/* 2. Technician PIN Login Modal */}
-      <Modal
-        isOpen={isPinOpen}
-        onClose={() => setIsPinOpen(false)}
-        maxWidth="max-w-md"
-        noBackdrop={true}
-      >
-        <TechnicianPinLogin isModal={true} onClose={() => setIsPinOpen(false)} />
-      </Modal>
+          {authModal === 'pin' && (
+            <motion.div
+              key="auth-pin"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              {/* Back link */}
+              <button
+                type="button"
+                onClick={() => setAuthModal('login')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors mb-4 touch-manipulation"
+              >
+                <span>← Back to Sign In</span>
+              </button>
+              <TechnicianPinLogin
+                isModal={true}
+                hideCloseButton={true}
+                onClose={() => setAuthModal(null)}
+              />
+            </motion.div>
+          )}
 
-      {/* 3. Technician Registration Modal */}
-      <Modal
-        isOpen={isSignUpOpen}
-        onClose={() => setIsSignUpOpen(false)}
-        maxWidth="max-w-xl"
-        noBackdrop={true}
-      >
-        <TechnicianSignUp isModal={true} onClose={() => setIsSignUpOpen(false)} />
+          {authModal === 'signup' && (
+            <motion.div
+              key="auth-signup"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              {/* Back link */}
+              <button
+                type="button"
+                onClick={() => setAuthModal('login')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors mb-4 touch-manipulation"
+              >
+                <span>← Back to Sign In</span>
+              </button>
+              <TechnicianSignUp
+                isModal={true}
+                hideCloseButton={true}
+                onClose={() => setAuthModal(null)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Modal>
     </div>
   );

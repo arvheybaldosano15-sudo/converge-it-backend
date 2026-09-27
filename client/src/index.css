@@ -138,7 +138,22 @@ html:not(.dark) {
   .glass-input {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    /* Prevent 300ms tap delay on mobile inputs */
+    touch-action: manipulation;
   }
+}
+
+/* Modal scroll container — iOS momentum scrolling */
+.modal-scroll-body,
+[class*="custom-scrollbar"] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent text size adjustment when rotating on iOS */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ─────────────────────────────────────────────

@@ -31,7 +31,7 @@ const schema = z.object({
   path: ['confirmPin'],
 });
 
-const TechnicianSignUp = ({ isModal = false, onClose }) => {
+const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false }) => {
   const { registerTechnician } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -94,17 +94,19 @@ const TechnicianSignUp = ({ isModal = false, onClose }) => {
   const content = (
     <div className="w-full select-none relative">
       {/* Top Right Close 'X' Button */}
-      <button
-        type="button"
-        onClick={() => {
-          if (onClose) onClose();
-          else navigate('/login');
-        }}
-        className="absolute -top-1 -right-1 sm:top-0 sm:right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
-        aria-label="Close"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {!hideCloseButton && !isModal && (
+        <button
+          type="button"
+          onClick={() => {
+            if (onClose) onClose();
+            else navigate('/login');
+          }}
+          className="absolute -top-1 -right-1 sm:top-0 sm:right-0 z-20 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 hover:text-white active:scale-95 transition-all touch-manipulation cursor-pointer"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Header */}
       <div className="mb-4 pr-10">

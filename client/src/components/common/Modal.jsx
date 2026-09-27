@@ -23,24 +23,28 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          {/* Semi-transparent Backdrop Overlay */}
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain">
+          {/* Semi-transparent Backdrop Overlay — Lightweight on mobile webkit */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={showCloseButton ? onClose : undefined}
-            className={`fixed inset-0 ${noBackdrop ? 'bg-slate-950/45 backdrop-blur-sm' : 'bg-slate-950/75 sm:backdrop-blur-md'}`}
+            className={`fixed inset-0 ${
+              noBackdrop
+                ? 'bg-slate-950/80 max-sm:backdrop-blur-none sm:backdrop-blur-sm'
+                : 'bg-slate-950/85 max-sm:backdrop-blur-none sm:backdrop-blur-md'
+            }`}
           />
 
           {/* Modal Box — Centered & Viewport-Optimized for Mobile Phones & PWA */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/98 sm:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-700/80 z-10 my-auto max-h-[88dvh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu`}
+            className={`relative w-full ${maxWidth} glass-panel bg-slate-900/98 sm:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-700/80 z-10 my-auto max-h-[88dvh] sm:max-h-[90vh] flex flex-col overflow-hidden transform-gpu will-change-transform`}
           >
             {/* Top Right Close Button */}
             {showCloseButton && (
@@ -61,7 +65,9 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', noBack
             )}
 
             {/* Body */}
-            <div className="p-4 sm:p-6 pb-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y">{children}</div>
+            <div className="p-4 sm:p-6 pb-6 overflow-y-auto custom-scrollbar flex-1 touch-pan-y overscroll-contain -webkit-overflow-scrolling-touch">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}
