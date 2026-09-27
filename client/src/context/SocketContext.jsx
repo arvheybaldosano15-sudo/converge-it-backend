@@ -108,6 +108,42 @@ export const SocketProvider = ({ children }) => {
       } catch (e) {}
     };
 
+    const triggerDesktopNotification = async (notification) => {
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      try {
+        let perm = Notification.permission;
+        if (perm === 'default') {
+          perm = await Notification.requestPermission();
+        }
+        if (perm !== 'granted') return;
+
+        const rawTitle = notification?.title || 'Converge IT Alert';
+        const notifTitle = rawTitle.startsWith('Converge') ? rawTitle : `Converge IT: ${rawTitle}`;
+        const notifBody = notification?.body || notification?.message || 'You have a new support notification.';
+        const notifTag = notification?.id ? `converge-notif-${notification.id}` : `converge-notif-${Date.now()}`;
+
+        const options = {
+          body: notifBody,
+          icon: '/CSiLogo.png',
+          badge: '/CSiLogo.png',
+          tag: notifTag,
+          renotify: true
+        };
+
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && reg.showNotification) {
+            await reg.showNotification(notifTitle, options);
+            return;
+          }
+        }
+
+        new Notification(notifTitle, options);
+      } catch (e) {
+        console.error('Desktop Notification error:', e);
+      }
+    };
+
     newSocket.on('notification:new', (notification) => {
       playNotificationChime();
       toast.custom(
@@ -138,22 +174,8 @@ export const SocketProvider = ({ children }) => {
         setUnreadNotifications((prev) => prev + 1);
       }
 
-      // Native Desktop & Mobile Browser Notification Popup
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        try {
-          const notifTitle = notification.title ? `Converge IT: ${notification.title}` : 'Converge IT Solutions Alert';
-          const notifBody = notification.body || notification.message || 'You have a new support notification.';
-
-          new Notification(notifTitle, {
-            body: notifBody,
-            icon: '/CSiLogo.png',
-            badge: '/CSiLogo.png',
-            tag: notification.id ? `converge-notif-${notification.id}` : `converge-notif-${Date.now()}`
-          });
-        } catch (e) {
-          console.error('Desktop Notification error:', e);
-        }
-      }
+      // Trigger Desktop & Mobile Notification Banner
+      triggerDesktopNotification(notification);
     });
 
     const handleCreatedNotification = (payload = {}) => {
