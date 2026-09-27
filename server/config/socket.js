@@ -42,7 +42,8 @@ const initializeSocket = (server) => {
 
     socket.on('join:ticket', (ticketId) => socket.join(`ticket:${ticketId}`));
     socket.on('leave:ticket', (ticketId) => socket.leave(`ticket:${ticketId}`));
-    socket.on('disconnect', () => logger.info(`Socket disconnected: ${socket.id}`));
+    socket.on('error', (err) => logger.warn(`Socket error on ${socket.id}:`, err.message));
+    socket.on('disconnect', (reason) => logger.info(`Socket disconnected: ${socket.id} (Reason: ${reason})`));
   });
 
   return io;

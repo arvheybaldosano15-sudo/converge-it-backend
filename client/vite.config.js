@@ -42,6 +42,20 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            if (err.code !== 'ECONNRESET' && err.code !== 'EPIPE') {
+              console.error('Socket proxy error:', err.message);
+            }
+          });
+          proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
+            socket.on('error', (err) => {
+              if (err.code !== 'ECONNRESET' && err.code !== 'EPIPE') {
+                console.error('Socket WS error:', err.message);
+              }
+            });
+          });
+        }
       },
     },
   },
