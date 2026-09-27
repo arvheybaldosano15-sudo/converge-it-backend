@@ -127,17 +127,36 @@ export const SocketProvider = ({ children }) => {
           icon: '/CSiLogo.png',
           badge: '/CSiLogo.png',
           tag: notifTag,
-          renotify: true
+          renotify: true,
         };
 
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.ready;
-          if (reg && reg.showNotification) {
-            await reg.showNotification(notifTitle, options);
-            return;
+        // Detect if running as an installed PWA (standalone) OR on mobile
+        // On desktop browsers (non-PWA), new Notification() is the correct API.
+        // reg.showNotification() requires an active push subscription on desktop Chrome — without
+        // one it silently drops the call, which is why desktop never shows anything.
+        const isStandalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.navigator.standalone === true;
+        const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        if ((isStandalone || isMobileUA) && 'serviceWorker' in navigator) {
+          // PWA/mobile: use Service Worker showNotification (supports vibrate, badge, actions)
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            if (reg && reg.showNotification) {
+              await reg.showNotification(notifTitle, {
+                ...options,
+                vibrate: [200, 100, 200],
+              });
+              return;
+            }
+          } catch (swErr) {
+            console.warn('SW notification failed, falling back to Notification API:', swErr);
           }
         }
 
+        // Desktop browser (non-PWA) OR SW fallback:
+        // new Notification() works reliably here without needing a push subscription
         new Notification(notifTitle, options);
       } catch (e) {
         console.error('Desktop Notification error:', e);
