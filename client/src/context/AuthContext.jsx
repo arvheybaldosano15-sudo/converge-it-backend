@@ -125,7 +125,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    const isTech = user?.role === 'technician';
     try {
       await api.post('/auth/logout');
     } catch (e) {
@@ -136,10 +135,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       toast.success('Logged out successfully');
 
-      // Allow 350ms for toast alert animation to render smoothly before navigating
+      // Direct to landing page (/) on logout
       setTimeout(() => {
-        const target = isTech ? '/technician-login' : '/login';
-        window.location.href = target;
+        window.location.href = '/';
       }, 350);
     }
   };

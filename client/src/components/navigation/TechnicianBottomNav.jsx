@@ -29,7 +29,6 @@ const TechnicianBottomNav = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/technician-login');
   };
 
   return (
