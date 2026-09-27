@@ -177,9 +177,10 @@ const InstallationRequests = () => {
     const handleCreated = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
       if (ticket && ticket.id) {
-        const catName = (ticket.category_name || '').toLowerCase();
-        // If category is not specified or contains 'installation', process it
-        const isInstallation = !catName || catName.includes('installation');
+        const catName = (ticket.category_name || ticket.categoryName || ticket.category?.name || '').toLowerCase();
+        const subjName = (ticket.subject || ticket.title || '').toLowerCase();
+        // If category is not specified, or category/subject contains 'installation', process it
+        const isInstallation = !catName || catName.includes('installation') || subjName.includes('installation');
         if (isInstallation) {
           queryClient.setQueryData(['installation-requests'], (old = []) => {
             const list = Array.isArray(old) ? old : [];

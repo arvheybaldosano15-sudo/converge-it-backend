@@ -706,6 +706,13 @@ exports.createTicket = async (req, res) => {
 
     const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
 
+    // ✅ Clear server-side tickets cache so the next GET /tickets returns fresh data immediately
+    // Without this, the 5s TTL cache returns old results even though the new ticket exists in DB.
+    try {
+      const { clearTicketsCache } = require('./ticketController');
+      if (typeof clearTicketsCache === 'function') clearTicketsCache();
+    } catch (e) {}
+
     // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });

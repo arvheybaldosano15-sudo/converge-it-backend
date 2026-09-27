@@ -349,6 +349,7 @@ const clearTicketsCache = () => {
   ticketsCache.clear();
   statsCache.clear();
 };
+exports.clearTicketsCache = clearTicketsCache;
 
 exports.getTicketStats = async (req, res, next) => {
   try {
