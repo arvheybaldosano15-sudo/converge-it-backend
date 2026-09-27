@@ -156,49 +156,39 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push Notification Listeners — Suppresses desktop OS banners when app is active in browser
+// Push Notification Listeners — Displays official Converge IT desktop & mobile popups
 self.addEventListener('push', (event) => {
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if user has app open and active in browser
-      const hasVisibleWindow = clientList.some((client) => client.visibilityState === 'visible');
-      if (hasVisibleWindow) {
-        // App is actively open in browser — in-app toasts & bell handle it cleanly; suppress desktop OS banner
-        return;
-      }
+  let data = {
+    title: 'Converge IT Solutions Notification',
+    body: 'You have a new support ticket notification.',
+    icon: '/CSiLogo.png',
+    badge: '/CSiLogo.png',
+    url: '/technician/assigned'
+  };
 
-      let data = {
-        title: 'Converge Support Notification',
-        body: 'You have a new support ticket notification.',
-        icon: '/CSiLogo.png',
-        badge: '/CSiLogo.png',
-        url: '/technician/assigned'
-      };
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
 
-      if (event.data) {
-        try {
-          data = { ...data, ...event.data.json() };
-        } catch (e) {
-          data.body = event.data.text();
-        }
-      }
+  const options = {
+    body: data.body,
+    icon: data.icon || '/CSiLogo.png',
+    badge: data.badge || '/CSiLogo.png',
+    vibrate: [300, 100, 300, 100, 300],
+    data: {
+      url: data.url || '/technician/assigned',
+      ticketId: data.data?.ticketId
+    },
+    tag: data.data?.ticketId ? `converge-notif-${data.data.ticketId}` : `converge-notif-${Date.now()}`,
+    renotify: false
+  };
 
-      const options = {
-        body: data.body,
-        icon: data.icon || '/CSiLogo.png',
-        badge: data.badge || '/CSiLogo.png',
-        vibrate: [300, 100, 300, 100, 300],
-        data: {
-          url: data.url || '/technician/assigned',
-          ticketId: data.data?.ticketId
-        },
-        tag: data.data?.ticketId ? `converge-notif-${data.data.ticketId}` : `converge-notif-${Date.now()}`,
-        renotify: false
-      };
-
-      return self.registration.showNotification(data.title, options);
-    })
-  );
+  const title = data.title ? (data.title.startsWith('Converge') ? data.title : `Converge IT: ${data.title}`) : 'Converge IT Solutions Notification';
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {

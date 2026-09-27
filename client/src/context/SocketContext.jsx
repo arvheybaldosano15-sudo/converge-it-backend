@@ -137,6 +137,23 @@ export const SocketProvider = ({ children }) => {
       } else {
         setUnreadNotifications((prev) => prev + 1);
       }
+
+      // Native Desktop & Mobile Browser Notification Popup
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+          const notifTitle = notification.title ? `Converge IT: ${notification.title}` : 'Converge IT Solutions Alert';
+          const notifBody = notification.body || notification.message || 'You have a new support notification.';
+
+          new Notification(notifTitle, {
+            body: notifBody,
+            icon: '/CSiLogo.png',
+            badge: '/CSiLogo.png',
+            tag: notification.id ? `converge-notif-${notification.id}` : `converge-notif-${Date.now()}`
+          });
+        } catch (e) {
+          console.error('Desktop Notification error:', e);
+        }
+      }
     });
 
     const handleCreatedNotification = (payload = {}) => {
