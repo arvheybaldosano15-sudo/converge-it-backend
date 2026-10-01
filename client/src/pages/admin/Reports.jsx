@@ -236,7 +236,24 @@ const ReportsAndAnalytics = () => {
     labels: sortedRT.map((r) => r.priority?.toUpperCase() || ''),
     datasets: [{ label: 'Avg Resolution (hrs)', data: sortedRT.map((r) => parseFloat(r.avg_resolution_hours || 0)), backgroundColor: sortedRT.map((r) => PRIORITY_COLORS[r.priority] || '#64748b'), borderRadius: 4 }]
   };
-  const rtBarOptions = { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: CHART_TOOLTIP }, scales: { x: { ...AXIS_STYLE, beginAtZero: true }, y: AXIS_STYLE } };
+  const rtBarOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...CHART_TOOLTIP,
+        callbacks: {
+          label: (context) => ` Avg Resolution: ${context.raw} hrs`
+        }
+      }
+    },
+    scales: {
+      x: { ...AXIS_STYLE, beginAtZero: true, title: { display: true, text: 'Turnaround Time (Hours)', color: '#64748b', font: { size: 10 } } },
+      y: AXIS_STYLE
+    }
+  };
 
   const drillTo = (filterKey, filterVal) => navigate(`/admin/tickets?${filterKey}=${filterVal}`);
 
@@ -449,8 +466,12 @@ const ReportsAndAnalytics = () => {
 
             <Card className="space-y-3 p-4">
               <h3 className="text-sm font-bold text-white font-display flex items-center gap-2"><Clock className="w-4 h-4 text-cyan-400" /> Avg Resolution Time by Priority</h3>
-              {loading ? <Skeleton h="h-64" /> : sortedRT.length === 0
-                ? <div className="h-64 flex items-center justify-center text-slate-500 text-xs">No resolution time data available.</div>
+              {loading ? <Skeleton h="h-64" /> : (sortedRT.length === 0 || !sortedRT.some(r => parseFloat(r.avg_resolution_hours || 0) > 0))
+                ? <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs space-y-1 text-center p-4">
+                    <Clock className="w-8 h-8 text-slate-600 mb-1" />
+                    <p className="font-semibold text-slate-400">No resolved ticket data in selected period.</p>
+                    <p className="text-[11px] text-slate-500 max-w-xs">Resolution turnaround times calculate automatically when tickets are marked as Resolved or Closed.</p>
+                  </div>
                 : <div className="h-64"><Bar data={rtBarData} options={rtBarOptions} /></div>}
             </Card>
           </div>

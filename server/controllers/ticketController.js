@@ -231,7 +231,15 @@ exports.updateTicket = async (req, res, next) => {
       }
     }
     const updates = []; const values = []; let i = 1;
-    if (status) { updates.push(`status = $${i++}`); values.push(status); }
+    if (status) {
+      updates.push(`status = $${i++}`);
+      values.push(status);
+      if (['resolved', 'closed'].includes(status)) {
+        updates.push(`resolved_at = COALESCE(resolved_at, NOW())`);
+      } else {
+        updates.push(`resolved_at = NULL`);
+      }
+    }
     if (priority && req.user.role === 'admin') { updates.push(`priority = $${i++}`); values.push(priority); }
     if (assignedTo !== undefined && req.user.role === 'admin') { updates.push(`assigned_technician_id = $${i++}`); values.push(assignedTo || null); }
     if (categoryId && req.user.role === 'admin') { updates.push(`service_category_id = $${i++}`); values.push(categoryId); }
