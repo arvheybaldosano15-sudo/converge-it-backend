@@ -510,9 +510,14 @@ exports.createTicket = async (req, res) => {
   if (recentVerifyRequests.length > 20) recentVerifyRequests.shift();
 
   try {
-    const subscriberId = req.query.subscriber_id || req.body?.subscriber_id || req.query.psid || req.body?.psid || '';
-    let concernText = req.query.concern || req.query.text || req.body?.concern || req.body?.text || '';
-    const requestType = (req.query.request_type || req.body?.request_type || '').toLowerCase();
+    let rawSubId = req.query.subscriber_id || req.body?.subscriber_id || req.query.psid || req.body?.psid || '';
+    const subscriberId = (Array.isArray(rawSubId) ? String(rawSubId[0]) : String(rawSubId)).trim();
+
+    let rawConcern = req.query.concern || req.query.text || req.body?.concern || req.body?.text || '';
+    let concernText = (Array.isArray(rawConcern) ? String(rawConcern[0]) : String(rawConcern)).trim();
+
+    let rawReqType = req.query.request_type || req.body?.request_type || '';
+    const requestType = (Array.isArray(rawReqType) ? String(rawReqType[0]) : String(rawReqType)).toLowerCase().trim();
 
     logger.info(`🔍 createTicket hit: subscriberId="${subscriberId}", requestType="${requestType}", concern="${concernText}"`);
 
