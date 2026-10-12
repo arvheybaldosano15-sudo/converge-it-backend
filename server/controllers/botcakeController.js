@@ -529,15 +529,60 @@ exports.createTicket = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Subscriber ID is required.' });
     }
 
-    // Find customer ONLY by their specific messenger_psid
+    // 1. Try to find customer by their specific messenger_psid
     let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
     let customer = custResult.rows[0];
 
-    // Parse structured form fields first (needed for auto-create below)
+    // Parse structured form fields
+    const accMatch = concernText.match(/(?:Account Number|Account No|Account|Acc No|Acc):\s*([^\n,]+)/i);
     const nameMatch = concernText.match(/(?:Name|Full Name):\s*([^\n]+)/i);
     const phoneMatch = concernText.match(/(?:Contact Number|Contact|Phone):\s*([^\n]+)/i);
     const addressMatch = concernText.match(/(?:Address|Complete Address):\s*([^\n]+)/i);
     const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
+
+    // 2. If not found by PSID, try finding customer by account number (new Facebook Page gives new PSID)
+    const rawAccFromQuery = (req.query.account_number || req.body?.account_number || (accMatch ? accMatch[1] : '')).toString().trim();
+    if (!customer && rawAccFromQuery) {
+      const cleanAcc = rawAccFromQuery.replace(/\{\{[^}]*?\/\//g, '').replace(/[\{\}\"\']/g, '').trim();
+      const digitsOnly = cleanAcc.replace(/\D/g, '');
+      const withPrefix = `ACC-${digitsOnly}`;
+
+      const accResult = await query(
+        `SELECT * FROM customers
+         WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
+            OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
+            OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
+            OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
+            OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
+         LIMIT 1`,
+        [cleanAcc, withPrefix, digitsOnly, digitsOnly]
+      );
+
+      if (accResult.rows.length > 0) {
+        customer = accResult.rows[0];
+        // Auto-link the new page's subscriberId PSID to this customer record
+        if (subscriberId) {
+          await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
+          logger.info(`🔗 Auto-linked new Facebook Page subscriber ${subscriberId} to customer "${customer.full_name}" (${customer.account_number})`);
+        }
+      }
+    }
+
+    // 3. If still not found by PSID or account, try finding customer by name
+    const rawNameFromQuery = (nameMatch ? nameMatch[1].trim() : '') || (req.query.name || req.body?.name || req.query.customer_name || req.body?.customer_name || '').toString().trim();
+    if (!customer && rawNameFromQuery && rawNameFromQuery.toLowerCase() !== 'new customer') {
+      const nameResult = await query(
+        `SELECT * FROM customers WHERE TRIM(LOWER(full_name)) = TRIM(LOWER($1)) LIMIT 1`,
+        [rawNameFromQuery]
+      );
+      if (nameResult.rows.length > 0) {
+        customer = nameResult.rows[0];
+        if (subscriberId) {
+          await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
+          logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer "${customer.full_name}" by name matching`);
+        }
+      }
+    }
 
     // Service & Installation specific fields
     const serviceTypeMatch = concernText.match(/(?:Service Type|Service|Type of Service):\s*([^\n]+)/i);
@@ -545,22 +590,14 @@ exports.createTicket = async (req, res) => {
     const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
     const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || installTypeMatch;
 
+    // 4. If customer is still not in DB, auto-create a customer record so the ticket is NEVER dropped!
     if (!customer) {
-      if (!isInstallationRequest) {
-        // Regular concerns still require a linked account
-        return res.status(200).json({
-          success: false,
-          message: 'No linked customer found. Please verify your account number first.'
-        });
-      }
-
-      // ✅ Installation Request: auto-create a new customer from form data
-      logger.info(`🆕 Auto-creating new customer for installation request from PSID: ${subscriberId}`);
-      const autoName = nameMatch ? nameMatch[1].trim() : 'New Customer';
-      const autoPhone = phoneMatch ? phoneMatch[1].trim() : null;
-      const autoAddress = addressMatch ? addressMatch[1].trim() : 'Not provided';
+      logger.info(`🆕 Auto-creating new customer from PSID: ${subscriberId}`);
+      const autoName = rawNameFromQuery || (nameMatch ? nameMatch[1].trim() : 'Messenger Customer');
+      const autoPhone = phoneMatch ? phoneMatch[1].trim() : (req.query.phone || req.body?.phone || null);
+      const autoAddress = addressMatch ? addressMatch[1].trim() : (req.query.address || req.body?.address || 'Not provided');
       const autoLandmark = landmarkMatch ? landmarkMatch[1].trim() : null;
-      const autoAccNum = `ACC-${Date.now().toString().slice(-6)}`;
+      const autoAccNum = rawAccFromQuery && !rawAccFromQuery.includes('{{') ? rawAccFromQuery : `ACC-${Date.now().toString().slice(-6)}`;
 
       try {
         const newCust = await query(
@@ -711,11 +748,12 @@ exports.createTicket = async (req, res) => {
 
     const fullTicketPayload = (await fetchFullTicket(createdTicket.id)) || createdTicket;
 
-    // ✅ Clear server-side tickets cache so the next GET /tickets returns fresh data immediately
-    // Without this, the 5s TTL cache returns old results even though the new ticket exists in DB.
+    // ✅ Clear server-side tickets cache and admin dashboard cache so the next GET returns fresh data immediately
     try {
       const { clearTicketsCache } = require('./ticketController');
       if (typeof clearTicketsCache === 'function') clearTicketsCache();
+      const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
+      if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
     } catch (e) {}
 
     // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
