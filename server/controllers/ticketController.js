@@ -147,7 +147,19 @@ exports.createTicket = async (req, res, next) => {
       }
     }
 
-    const ticketNumber = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    if (customerId) {
+      const activeCustomerCheck = await query(
+        `SELECT id, ticket_number, status FROM tickets 
+         WHERE customer_id = $1 AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
+         ORDER BY created_at DESC LIMIT 1`,
+        [customerId]
+      );
+      if (activeCustomerCheck.rows.length > 0) {
+        throw createError(`This customer already has an active ticket (#${activeCustomerCheck.rows[0].ticket_number}) with status "${activeCustomerCheck.rows[0].status}". A new ticket cannot be created until it is resolved or closed.`, 400);
+      }
+    }
+
+    const ticketNumber = `TKT-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
     const priorityVal = (priority || 'medium').toLowerCase();
     const defaultEta = priorityVal === 'critical' ? 15 : priorityVal === 'high' ? 24 : 48;
     const result = await query(

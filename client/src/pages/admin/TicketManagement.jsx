@@ -227,7 +227,7 @@ const TicketManagement = () => {
     const params = paramsRef.current;
 
     // Fetch stats in background independently — does not block table rendering
-    api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request' } })
+    api.get('/tickets/stats', { params: { excludeCategoryName: 'Installation Request', fresh: true, _t: Date.now() } })
       .then((statsRes) => {
         if (statsRes && statsRes.success) {
           const statsData = statsRes.data || {};
@@ -240,7 +240,7 @@ const TicketManagement = () => {
 
     // Fetch primary tickets list
     try {
-      const ticketsRes = await api.get('/tickets', { params });
+      const ticketsRes = await api.get('/tickets', { params: { ...params, fresh: true, _t: Date.now() } });
 
       if (ticketsRes && ticketsRes.success) {
         const freshTickets = ticketsRes.data || [];

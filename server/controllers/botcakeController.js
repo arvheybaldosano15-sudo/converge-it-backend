@@ -312,6 +312,27 @@ exports.handleWebhook = async (req, res) => {
       }
     }
 
+    // Active Ticket Enforcement: if customer already has a ticket that is NOT resolved or closed, do not create a new one!
+    const activeTicketCheck = await query(
+      `SELECT * FROM tickets 
+       WHERE customer_id = $1 
+         AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
+       ORDER BY created_at DESC LIMIT 1`,
+      [customer.id]
+    );
+    if (activeTicketCheck.rows.length > 0) {
+      const existingTicket = activeTicketCheck.rows[0];
+      const statusDisplay = (existingTicket.status || 'open').toUpperCase();
+      logger.info(`⚠️ Active ticket exists for customer ${customer.id} in webhook — existing: ${existingTicket.ticket_number}`);
+      const activeMsg = `⚠️ Existing Active Ticket Found\n\nHello, ${customer.full_name || 'Customer'}!\nYou already have an ongoing support ticket in our system:\n\n📋 Ticket Number: ${existingTicket.ticket_number}\n📌 Status: ${statusDisplay}\n\nOur team is currently handling your request. A new ticket cannot be created until your existing ticket is resolved or closed.`;
+      try {
+        await sendBotcakeMessage(psid, activeMsg);
+      } catch (err) {
+        await sendTextMessage(psid, activeMsg).catch(() => {});
+      }
+      return;
+    }
+
     // Customer is found & linked -> Auto-generate ticket instantly (< 15ms)
     logger.info(`Generating ticket instantly for customer "${customer.full_name}"...`);
     const textLower = (messageText || '').toLowerCase();
@@ -321,7 +342,7 @@ exports.handleWebhook = async (req, res) => {
     const { categoryId, categoryName } = await determineFastCategory(textLower);
 
     const subjectVal = messageText.length > 95 ? messageText.substring(0, 95) + '...' : messageText || 'Support Request via Messenger';
-    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
 
     let createdTicket;
     try {
@@ -340,6 +361,8 @@ exports.handleWebhook = async (req, res) => {
     logger.info(`✅ Ticket created instantly: ${createdTicket.ticket_number}`);
 
     try {
+      const { clearTicketsCache } = require('./ticketController');
+      if (typeof clearTicketsCache === 'function') clearTicketsCache();
       const { clearAdminDashboardCache } = require('../routes/dashboardRoutes');
       if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
     } catch (_) {}
@@ -758,26 +781,35 @@ exports.createTicket = async (req, res) => {
       ? `Installation Request${installTypeMatch ? ' - ' + installTypeMatch[1].trim() : ''}`
       : (aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger');
 
-    // Duplicate guard: if same customer already has an open ticket created in last 5 minutes, don't create another
-    const recentCheck = await query(
+    // Active Ticket Enforcement: if customer has an existing ticket that is NOT resolved or closed, do NOT create a new ticket!
+    const activeTicketCheck = await query(
       `SELECT * FROM tickets 
        WHERE customer_id = $1 
-         AND status = 'open' 
-         AND created_at > NOW() - INTERVAL '5 minutes'
+         AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
        ORDER BY created_at DESC LIMIT 1`,
       [customer.id]
     );
-    if (recentCheck.rows.length > 0) {
-      const existingTicket = recentCheck.rows[0];
-      logger.info(`⚠️ Duplicate ticket prevented for customer ${customer.id} — existing: ${existingTicket.ticket_number}`);
-      const dupMsg = `✅ Your concern has already been submitted!\n\n📋 Ticket Number: ${existingTicket.ticket_number}\n\nOur team is already processing your request. Please wait for a technician to contact you.`;
+    if (activeTicketCheck.rows.length > 0) {
+      const existingTicket = activeTicketCheck.rows[0];
+      const statusDisplay = (existingTicket.status || 'open').toUpperCase();
+      logger.info(`⚠️ Active ticket exists for customer ${customer.id} (${customer.full_name}) — existing: ${existingTicket.ticket_number} (status: ${existingTicket.status})`);
+      const activeMsg = `⚠️ Existing Active Ticket Found\n\nHello, ${customer.full_name || 'Customer'}!\nYou already have an ongoing support ticket in our system:\n\n📋 Ticket Number: ${existingTicket.ticket_number}\n📌 Status: ${statusDisplay}\n📝 Subject: ${existingTicket.subject || 'Support Request'}\n\nOur technical team is already handling your request. A new ticket cannot be created until your existing ticket is resolved or closed.\n\nThank you for your patience!`;
       if (subscriberId) {
-        try { await sendBotcakeMessage(subscriberId, dupMsg); } catch { await sendTextMessage(subscriberId, dupMsg).catch(() => {}); }
+        try { await sendBotcakeMessage(subscriberId, activeMsg); } catch { await sendTextMessage(subscriberId, activeMsg).catch(() => {}); }
       }
-      return res.status(200).json({ success: true, ticket_number: existingTicket.ticket_number, duplicate: true, reply_message: dupMsg, messages: [{ text: dupMsg }] });
+      return res.status(200).json({ 
+        success: false, 
+        has_active_ticket: true,
+        ticket_number: existingTicket.ticket_number, 
+        status: existingTicket.status,
+        duplicate: true, 
+        message: `Customer already has an active ticket (${existingTicket.ticket_number}) with status "${existingTicket.status}". A new ticket cannot be created until the current ticket is resolved or closed.`,
+        reply_message: activeMsg, 
+        messages: [{ text: activeMsg }] 
+      });
     }
 
-    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const ticketNum = `TKT-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
 
     const etaHoursVal = aiResult.etaHours || (priorityEnum === 'critical' ? 15 : priorityEnum === 'high' ? 24 : 48);
 
