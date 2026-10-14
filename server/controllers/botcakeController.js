@@ -24,6 +24,38 @@ const fetchFullTicket = async (ticketId) => {
   }
 };
 
+/**
+ * Robust customer lookup by account number
+ * Matches standard account numbers (e.g. "11114", "ACC-11114", "acc-893793")
+ */
+const findCustomerByAccount = async (rawAcc) => {
+  if (!rawAcc) return null;
+  const cleanAcc = String(rawAcc)
+    .replace(/\{\{[^}]*?\/\//g, '')
+    .replace(/[\{\}\"\']/g, '')
+    .trim();
+  const digitsOnly = cleanAcc.replace(/\D/g, '');
+  if (!cleanAcc && !digitsOnly) return null;
+  const withPrefix = `ACC-${digitsOnly}`;
+
+  try {
+    const res = await query(
+      `SELECT * FROM customers
+       WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
+          OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
+          OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
+       LIMIT 1`,
+      [cleanAcc, withPrefix, digitsOnly, digitsOnly]
+    );
+    return res.rows[0] || null;
+  } catch (err) {
+    logger.error('findCustomerByAccount error:', err);
+    return null;
+  }
+};
+
 const serviceCategoriesCache = { data: null, lastFetch: 0 };
 
 async function getServiceCategoriesCached() {
@@ -184,6 +216,17 @@ exports.verifyAccountNumber = async (req, res) => {
 
     const customer = result.rows[0];
     logger.info(`✅ Account number verified for customer: "${customer.full_name}" (${customer.account_number})`);
+
+    const subscriberId = normalizedQuery.subscriber_id || req.body?.subscriber_id || normalizedQuery.psid || req.body?.psid || '';
+    if (subscriberId) {
+      try {
+        await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
+        logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer ${customer.full_name} in verifyAccountNumber`);
+      } catch (linkErr) {
+        logger.warn('Failed to auto-link subscriber PSID in verifyAccountNumber:', linkErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       found: true,
@@ -529,75 +572,84 @@ exports.createTicket = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Subscriber ID is required.' });
     }
 
-    // 1. Try to find customer by their specific messenger_psid
-    let custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
-    let customer = custResult.rows[0];
+    // Detect whether this is an installation request
+    const serviceTypeMatch = concernText.match(/(?:Service Type|Service|Type of Service):\s*([^\n]+)/i);
+    const installTypeMatch = concernText.match(/Type\s*of\s*Installation:\s*([^\n]+)/i);
+    const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
+    const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || Boolean(installTypeMatch);
 
     // Parse structured form fields
-    const accMatch = concernText.match(/(?:Account Number|Account No|Account|Acc No|Acc):\s*([^\n,]+)/i);
+    const accMatch = concernText.match(/(?:Account\s*(?:Number|No\.?|#)?|Acc\.?\s*(?:No\.?|#)?|Acct\.?\s*(?:No\.?|#)?):\s*([^\n,]+)/i);
     const nameMatch = concernText.match(/(?:Name|Full Name):\s*([^\n]+)/i);
     const phoneMatch = concernText.match(/(?:Contact Number|Contact|Phone):\s*([^\n]+)/i);
     const addressMatch = concernText.match(/(?:Address|Complete Address):\s*([^\n]+)/i);
     const landmarkMatch = concernText.match(/Landmark:\s*([^\n]+)/i);
 
-    // 2. If not found by PSID, try finding customer by account number (new Facebook Page gives new PSID)
-    const rawAccFromQuery = (req.query.account_number || req.body?.account_number || (accMatch ? accMatch[1] : '')).toString().trim();
-    if (!customer && rawAccFromQuery) {
-      const cleanAcc = rawAccFromQuery.replace(/\{\{[^}]*?\/\//g, '').replace(/[\{\}\"\']/g, '').trim();
-      const digitsOnly = cleanAcc.replace(/\D/g, '');
-      const withPrefix = `ACC-${digitsOnly}`;
+    const rawAccFromQuery = (req.query.account_number || req.body?.account_number || req.query.account || req.body?.account || (accMatch ? accMatch[1] : '')).toString().trim();
+    const cleanAcc = rawAccFromQuery.replace(/\{\{[^}]*?\/\//g, '').replace(/[\{\}\"\']/g, '').trim();
 
-      const accResult = await query(
-        `SELECT * FROM customers
-         WHERE TRIM(LOWER(account_number)) = TRIM(LOWER($1))
-            OR TRIM(LOWER(account_number)) = TRIM(LOWER($2))
-            OR TRIM(LOWER(account_number)) = TRIM(LOWER($3))
-            OR TRIM(LOWER(account_number)) = TRIM(LOWER(REPLACE($1, 'ACC-', '')))
-            OR ($4 != '' AND TRIM(REPLACE(LOWER(account_number), 'acc-', '')) = $4)
-         LIMIT 1`,
-        [cleanAcc, withPrefix, digitsOnly, digitsOnly]
-      );
+    let customer = null;
 
-      if (accResult.rows.length > 0) {
-        customer = accResult.rows[0];
-        // Auto-link the new page's subscriberId PSID to this customer record
+    // 1. If an account number was provided in query, body, or form, verify it in the system first!
+    if (cleanAcc && !cleanAcc.includes('{{')) {
+      customer = await findCustomerByAccount(cleanAcc);
+
+      // If they provided an account number, but it DOES NOT exist in the database:
+      if (!customer && !isInstallationRequest) {
+        logger.warn(`❌ createTicket rejected: Account number "${cleanAcc}" does not exist in DB for subscriber ${subscriberId}`);
+        const notFoundMsg = `❌ Account Number Not Found\n\nWe couldn't find an account matching "${cleanAcc}" in our system.\n\n📌 Please make sure you enter a valid, registered Account Number (e.g. ACC-11114 or 11114) before filing a report.\n\nIf you want to apply for a new installation, please select "Installation Request".`;
         if (subscriberId) {
-          await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
-          logger.info(`🔗 Auto-linked new Facebook Page subscriber ${subscriberId} to customer "${customer.full_name}" (${customer.account_number})`);
+          try { await sendBotcakeMessage(subscriberId, notFoundMsg); } catch { await sendTextMessage(subscriberId, notFoundMsg).catch(() => {}); }
         }
+        return res.status(200).json({
+          success: false,
+          account_found: false,
+          message: `Account number "${cleanAcc}" does not exist in our system. Ticket was not created.`,
+          reply_message: notFoundMsg,
+          messages: [{ text: notFoundMsg }]
+        });
+      }
+
+      if (customer && subscriberId) {
+        await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
+        logger.info(`🔗 Auto-linked subscriber ${subscriberId} to verified customer "${customer.full_name}" (${customer.account_number})`);
       }
     }
 
-    // 3. If still not found by PSID or account, try finding customer by name
-    const rawNameFromQuery = (nameMatch ? nameMatch[1].trim() : '') || (req.query.name || req.body?.name || req.query.customer_name || req.body?.customer_name || '').toString().trim();
-    if (!customer && rawNameFromQuery && rawNameFromQuery.toLowerCase() !== 'new customer') {
-      const nameResult = await query(
-        `SELECT * FROM customers WHERE TRIM(LOWER(full_name)) = TRIM(LOWER($1)) LIMIT 1`,
-        [rawNameFromQuery]
-      );
-      if (nameResult.rows.length > 0) {
-        customer = nameResult.rows[0];
-        if (subscriberId) {
-          await query('UPDATE customers SET messenger_psid = $1, updated_at = NOW() WHERE id = $2', [subscriberId, customer.id]);
-          logger.info(`🔗 Auto-linked subscriber ${subscriberId} to customer "${customer.full_name}" by name matching`);
-        }
+    // 2. If no account number in form, check if customer was already verified via messenger_psid
+    if (!customer && subscriberId) {
+      const custResult = await query('SELECT * FROM customers WHERE messenger_psid = $1', [subscriberId]);
+      if (custResult.rows.length > 0) {
+        customer = custResult.rows[0];
+        logger.info(`✅ Found verified customer by PSID: "${customer.full_name}" (${customer.account_number})`);
       }
     }
 
-    // Service & Installation specific fields
-    const serviceTypeMatch = concernText.match(/(?:Service Type|Service|Type of Service):\s*([^\n]+)/i);
-    const installTypeMatch = concernText.match(/Type\s*of\s*Installation:\s*([^\n]+)/i);
-    const installDateMatch = concernText.match(/Preferred\s*(?:Installation\s*)?Date:\s*([^\n]+)/i);
-    const isInstallationRequest = requestType === 'installation' || concernText.toLowerCase().includes('installation request') || installTypeMatch;
-
-    // 4. If customer is still not in DB, auto-create a customer record so the ticket is NEVER dropped!
+    // 3. For reports (NOT installation requests): customer account MUST exist in the system!
     if (!customer) {
-      logger.info(`🆕 Auto-creating new customer from PSID: ${subscriberId}`);
-      const autoName = rawNameFromQuery || (nameMatch ? nameMatch[1].trim() : 'Messenger Customer');
+      if (!isInstallationRequest) {
+        logger.warn(`❌ createTicket rejected: No existing account found or verified for subscriber ${subscriberId}`);
+        const notFoundMsg = `❌ Account Not Verified\n\nWe couldn't find an existing account linked to your Messenger.\n\n📌 Before filing a report or technical ticket, your account number must be verified.\nPlease verify your Account Number first.\n\nIf you are a new customer requesting an installation, please select "Installation Request".`;
+        if (subscriberId) {
+          try { await sendBotcakeMessage(subscriberId, notFoundMsg); } catch { await sendTextMessage(subscriberId, notFoundMsg).catch(() => {}); }
+        }
+        return res.status(200).json({
+          success: false,
+          account_found: false,
+          message: 'No existing account found in the system. Ticket was not created. Please verify your account number first.',
+          reply_message: notFoundMsg,
+          messages: [{ text: notFoundMsg }]
+        });
+      }
+
+      // 4. Installation Requests ONLY: auto-create new customer prospect
+      logger.info(`🆕 Auto-creating new customer for installation request from PSID: ${subscriberId}`);
+      const rawNameFromQuery = (nameMatch ? nameMatch[1].trim() : '') || (req.query.name || req.body?.name || req.query.customer_name || req.body?.customer_name || '').toString().trim();
+      const autoName = rawNameFromQuery || (nameMatch ? nameMatch[1].trim() : 'New Customer');
       const autoPhone = phoneMatch ? phoneMatch[1].trim() : (req.query.phone || req.body?.phone || null);
       const autoAddress = addressMatch ? addressMatch[1].trim() : (req.query.address || req.body?.address || 'Not provided');
       const autoLandmark = landmarkMatch ? landmarkMatch[1].trim() : null;
-      const autoAccNum = rawAccFromQuery && !rawAccFromQuery.includes('{{') ? rawAccFromQuery : `ACC-${Date.now().toString().slice(-6)}`;
+      const autoAccNum = `ACC-${Date.now().toString().slice(-6)}`;
 
       try {
         const newCust = await query(
@@ -606,10 +658,10 @@ exports.createTicket = async (req, res) => {
           [autoAccNum, subscriberId, autoName, autoAddress, autoLandmark, autoPhone]
         );
         customer = newCust.rows[0];
-        logger.info(`✅ Auto-created customer: ${autoName} (${autoAccNum})`);
+        logger.info(`✅ Auto-created customer for installation: ${autoName} (${autoAccNum})`);
       } catch (createErr) {
-        logger.error('Failed to auto-create customer:', createErr.message);
-        return res.status(200).json({ success: false, message: 'Failed to process your request. Please try again.' });
+        logger.error('Failed to auto-create customer for installation:', createErr.message);
+        return res.status(200).json({ success: false, message: 'Failed to process installation request. Please try again.' });
       }
     }
 
