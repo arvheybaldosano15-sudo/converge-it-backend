@@ -316,7 +316,7 @@ exports.handleWebhook = async (req, res) => {
     const activeTicketCheck = await query(
       `SELECT * FROM tickets 
        WHERE customer_id = $1 
-         AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
+         AND status::text NOT IN ('resolved', 'closed', 'cancelled')
        ORDER BY created_at DESC LIMIT 1`,
       [customer.id]
     );
@@ -785,7 +785,7 @@ exports.createTicket = async (req, res) => {
     const activeTicketCheck = await query(
       `SELECT * FROM tickets 
        WHERE customer_id = $1 
-         AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
+         AND status::text NOT IN ('resolved', 'closed', 'cancelled')
        ORDER BY created_at DESC LIMIT 1`,
       [customer.id]
     );

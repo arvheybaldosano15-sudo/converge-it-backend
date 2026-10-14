@@ -150,7 +150,7 @@ exports.createTicket = async (req, res, next) => {
     if (customerId) {
       const activeCustomerCheck = await query(
         `SELECT id, ticket_number, status FROM tickets 
-         WHERE customer_id = $1 AND LOWER(status) NOT IN ('resolved', 'closed', 'cancelled')
+         WHERE customer_id = $1 AND status::text NOT IN ('resolved', 'closed', 'cancelled')
          ORDER BY created_at DESC LIMIT 1`,
         [customerId]
       );
