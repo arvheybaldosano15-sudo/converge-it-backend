@@ -312,12 +312,15 @@ exports.handleWebhook = async (req, res) => {
       }
     }
 
-    // Active Ticket Enforcement: if customer already has a ticket that is NOT resolved or closed, do not create a new one!
+    // Active Ticket Enforcement: if customer already has a support ticket that is NOT resolved or closed, do not create a new one!
     const activeTicketCheck = await query(
-      `SELECT * FROM tickets 
-       WHERE customer_id = $1 
-         AND status::text NOT IN ('resolved', 'closed', 'cancelled')
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT t.*, cat.name AS category_name FROM tickets t
+       LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+       WHERE t.customer_id = $1 
+         AND t.status::text NOT IN ('resolved', 'closed', 'cancelled')
+         AND (cat.name IS NULL OR cat.name NOT ILIKE '%Installation%')
+         AND t.subject NOT ILIKE '%Installation%'
+       ORDER BY t.created_at DESC LIMIT 1`,
       [customer.id]
     );
     if (activeTicketCheck.rows.length > 0) {
@@ -781,12 +784,18 @@ exports.createTicket = async (req, res) => {
       ? `Installation Request${installTypeMatch ? ' - ' + installTypeMatch[1].trim() : ''}`
       : (aiResult.title || concernText.substring(0, 100) || 'Support Request via Messenger');
 
-    // Active Ticket Enforcement: if customer has an existing ticket that is NOT resolved or closed, do NOT create a new ticket!
+    // Active Ticket Enforcement:
+    // If reporting a regular Support Ticket, only check for active Support Tickets (exclude Installation Requests).
+    // If reporting an Installation Request, only check for active Installation Requests.
     const activeTicketCheck = await query(
-      `SELECT * FROM tickets 
-       WHERE customer_id = $1 
-         AND status::text NOT IN ('resolved', 'closed', 'cancelled')
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT t.*, cat.name AS category_name FROM tickets t
+       LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+       WHERE t.customer_id = $1 
+         AND t.status::text NOT IN ('resolved', 'closed', 'cancelled')
+         AND ${isInstallationRequest 
+           ? "(cat.name ILIKE '%Installation%' OR t.subject ILIKE '%Installation%')" 
+           : "((cat.name IS NULL OR cat.name NOT ILIKE '%Installation%') AND t.subject NOT ILIKE '%Installation%')"}
+       ORDER BY t.created_at DESC LIMIT 1`,
       [customer.id]
     );
     if (activeTicketCheck.rows.length > 0) {

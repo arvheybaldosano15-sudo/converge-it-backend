@@ -148,14 +148,19 @@ exports.createTicket = async (req, res, next) => {
     }
 
     if (customerId) {
+      const isInstallReq = categoryId ? (await query(`SELECT name FROM service_categories WHERE id = $1`, [categoryId])).rows[0]?.name?.toLowerCase()?.includes('installation') : (subject || '').toLowerCase().includes('installation');
       const activeCustomerCheck = await query(
-        `SELECT id, ticket_number, status FROM tickets 
-         WHERE customer_id = $1 AND status::text NOT IN ('resolved', 'closed', 'cancelled')
-         ORDER BY created_at DESC LIMIT 1`,
+        `SELECT t.id, t.ticket_number, t.status FROM tickets t
+         LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+         WHERE t.customer_id = $1 AND t.status::text NOT IN ('resolved', 'closed', 'cancelled')
+           AND ${isInstallReq 
+             ? "(cat.name ILIKE '%Installation%' OR t.subject ILIKE '%Installation%')" 
+             : "((cat.name IS NULL OR cat.name NOT ILIKE '%Installation%') AND t.subject NOT ILIKE '%Installation%')"}
+         ORDER BY t.created_at DESC LIMIT 1`,
         [customerId]
       );
       if (activeCustomerCheck.rows.length > 0) {
-        throw createError(`This customer already has an active ticket (#${activeCustomerCheck.rows[0].ticket_number}) with status "${activeCustomerCheck.rows[0].status}". A new ticket cannot be created until it is resolved or closed.`, 400);
+        throw createError(`This customer already has an active ${isInstallReq ? 'installation request' : 'support ticket'} (#${activeCustomerCheck.rows[0].ticket_number}) with status "${activeCustomerCheck.rows[0].status}". A new ticket cannot be created until it is resolved or closed.`, 400);
       }
     }
 

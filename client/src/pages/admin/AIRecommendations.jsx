@@ -205,6 +205,22 @@ const AIRecommendations = () => {
                           <span className="font-mono text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-lg">
                             {rec.ticket_number}
                           </span>
+                          {rec.category_name && (
+                            <Badge variant="purple">
+                              Category: {rec.category_name}
+                            </Badge>
+                          )}
+                          {(() => {
+                            const specMatch = rec.suggestion && rec.suggestion.match(/\(([^)]+)\)/);
+                            if (specMatch && specMatch[1]) {
+                              return (
+                                <Badge variant="success">
+                                  🎯 {specMatch[1]}
+                                </Badge>
+                              );
+                            }
+                            return null;
+                          })()}
                           <Badge variant={cfg.badge}>
                             {cfg.label}
                           </Badge>
@@ -226,6 +242,11 @@ const AIRecommendations = () => {
                           </div>
                         </div>
 
+                        {rec.ticket_subject && (
+                          <div className="text-xs text-slate-300">
+                            <span className="text-slate-500 font-medium">Concern:</span> {rec.ticket_subject}
+                          </div>
+                        )}
                         <h4 className="text-sm font-bold text-white leading-snug">{rec.suggestion}</h4>
                         <p className="text-xs text-slate-400 leading-relaxed">{rec.reasoning}</p>
                       </div>

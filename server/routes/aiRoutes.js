@@ -5,6 +5,122 @@ const { aiLimiter } = require('../middleware/rateLimiter');
 const { query } = require('../config/database');
 const aiService = require('../services/aiService');
 
+/**
+ * Intelligent Specialization Matcher for AI Recommendations
+ * Matches ticket category, concern, and problem description with technician specializations.
+ * Strictly prioritizes technicians specialized in the domain (e.g. CCTV System -> CCTV Systems).
+ */
+function findSpecializationMatch(ticket, availableTechs) {
+  if (!availableTechs || availableTechs.length === 0) return null;
+
+  const catName = (ticket.category_name || '').toLowerCase();
+  const subject = (ticket.subject || '').toLowerCase();
+  const desc = (ticket.description || '').toLowerCase();
+  const fullText = `${catName} ${subject} ${desc}`;
+
+  // 1. CCTV System Match (Strictly prioritizes CCTV technicians)
+  if (catName.includes('cctv') || fullText.includes('cctv') || fullText.includes('camera') || fullText.includes('surveillance')) {
+    const cctvTechs = availableTechs.filter(t => {
+      const s = (t.specialization || '').toLowerCase();
+      return s.includes('cctv') || s.includes('camera') || s.includes('security');
+    });
+    if (cctvTechs.length > 0) {
+      cctvTechs.sort((a, b) => parseInt(a.workload, 10) - parseInt(b.workload, 10));
+      return {
+        tech: cctvTechs[0],
+        matchType: 'specialization',
+        matchedCategory: 'CCTV System',
+        specialization: cctvTechs[0].specialization,
+        confidence: 96.00
+      };
+    }
+  }
+
+  // 2. Starlink Internet & Network Issues Match
+  if (catName.includes('starlink') || catName.includes('network') || catName.includes('internet') ||
+      fullText.includes('starlink') || fullText.includes('wifi') || fullText.includes('internet') ||
+      fullText.includes('connection') || fullText.includes('mabagal') || fullText.includes('putol') ||
+      fullText.includes('red light') || fullText.includes('los') || fullText.includes('signal')) {
+    const starlinkTechs = availableTechs.filter(t => {
+      const s = (t.specialization || '').toLowerCase();
+      return s.includes('starlink') || s.includes('network') || s.includes('internet');
+    });
+    if (starlinkTechs.length > 0) {
+      starlinkTechs.sort((a, b) => parseInt(a.workload, 10) - parseInt(b.workload, 10));
+      return {
+        tech: starlinkTechs[0],
+        matchType: 'specialization',
+        matchedCategory: 'Starlink Internet',
+        specialization: starlinkTechs[0].specialization,
+        confidence: 95.00
+      };
+    }
+  }
+
+  // 3. Smart Devices & IoT Match
+  if (catName.includes('smart') || fullText.includes('smart') || fullText.includes('iot') ||
+      fullText.includes('finger print') || fullText.includes('fingerprint') || fullText.includes('biometric') ||
+      fullText.includes('device') || fullText.includes('sensor')) {
+    const smartTechs = availableTechs.filter(t => {
+      const s = (t.specialization || '').toLowerCase();
+      return s.includes('smart') || s.includes('iot') || s.includes('device');
+    });
+    if (smartTechs.length > 0) {
+      smartTechs.sort((a, b) => parseInt(a.workload, 10) - parseInt(b.workload, 10));
+      return {
+        tech: smartTechs[0],
+        matchType: 'specialization',
+        matchedCategory: 'Smart Devices & IoT',
+        specialization: smartTechs[0].specialization,
+        confidence: 95.00
+      };
+    }
+  }
+
+  // 4. Installation Request & General Installation Match
+  if (catName.includes('installation') || fullText.includes('installation') || fullText.includes('kabit') || fullText.includes('apply')) {
+    const installTechs = availableTechs.filter(t => {
+      const s = (t.specialization || '').toLowerCase();
+      return s.includes('installation') || s.includes('install');
+    });
+    if (installTechs.length > 0) {
+      installTechs.sort((a, b) => parseInt(a.workload, 10) - parseInt(b.workload, 10));
+      return {
+        tech: installTechs[0],
+        matchType: 'specialization',
+        matchedCategory: 'General Installation',
+        specialization: installTechs[0].specialization,
+        confidence: 94.00
+      };
+    }
+  }
+
+  // 5. Normalized direct match fallback
+  const directMatch = availableTechs.find(t => {
+    const s = (t.specialization || '').toLowerCase().replace(/systems?/g, '').trim();
+    const c = catName.replace(/systems?/g, '').trim();
+    return s && c && (s.includes(c) || c.includes(s));
+  });
+  if (directMatch) {
+    return {
+      tech: directMatch,
+      matchType: 'specialization',
+      matchedCategory: ticket.category_name || 'Technical Support',
+      specialization: directMatch.specialization,
+      confidence: 92.00
+    };
+  }
+
+  // 6. Lowest Workload Fallback
+  return {
+    tech: availableTechs[0],
+    matchType: 'workload',
+    matchedCategory: ticket.category_name || 'General Support',
+    specialization: availableTechs[0].specialization,
+    confidence: 85.00
+  };
+}
+
 router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, async (req, res, next) => {
   try {
     // 1. Fetch active unresolved tickets with customer & technician details
@@ -15,19 +131,19 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
              (
                SELECT COUNT(*) FROM tickets t2 
                WHERE t2.assigned_technician_id = t.assigned_technician_id 
-                 AND t2.status NOT IN ('resolved', 'closed', 'cancelled')
+                 AND t2.status::text NOT IN ('resolved', 'closed', 'cancelled')
              ) AS assignee_workload
       FROM tickets t 
       LEFT JOIN service_categories cat ON t.service_category_id = cat.id 
       LEFT JOIN users u ON t.assigned_technician_id = u.id
-      WHERE t.status NOT IN ('resolved', 'closed', 'cancelled')
+      WHERE t.status::text NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY t.created_at ASC
     `);
 
     // 2. Fetch active technicians with workload
     const techsRes = await query(`
       SELECT u.id, u.full_name, u.specialization,
-             (SELECT COUNT(*) FROM tickets t2 WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled')) AS workload
+             (SELECT COUNT(*) FROM tickets t2 WHERE t2.assigned_technician_id = u.id AND t2.status::text NOT IN ('resolved', 'closed', 'cancelled')) AS workload
       FROM users u 
       WHERE u.role = 'technician' AND u.status = 'active'
       ORDER BY workload ASC
@@ -40,27 +156,28 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
     await query(`
       DELETE FROM ai_recommendations 
       WHERE is_applied = FALSE 
-         OR ticket_id IN (SELECT id FROM tickets WHERE status IN ('resolved', 'closed', 'cancelled'))
+         OR ticket_id IN (SELECT id FROM tickets WHERE status::text IN ('resolved', 'closed', 'cancelled'))
     `);
 
     // Evaluate rules for each active ticket
     for (const ticket of activeTickets) {
       const availableTechs = technicians.filter(t => parseInt(t.workload, 10) < 3);
 
-      // Rule 1: Ticket is Unassigned -> Suggest Smart Assignment
+      // Rule 1: Ticket is Unassigned -> Suggest Smart Assignment based on specialization
       if (!ticket.assigned_technician_id && availableTechs.length > 0) {
-        let selectedTech = availableTechs[0];
-        const matchingTech = availableTechs.find(t => 
-          t.specialization && 
-          ticket.category_name && 
-          t.specialization.toLowerCase().includes(ticket.category_name.toLowerCase())
-        );
-        if (matchingTech) selectedTech = matchingTech;
+        const matchResult = findSpecializationMatch(ticket, availableTechs);
+        const selectedTech = matchResult.tech;
+        const isSpecMatch = matchResult.matchType === 'specialization';
 
-        const suggestion = `Assign ticket ${ticket.ticket_number} to ${selectedTech.full_name}`;
-        const reasoning = `Ticket is currently unassigned. ${selectedTech.full_name} has matching specialization or lowest workload (${selectedTech.workload} active tickets).`;
+        const categoryLabel = ticket.category_name || matchResult.matchedCategory || 'General Support';
+        const specLabel = selectedTech.specialization || 'Support Technician';
+
+        const suggestion = `Assign ticket ${ticket.ticket_number} to ${selectedTech.full_name} (${specLabel})`;
+        const reasoning = isSpecMatch
+          ? `🎯 Specialization Match: Ticket concern is categorized under "${categoryLabel}". ${selectedTech.full_name} specializes in "${specLabel}" with active workload of ${selectedTech.workload}/3 tickets.`
+          : `⚡ Workload Optimization: No direct specialization match for category "${categoryLabel}". Recommended ${selectedTech.full_name} (${specLabel}) based on lowest active workload (${selectedTech.workload} active tickets).`;
         const type = 'reassignment';
-        const confidence = matchingTech ? 95.00 : 85.00;
+        const confidence = matchResult.confidence;
 
         await query(`
           INSERT INTO ai_recommendations (ticket_id, type, suggestion, reasoning, confidence)
@@ -75,8 +192,9 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
       if (ticket.assigned_technician_id && currentWorkload >= 3 && availableTechs.length > 0) {
         const lighterTech = availableTechs.find(t => t.id !== ticket.assigned_technician_id && parseInt(t.workload, 10) <= 1);
         if (lighterTech) {
-          const suggestion = `Reassign ticket ${ticket.ticket_number} from ${ticket.assignee_name} to ${lighterTech.full_name}`;
-          const reasoning = `${ticket.assignee_name} is at maximum capacity (3 active tickets). ${lighterTech.full_name} has lower workload (${lighterTech.workload} active tickets).`;
+          const specLabel = lighterTech.specialization || 'Support Technician';
+          const suggestion = `Reassign ticket ${ticket.ticket_number} from ${ticket.assignee_name} to ${lighterTech.full_name} (${specLabel})`;
+          const reasoning = `⚡ Workload Balancing: ${ticket.assignee_name} is at maximum capacity (3 active tickets). ${lighterTech.full_name} specializes in "${specLabel}" with lower workload (${lighterTech.workload}/3 tickets).`;
           const type = 'workload_balancing';
           const confidence = 90.00;
 
@@ -125,11 +243,14 @@ router.get('/recommendations', authenticate, authorize('admin'), aiLimiter, asyn
 
     // Return recommendations strictly for unresolved tickets
     const finalRecs = await query(`
-      SELECT r.*, t.ticket_number, t.priority, t.created_at AS ticket_created_at
+      SELECT r.*, t.ticket_number, t.priority, t.subject AS ticket_subject,
+             COALESCE(cat.name, 'General Support') AS category_name,
+             t.created_at AS ticket_created_at
       FROM ai_recommendations r
       JOIN tickets t ON r.ticket_id = t.id
+      LEFT JOIN service_categories cat ON t.service_category_id = cat.id
       WHERE r.is_applied = FALSE
-        AND t.status NOT IN ('resolved', 'closed', 'cancelled')
+        AND t.status::text NOT IN ('resolved', 'closed', 'cancelled')
       ORDER BY r.confidence DESC, r.created_at DESC
     `);
 
@@ -150,17 +271,18 @@ const applyRecommendationHandler = async (req, res, next) => {
     const ticket = ticketResult.rows[0];
     if (!ticket) return next({ statusCode: 404, message: 'Ticket associated with recommendation not found' });
 
-    if (rec.type === 'reassignment') {
+    if (rec.type === 'reassignment' || rec.type === 'workload_balancing') {
       // Parse the technician name from the suggestion text
-      const match = rec.suggestion.match(/to\s+(.+)$/i);
+      // Format: "Assign ticket TKT-123 to Michael Cordova (CCTV Systems)" or "Reassign ticket TKT-123 from X to Michael Cordova (CCTV Systems)"
+      const match = rec.suggestion.match(/to\s+([^(]+)/i);
       if (match && match[1]) {
-        const techName = match[1].trim();
-        const techResult = await query(`SELECT id FROM users WHERE full_name = $1 AND role = 'technician'`, [techName]);
+        const techName = match[1].replace(/\(.*?\)/g, '').trim();
+        const techResult = await query(`SELECT id FROM users WHERE LOWER(TRIM(full_name)) = LOWER(TRIM($1)) AND role = 'technician'`, [techName]);
         if (techResult.rows[0]) {
           const techId = techResult.rows[0].id;
           const activeCheck = await query(
             `SELECT ticket_number FROM tickets 
-             WHERE assigned_technician_id = $1 AND status NOT IN ('resolved', 'closed', 'cancelled') AND id != $2`,
+             WHERE assigned_technician_id = $1 AND status::text NOT IN ('resolved', 'closed', 'cancelled') AND id != $2`,
             [techId, ticket.id]
           );
           if (activeCheck.rows.length >= 3) {
@@ -173,11 +295,11 @@ const applyRecommendationHandler = async (req, res, next) => {
             WHERE u.role = 'technician' AND u.status = 'active'
             AND (
               SELECT COUNT(*) FROM tickets t2 
-              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
+              WHERE t2.assigned_technician_id = u.id AND t2.status::text NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
             ) < 3
             ORDER BY (
               SELECT COUNT(*) FROM tickets t2 
-              WHERE t2.assigned_technician_id = u.id AND t2.status NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
+              WHERE t2.assigned_technician_id = u.id AND t2.status::text NOT IN ('resolved', 'closed', 'cancelled') AND t2.id != $1
             ) ASC
             LIMIT 1
           `, [ticket.id]);
