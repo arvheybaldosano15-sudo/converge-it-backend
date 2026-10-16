@@ -215,17 +215,35 @@ exports.getTechnicianById = async (req, res, next) => {
 
 exports.updateTechnician = async (req, res, next) => {
   try {
-    const { fullName, email, contactNumber, specialization, department, status } = req.body;
+    const {
+      fullName, full_name,
+      email,
+      contactNumber, contact_number,
+      specialization,
+      department,
+      status,
+      employeeId, employee_id
+    } = req.body;
+
     const updates = [];
     const values = [];
     let i = 1;
 
-    if (fullName !== undefined) { updates.push(`full_name = $${i++}`); values.push(fullName); }
-    if (email !== undefined) { updates.push(`email = $${i++}`); values.push(email); }
-    if (contactNumber !== undefined) { updates.push(`contact_number = $${i++}`); values.push(contactNumber); }
-    if (specialization !== undefined) { updates.push(`specialization = $${i++}`); values.push(specialization); }
-    if (department !== undefined) { updates.push(`department = $${i++}`); values.push(department); }
-    if (status !== undefined) { updates.push(`status = $${i++}`); values.push(status); }
+    const finalFullName = fullName !== undefined ? fullName : full_name;
+    const finalEmail = email;
+    const finalContact = contactNumber !== undefined ? contactNumber : contact_number;
+    const finalSpecialization = specialization;
+    const finalDepartment = department;
+    const finalStatus = status;
+    const finalEmployeeId = employeeId !== undefined ? employeeId : employee_id;
+
+    if (finalFullName !== undefined) { updates.push(`full_name = $${i++}`); values.push(finalFullName); }
+    if (finalEmail !== undefined) { updates.push(`email = $${i++}`); values.push(finalEmail); }
+    if (finalContact !== undefined) { updates.push(`contact_number = $${i++}`); values.push(finalContact); }
+    if (finalSpecialization !== undefined) { updates.push(`specialization = $${i++}`); values.push(finalSpecialization); }
+    if (finalDepartment !== undefined) { updates.push(`department = $${i++}`); values.push(finalDepartment); }
+    if (finalStatus !== undefined) { updates.push(`status = $${i++}`); values.push(finalStatus); }
+    if (finalEmployeeId !== undefined) { updates.push(`employee_id = $${i++}`); values.push(finalEmployeeId); }
 
     if (updates.length === 0) throw createError('No fields to update', 400);
 
@@ -236,7 +254,13 @@ exports.updateTechnician = async (req, res, next) => {
     );
 
     if (!result.rows[0]) throw createError('Technician not found', 404);
-    res.json({ success: true, data: result.rows[0], message: 'Technician updated successfully' });
+    const updatedUser = result.rows[0];
+
+    // Emit socket update so all connected admins and technicians update in real-time
+    emitToAdmins('technician:updated', { technicianId: req.params.id, technician: updatedUser });
+    emitToAll('technician:updated', { technicianId: req.params.id, technician: updatedUser });
+
+    res.json({ success: true, data: updatedUser, message: 'Technician updated successfully' });
   } catch (error) {
     next(error);
   }

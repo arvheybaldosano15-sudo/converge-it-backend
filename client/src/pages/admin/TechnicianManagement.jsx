@@ -77,11 +77,21 @@ const TechnicianForm = ({ formData, onChange, onSubmit, onCancel, submitLabel, i
           className="glass-input w-full rounded-xl py-2 px-3 text-xs bg-slate-950 text-white"
         >
           <option value="Starlink Internet">Starlink Internet</option>
-          <option value="Installation Request">Installation Request</option>
+          <option value="CCTV Systems">CCTV Systems</option>
           <option value="CCTV System">CCTV System</option>
+          <option value="Smart Devices & IoT">Smart Devices & IoT</option>
           <option value="Smart Devices">Smart Devices</option>
+          <option value="General Installation">General Installation</option>
+          <option value="Installation Request">Installation Request</option>
           <option value="Network Infrastructure">Network Infrastructure</option>
           <option value="General Field Services">General Field Services</option>
+          {formData.specialization && ![
+            'Starlink Internet', 'CCTV Systems', 'CCTV System',
+            'Smart Devices & IoT', 'Smart Devices', 'General Installation',
+            'Installation Request', 'Network Infrastructure', 'General Field Services'
+          ].includes(formData.specialization) && (
+            <option value={formData.specialization}>{formData.specialization}</option>
+          )}
         </select>
       </div>
 
@@ -264,6 +274,19 @@ const TechnicianManagement = () => {
     e?.stopPropagation();
     const isCurrentlyActive = tech.status === 'approved' || tech.status === 'active';
     const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+
+    // ⚡ Instant Local State Update (0ms latency - updates UI immediately)
+    setTechnicians((prev) => {
+      const updatedList = prev.map((t) => (t.id === tech.id ? { ...t, status: newStatus } : t));
+      try {
+        localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+          data: updatedList,
+          pagination: { total: totalItems, totalPages, page }
+        }));
+      } catch (_) {}
+      return updatedList;
+    });
+
     try {
       const res = await api.put(`/technicians/${tech.id}/status`, { status: newStatus });
       if (res.success) {
@@ -272,25 +295,68 @@ const TechnicianManagement = () => {
       }
     } catch (e) {
       toast.error(e.message || 'Failed to update status');
+      fetchTechnicians();
     }
   };
 
   const handleEditTechnician = async (e) => {
     e.preventDefault();
     if (!selectedTech) return;
+
+    const updatedId = selectedTech.id;
+    const patchedFields = {
+      full_name: formData.fullName,
+      employee_id: formData.employeeId || selectedTech.employee_id,
+      email: formData.email,
+      contact_number: formData.contactNumber,
+      specialization: formData.specialization,
+      status: formData.status
+    };
+
+    // ⚡ 1. INSTANT LOCAL STATE UPDATE (0ms latency - updates UI immediately)
+    setTechnicians((prev) => {
+      const updatedList = prev.map((t) => (t.id === updatedId ? { ...t, ...patchedFields } : t));
+      try {
+        localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+          data: updatedList,
+          pagination: { total: totalItems, totalPages, page }
+        }));
+      } catch (_) {}
+      return updatedList;
+    });
+
+    // Also update selectedTech & techDetail immediately if detail modal is open
+    setSelectedTech((prev) => (prev && prev.id === updatedId ? { ...prev, ...patchedFields } : prev));
+    setTechDetail((prev) => (prev && prev.id === updatedId ? { ...prev, ...patchedFields } : prev));
+
+    setIsEditModalOpen(false);
+
     try {
-      const res = await api.put(`/technicians/${selectedTech.id}`, formData);
-      if (res.success) {
+      const res = await api.put(`/technicians/${updatedId}`, formData);
+      if (res.success && res.data) {
+        const serverData = res.data;
+        // Merge verified server response into local state and localStorage
+        setTechnicians((prev) => {
+          const updatedList = prev.map((t) => (t.id === updatedId ? { ...t, ...serverData } : t));
+          try {
+            localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+              data: updatedList,
+              pagination: { total: totalItems, totalPages, page }
+            }));
+          } catch (_) {}
+          return updatedList;
+        });
+
+        setSelectedTech((prev) => (prev && prev.id === updatedId ? { ...prev, ...serverData } : prev));
+        setTechDetail((prev) => (prev && prev.id === updatedId ? { ...prev, ...serverData } : prev));
+
         toast.success('Technician profile updated successfully');
-        setIsEditModalOpen(false);
         setFormData(emptyForm);
         fetchTechnicians();
-        if (techDetail && techDetail.id === selectedTech.id) {
-          viewTechnicianProfile(selectedTech);
-        }
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update technician profile');
+      fetchTechnicians(); // rollback on error
     }
   };
 
@@ -300,30 +366,71 @@ const TechnicianManagement = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleRealtimeUpdate = ({ id } = {}) => {
-      if (id) {
-        setTechnicians((prev) => prev.filter((t) => t.id !== id));
+    const handleRealtimeRoster = () => {
+      fetchTechnicians();
+    };
+
+    const handleTechUpdated = ({ technicianId, technician }) => {
+      if (technician && technician.id) {
+        setTechnicians((prev) => {
+          const updated = prev.map((t) => (t.id === technician.id ? { ...t, ...technician } : t));
+          try {
+            localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+              data: updated,
+              pagination: { total: totalItems, totalPages, page }
+            }));
+          } catch (_) {}
+          return updated;
+        });
+        setSelectedTech((prev) => (prev && prev.id === technician.id ? { ...prev, ...technician } : prev));
+        setTechDetail((prev) => (prev && prev.id === technician.id ? { ...prev, ...technician } : prev));
       }
       fetchTechnicians();
     };
 
-    socket.on('technician:new_pending', handleRealtimeUpdate);
-    socket.on('technician:approved', handleRealtimeUpdate);
-    socket.on('technician:rejected', handleRealtimeUpdate);
-    socket.on('technician:suspended', handleRealtimeUpdate);
-    socket.on('technician:status_changed', handleRealtimeUpdate);
-    socket.on('technician:deleted', handleRealtimeUpdate);
-    socket.on('technician_deleted', handleRealtimeUpdate);
+    const handleTechStatusChanged = ({ technicianId, status }) => {
+      if (technicianId && status) {
+        setTechnicians((prev) => {
+          const updated = prev.map((t) => (t.id === technicianId ? { ...t, status } : t));
+          try {
+            localStorage.setItem(TECH_CACHE_KEY, JSON.stringify({
+              data: updated,
+              pagination: { total: totalItems, totalPages, page }
+            }));
+          } catch (_) {}
+          return updated;
+        });
+      }
+      fetchTechnicians();
+    };
+
+    const handleTechDeleted = ({ technicianId, id } = {}) => {
+      const delId = technicianId || id;
+      if (delId) {
+        setTechnicians((prev) => prev.filter((t) => t.id !== delId));
+      }
+      fetchTechnicians();
+    };
+
+    socket.on('technician:new_pending', handleRealtimeRoster);
+    socket.on('technician:approved', handleRealtimeRoster);
+    socket.on('technician:rejected', handleRealtimeRoster);
+    socket.on('technician:suspended', handleTechStatusChanged);
+    socket.on('technician:status_changed', handleTechStatusChanged);
+    socket.on('technician:updated', handleTechUpdated);
+    socket.on('technician:deleted', handleTechDeleted);
+    socket.on('technician_deleted', handleTechDeleted);
 
     return () => {
       if (typeof socket.off === 'function') {
-        socket.off('technician:new_pending', handleRealtimeUpdate);
-        socket.off('technician:approved', handleRealtimeUpdate);
-        socket.off('technician:rejected', handleRealtimeUpdate);
-        socket.off('technician:suspended', handleRealtimeUpdate);
-        socket.off('technician:status_changed', handleRealtimeUpdate);
-        socket.off('technician:deleted', handleRealtimeUpdate);
-        socket.off('technician_deleted', handleRealtimeUpdate);
+        socket.off('technician:new_pending', handleRealtimeRoster);
+        socket.off('technician:approved', handleRealtimeRoster);
+        socket.off('technician:rejected', handleRealtimeRoster);
+        socket.off('technician:suspended', handleTechStatusChanged);
+        socket.off('technician:status_changed', handleTechStatusChanged);
+        socket.off('technician:updated', handleTechUpdated);
+        socket.off('technician:deleted', handleTechDeleted);
+        socket.off('technician_deleted', handleTechDeleted);
       }
     };
   }, [socket]);
