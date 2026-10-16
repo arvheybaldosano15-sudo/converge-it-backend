@@ -59,12 +59,31 @@ exports.registerTechnician = async (req, res, next) => {
   try {
     const { employeeId, fullName, email, password, pin, contactNumber, address, specialization, department } = req.body;
 
+    if (!employeeId || !employeeId.trim()) {
+      throw createError('Employee ID is required', 400);
+    }
+
     if (!pin || !/^\d{6}$/.test(String(pin))) {
       throw createError('PIN must be exactly 6 digits', 400);
     }
 
-    const existing = await query('SELECT id FROM users WHERE email = $1 OR employee_id = $2', [email.toLowerCase(), employeeId]);
-    if (existing.rows.length > 0) throw createError('Email or Employee ID already registered', 409);
+    // 1. Specific Employee ID uniqueness check (case-insensitive & trimmed)
+    const existingEmployee = await query(
+      'SELECT id FROM users WHERE LOWER(TRIM(employee_id)) = LOWER(TRIM($1))',
+      [employeeId.trim()]
+    );
+    if (existingEmployee.rows.length > 0) {
+      throw createError('Employee ID already exists', 409);
+    }
+
+    // 2. Specific Email uniqueness check
+    const existingEmail = await query(
+      'SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
+      [email.toLowerCase().trim()]
+    );
+    if (existingEmail.rows.length > 0) {
+      throw createError('Email address already registered', 409);
+    }
 
     const pinIndex = getPinIndex(pin);
     const existingPin = await query('SELECT id FROM users WHERE pin_index = $1', [pinIndex]);
@@ -347,6 +366,25 @@ exports.updateProfile = async (req, res, next) => {
         specialization: u.specialization,
         department: u.department
       }
+    });
+  } catch (error) { next(error); }
+};
+
+exports.checkEmployeeId = async (req, res, next) => {
+  try {
+    const { employeeId } = req.query;
+    if (!employeeId || !employeeId.trim()) {
+      return res.json({ success: true, exists: false, message: 'Employee ID required' });
+    }
+    const result = await query(
+      'SELECT id FROM users WHERE LOWER(TRIM(employee_id)) = LOWER(TRIM($1))',
+      [employeeId.trim()]
+    );
+    const exists = result.rows.length > 0;
+    res.json({
+      success: true,
+      exists,
+      message: exists ? 'Employee ID already exists' : 'Employee ID is available'
     });
   } catch (error) { next(error); }
 };

@@ -247,6 +247,16 @@ exports.updateTechnician = async (req, res, next) => {
 
     if (updates.length === 0) throw createError('No fields to update', 400);
 
+    if (finalEmployeeId) {
+      const existingId = await query(
+        'SELECT id FROM users WHERE LOWER(TRIM(employee_id)) = LOWER(TRIM($1)) AND id != $2',
+        [finalEmployeeId.trim(), req.params.id]
+      );
+      if (existingId.rows.length > 0) {
+        throw createError('Employee ID already exists', 409);
+      }
+    }
+
     values.push(req.params.id);
     const result = await query(
       `UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i} AND role = 'technician' RETURNING *`,

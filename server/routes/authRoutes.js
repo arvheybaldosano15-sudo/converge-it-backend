@@ -8,6 +8,7 @@ const { uploadProfileImage } = require('../middleware/upload');
 router.post('/login', authLimiter, authController.login);
 router.post('/pin-login', authLimiter, authController.pinLogin);
 router.post('/register-technician', authLimiter, authController.registerTechnician);
+router.get('/check-employee-id', authController.checkEmployeeId);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getMe);

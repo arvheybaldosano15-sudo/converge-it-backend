@@ -11,6 +11,7 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import { Wrench, Mail, Lock, User, Phone, BadgeCheck, ArrowLeft, KeyRound, ArrowRight, Check, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../utils/axios';
 
 const schema = z.object({
   employeeId: z.string().min(3, 'Employee ID is required (e.g. TECH-101)'),
@@ -55,6 +56,9 @@ const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false })
     register,
     handleSubmit,
     trigger,
+    setError,
+    clearErrors,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
@@ -64,10 +68,38 @@ const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false })
     },
   });
 
+  const handleEmployeeIdBlur = async (e) => {
+    const val = e.target.value?.trim();
+    if (val && val.length >= 2) {
+      try {
+        const res = await api.get('/auth/check-employee-id', { params: { employeeId: val } });
+        if (res.exists) {
+          setError('employeeId', { type: 'manual', message: 'Employee ID already exists' });
+        } else {
+          clearErrors('employeeId');
+        }
+      } catch (_) {}
+    }
+  };
+
   const nextStep = async () => {
     if (currentStep === 1) {
       const isStep1Valid = await trigger(['employeeId', 'fullName', 'email', 'contactNumber']);
-      if (isStep1Valid) setCurrentStep(2);
+      if (!isStep1Valid) return;
+
+      const empId = getValues('employeeId')?.trim();
+      if (empId) {
+        try {
+          const res = await api.get('/auth/check-employee-id', { params: { employeeId: empId } });
+          if (res.exists) {
+            setError('employeeId', { type: 'manual', message: 'Employee ID already exists' });
+            toast.error('Employee ID already exists');
+            return;
+          }
+        } catch (_) {}
+      }
+
+      setCurrentStep(2);
     } else if (currentStep === 2) {
       const isStep2Valid = await trigger(['password', 'confirmPassword', 'pin', 'confirmPin']);
       if (isStep2Valid) setCurrentStep(3);
@@ -85,7 +117,20 @@ const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false })
       if (onClose) onClose();
       navigate('/pending-approval');
     } catch (err) {
-      toast.error(err.message || 'Registration failed');
+      const errorMsg = err.message || err.response?.data?.message || 'Registration failed';
+      if (/employee\s*id/i.test(errorMsg)) {
+        setError('employeeId', { type: 'manual', message: 'Employee ID already exists' });
+        if (isMobile) setCurrentStep(1);
+      }
+      if (/email/i.test(errorMsg)) {
+        setError('email', { type: 'manual', message: errorMsg });
+        if (isMobile) setCurrentStep(1);
+      }
+      if (/pin/i.test(errorMsg)) {
+        setError('pin', { type: 'manual', message: errorMsg });
+        if (isMobile) setCurrentStep(2);
+      }
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -183,6 +228,10 @@ const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false })
                     autoCapitalize="characters"
                     error={errors.employeeId?.message}
                     {...register('employeeId')}
+                    onBlur={(e) => {
+                      register('employeeId').onBlur(e);
+                      handleEmployeeIdBlur(e);
+                    }}
                   />
                   <Input
                     label="Full Name"
@@ -361,6 +410,10 @@ const TechnicianSignUp = ({ isModal = false, onClose, hideCloseButton = false })
                   autoCapitalize="characters"
                   error={errors.employeeId?.message}
                   {...register('employeeId')}
+                  onBlur={(e) => {
+                    register('employeeId').onBlur(e);
+                    handleEmployeeIdBlur(e);
+                  }}
                 />
                 <Input
                   label="Full Name"
