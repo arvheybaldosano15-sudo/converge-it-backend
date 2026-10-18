@@ -187,28 +187,51 @@ exports.createTicket = async (req, res, next) => {
       WHERE t.id = $1`, [ticket.id]);
     const fullPayload = fullTicketRes.rows[0] || ticket;
 
-    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
-    emitToAdmins('ticket:created', { ticket: fullPayload });
-    emitToAdmins('ticket_created', { ticket: fullPayload });
-    emitToAll('ticket:created', { ticket: fullPayload });
-    emitToAll('ticket_created', { ticket: fullPayload });
+    let techName = null;
+    if (assignedTo) {
+      const techRes = await query('SELECT full_name FROM users WHERE id = $1', [assignedTo]);
+      techName = techRes.rows[0]?.full_name || null;
+    }
+
+    const payloadWithTech = {
+      ...fullPayload,
+      assigned_technician_name: techName,
+      technicianName: techName,
+      assignedTo: assignedTo || null
+    };
+
+    // ✅ EMIT SOCKET FIRST (0ms) — Notify admins immediately. Technicians ONLY receive if assigned to them!
+    emitToAdmins('ticket:created', { ticket: payloadWithTech });
+    emitToAdmins('ticket_created', { ticket: payloadWithTech });
+    if (assignedTo) {
+      emitToUser(assignedTo, 'ticket:created', { ticket: payloadWithTech, technicianName: techName });
+      emitToUser(assignedTo, 'ticket:assigned', { ticket: payloadWithTech, technicianName: techName });
+    }
 
     // Run audit log + DB notifications in background (non-blocking)
     logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'create', targetType: 'ticket', targetId: ticket.id, targetDescription: ticket.ticket_number }).catch(() => {});
 
     const catNameLower = (fullPayload.category_name || '').toLowerCase();
     const isInstallCat = catNameLower.includes('installation');
+    const assignedSuffix = techName ? ` (Assigned to: ${techName})` : ' (Unassigned)';
     notifyAdmins({
       type: isInstallCat ? 'installation' : 'ticket',
       title: isInstallCat ? `New Installation Request #${ticket.ticket_number}` : `New Ticket Created #${ticket.ticket_number}`,
       message: isInstallCat
-        ? `Installation Request #${ticket.ticket_number} created for ${fullPayload.customer_name || 'Customer'}.`
-        : `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}.`,
+        ? `Installation Request #${ticket.ticket_number} created for ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`
+        : `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`,
       referenceId: ticket.id,
+      data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo }
     }).catch(() => {});
 
     if (assignedTo) {
-      createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'New Ticket Assigned', body: `Ticket ${ticket.ticket_number} has been assigned to you`, data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number } }).catch(() => {});
+      createNotification({
+        userId: assignedTo,
+        type: 'ticket',
+        title: `New Ticket Assigned #${ticket.ticket_number}`,
+        body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${techName || 'Technician'}).`,
+        data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo }
+      }).catch(() => {});
     }
 
     res.status(201).json({ success: true, data: fullPayload, message: 'Ticket created successfully' });
@@ -274,11 +297,34 @@ exports.updateTicket = async (req, res, next) => {
       [id, req.user.id, status || old.status, note || null]
     );
     await client.query('COMMIT');
+    let techName = null;
     if (assignedTo && assignedTo !== old.assigned_technician_id) {
-      await createNotification({ userId: assignedTo, type: 'ticket_assigned', title: 'Ticket Assigned', body: `Ticket ${updatedTicket.ticket_number} assigned to you`, data: { ticketId: id } });
+      const techRes = await client.query('SELECT full_name FROM users WHERE id = $1', [assignedTo]);
+      techName = techRes.rows[0]?.full_name || 'Technician';
+
+      // Notify the newly assigned technician
+      await createNotification({
+        userId: assignedTo,
+        type: 'ticket',
+        title: `Ticket #${updatedTicket.ticket_number} Assigned`,
+        body: `Ticket #${updatedTicket.ticket_number} (${updatedTicket.subject || 'Concern'}) has been assigned to you (${techName}).`,
+        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo }
+      }).catch(() => {});
+
+      // Notify admins with technician name
+      await notifyAdmins({
+        type: 'ticket',
+        title: `Ticket #${updatedTicket.ticket_number} Assigned`,
+        body: `Ticket #${updatedTicket.ticket_number} has been assigned to technician ${techName}.`,
+        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo }
+      }).catch(() => {});
+
+      emitToUser(assignedTo, 'ticket:assigned', { ticket: { ...updatedTicket, assigned_technician_name: techName }, technicianName: techName });
+      emitToUser(assignedTo, 'ticket:created', { ticket: { ...updatedTicket, assigned_technician_name: techName }, technicianName: techName });
     }
-    emitToRoom(`ticket:${id}`, 'ticket:updated', { ticket: updatedTicket });
-    emitToAdmins('ticket:updated', { ticket: updatedTicket });
+    const ticketWithTech = { ...updatedTicket, assigned_technician_name: techName };
+    emitToRoom(`ticket:${id}`, 'ticket:updated', { ticket: ticketWithTech });
+    emitToAdmins('ticket:updated', { ticket: ticketWithTech });
     clearTicketsCache();
     await logAudit({ actorId: req.user.id, actorName: req.user.full_name, actorRole: req.user.role, action: 'update', targetType: 'ticket', targetId: id, targetDescription: updatedTicket.ticket_number, oldValues: { status: old.status, priority: old.priority }, newValues: { status: status || old.status, priority: priority || old.priority } });
     res.json({ success: true, data: updatedTicket, message: 'Ticket updated successfully' });

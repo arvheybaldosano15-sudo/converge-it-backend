@@ -52,10 +52,12 @@ exports.getNotifications = async (req, res, next) => {
         SELECT n.*,
                t.ticket_number,
                t.subject AS ticket_subject,
-               cat.name AS category_name
+               cat.name AS category_name,
+               tech.full_name AS assigned_technician_name
         FROM notifications n
-        LEFT JOIN tickets t ON n.reference_id = t.id
+        LEFT JOIN tickets t ON n.reference_id = t.id AND (n.type IN ('ticket', 'installation') OR n.type IS NULL)
         LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+        LEFT JOIN users tech ON t.assigned_technician_id = tech.id
         ${where}
         ORDER BY n.created_at DESC
         LIMIT $${idx++} OFFSET $${idx}

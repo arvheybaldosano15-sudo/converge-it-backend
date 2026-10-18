@@ -99,6 +99,7 @@ const TechnicianDashboard = () => {
 
     socket.on('ticket:created', handleUpdate);
     socket.on('ticket_created', handleUpdate);
+    socket.on('ticket:assigned', handleUpdate);
     socket.on('ticket:updated', handleUpdate);
     socket.on('ticket_updated', handleUpdate);
     socket.on('notification:new', handleUpdate);
@@ -107,6 +108,7 @@ const TechnicianDashboard = () => {
       if (typeof socket.off === 'function') {
         socket.off('ticket:created', handleUpdate);
         socket.off('ticket_created', handleUpdate);
+        socket.off('ticket:assigned', handleUpdate);
         socket.off('ticket:updated', handleUpdate);
         socket.off('ticket_updated', handleUpdate);
         socket.off('notification:new', handleUpdate);

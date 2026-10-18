@@ -2,7 +2,7 @@ const { query } = require('../config/database');
 const { classifyAndGenerateTicket } = require('../services/aiService');
 const { sendBotcakeMessage, updateBotcakeCustomerField } = require('../services/botcakeService');
 const { sendTextMessage } = require('../services/messengerService');
-const { emitToAdmins, emitToAll } = require('../services/socketService');
+const { emitToAdmins, emitToAll, emitToUser } = require('../services/socketService');
 const { notifyAdmins } = require('../services/notificationService');
 const logger = require('../config/logger');
 
@@ -378,11 +378,13 @@ exports.handleWebhook = async (req, res) => {
       category_name: categoryName,
     };
 
-    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
+    // ✅ EMIT SOCKET FIRST (0ms) — Notify admins immediately. Technicians on mobile ONLY receive notifications when assigned!
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });
-    emitToAll('ticket:created', { ticket: fullTicketPayload });
-    emitToAll('ticket_created', { ticket: fullTicketPayload });
+    if (fullTicketPayload.assigned_technician_id) {
+      emitToUser(fullTicketPayload.assigned_technician_id, 'ticket:created', { ticket: fullTicketPayload });
+      emitToUser(fullTicketPayload.assigned_technician_id, 'ticket:assigned', { ticket: fullTicketPayload });
+    }
 
     const isInstallNotif = (categoryName || '').toLowerCase().includes('installation');
     notifyAdmins({
@@ -849,11 +851,13 @@ exports.createTicket = async (req, res) => {
       if (typeof clearAdminDashboardCache === 'function') clearAdminDashboardCache();
     } catch (e) {}
 
-    // ✅ EMIT SOCKET FIRST (0ms) — badge updates instantly on all clients
+    // ✅ EMIT SOCKET FIRST (0ms) — Notify admins immediately. Technicians on mobile ONLY receive notifications when assigned!
     emitToAdmins('ticket:created', { ticket: fullTicketPayload });
     emitToAdmins('ticket_created', { ticket: fullTicketPayload });
-    emitToAll('ticket:created', { ticket: fullTicketPayload });
-    emitToAll('ticket_created', { ticket: fullTicketPayload });
+    if (fullTicketPayload.assigned_technician_id) {
+      emitToUser(fullTicketPayload.assigned_technician_id, 'ticket:created', { ticket: fullTicketPayload });
+      emitToUser(fullTicketPayload.assigned_technician_id, 'ticket:assigned', { ticket: fullTicketPayload });
+    }
 
     const isInstallNotif = (categoryName || '').toLowerCase().includes('installation');
     notifyAdmins({

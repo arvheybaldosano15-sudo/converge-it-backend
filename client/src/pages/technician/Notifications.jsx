@@ -378,10 +378,15 @@ const TechnicianNotifications = () => {
 
                     {/* Footer Tags & Quick Buttons */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-xs">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {notif.reference_id && (
                           <span className="font-mono text-[11px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30 flex items-center gap-1">
-                            <Ticket className="w-3 h-3" /> Ticket: {notif.reference_id}
+                            <Ticket className="w-3 h-3" /> Ticket: #{notif.ticket_number || notif.reference_id}
+                          </span>
+                        )}
+                        {(notif.assigned_technician_name || notif.data?.technicianName) && (
+                          <span className="font-mono text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" /> Tech: {notif.assigned_technician_name || notif.data?.technicianName}
                           </span>
                         )}
                       </div>

@@ -164,7 +164,16 @@ export const SocketProvider = ({ children }) => {
     };
 
     newSocket.on('notification:new', (notification) => {
+      // If technician, verify notification is addressed to this technician
+      if (user?.role === 'technician') {
+        if (notification?.user_id && String(notification.user_id) !== String(user.id)) {
+          return;
+        }
+      }
+
       playNotificationChime();
+      const techName = notification.assigned_technician_name || notification.data?.technicianName;
+
       toast.custom(
         (t) => (
           <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} fixed top-3 left-3 right-3 max-w-md mx-auto z-[9999] glass-panel bg-slate-950/95 text-white p-4 rounded-2xl shadow-2xl border-2 border-cyan-500/60 flex items-start space-x-3 pointer-events-auto backdrop-blur-xl`}>
@@ -177,6 +186,12 @@ export const SocketProvider = ({ children }) => {
                 <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-700/50">ALERT</span>
               </div>
               <p className="text-xs text-slate-200 mt-1 leading-snug line-clamp-2">{notification.body || notification.message}</p>
+              {techName && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+                  <span className="text-slate-400">Technician:</span>
+                  <span className="text-emerald-300 font-mono bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/30">{techName}</span>
+                </div>
+              )}
             </div>
           </div>
         ),
@@ -187,7 +202,6 @@ export const SocketProvider = ({ children }) => {
       // notification:new fires LATER (after DB write) — do a server sync to get accurate count.
       // For non-ticket (system/approval): increment normally since ticket:created won't fire.
       if (notification?.type === 'ticket') {
-        // Sync with server to get accurate count (ticket:created already did +1)
         setTimeout(() => fetchUnreadCount(), 500);
       } else {
         setUnreadNotifications((prev) => prev + 1);
@@ -199,15 +213,63 @@ export const SocketProvider = ({ children }) => {
 
     const handleCreatedNotification = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
-      // ✅ Instantly increment badge at 0ms for ALL roles (admin + technician)
+      if (!ticket) return;
+
+      const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
+      const techName = ticket.assigned_technician_name || ticket.technicianName || payload?.technicianName;
+
+      // Technicians on mobile ONLY see notifications when assigned to them!
+      if (user?.role === 'technician') {
+        if (!assignedTechId || String(assignedTechId) !== String(user?.id)) {
+          return; // DO NOT display notification or increment count on mobile for unassigned tickets or tickets assigned to others
+        }
+        setUnreadNotifications((prev) => prev + 1);
+        if (ticket?.ticket_number) {
+          toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
+        }
+        return;
+      }
+
+      // Admins: receive notifications for all created tickets, showing technician name if assigned
       setUnreadNotifications((prev) => prev + 1);
       if (ticket?.ticket_number) {
-        toast.info(`New Ticket #${ticket.ticket_number} created`);
+        if (techName) {
+          toast.info(`New Ticket #${ticket.ticket_number} created (Assigned: ${techName})`);
+        } else {
+          toast.info(`New Ticket #${ticket.ticket_number} created (Unassigned)`);
+        }
+      }
+    };
+
+    const handleAssignedNotification = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
+      if (!ticket) return;
+
+      const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
+      const techName = payload?.technicianName || ticket.assigned_technician_name || ticket.technicianName;
+
+      // Technicians on mobile ONLY see notifications when assigned to them
+      if (user?.role === 'technician') {
+        if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
+          return;
+        }
+        setUnreadNotifications((prev) => prev + 1);
+        if (ticket?.ticket_number) {
+          toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
+        }
+        return;
+      }
+
+      // Admins: see assignment notification with technician's name
+      setUnreadNotifications((prev) => prev + 1);
+      if (ticket?.ticket_number) {
+        toast.info(`Ticket #${ticket.ticket_number} assigned to technician ${techName || 'Technician'}`);
       }
     };
 
     newSocket.on('ticket:created', handleCreatedNotification);
     newSocket.on('ticket_created', handleCreatedNotification);
+    newSocket.on('ticket:assigned', handleAssignedNotification);
 
     setSocket(newSocket);
 

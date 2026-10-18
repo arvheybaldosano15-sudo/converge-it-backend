@@ -101,30 +101,85 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
 
     const handleTicketCreated = (payload = {}) => {
       const ticket = payload?.ticket || payload?.data || payload;
-      if (ticket && ticket.ticket_number) {
-        const catName = (ticket.category_name || ticket.category?.name || '').toLowerCase();
-        const subjectLower = (ticket.subject || '').toLowerCase();
-        const descLower = (ticket.description || '').toLowerCase();
-        const isInstall = catName.includes('installation') || subjectLower.includes('installation') || descLower.includes('installation');
+      if (!ticket || !ticket.ticket_number) return;
 
-        const notifItem = {
-          id: 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-          title: isInstall ? `New Installation Request #${ticket.ticket_number}` : `New Ticket #${ticket.ticket_number}`,
-          message: isInstall
-            ? `Installation Request #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`
-            : `Ticket #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`,
-          type: isInstall ? 'installation' : 'ticket',
-          is_read: false,
-          created_at: new Date().toISOString(),
-          reference_id: ticket.id,
-          category_name: ticket.category_name
-        };
-        setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
+      const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
+      const techName = ticket.assigned_technician_name || ticket.technicianName || payload?.technicianName;
+
+      // Technicians on mobile ONLY see notifications for tickets assigned to them!
+      if (user?.role === 'technician') {
+        if (!assignedTechId || String(assignedTechId) !== String(user?.id)) {
+          return;
+        }
       }
+
+      const catName = (ticket.category_name || ticket.category?.name || '').toLowerCase();
+      const subjectLower = (ticket.subject || '').toLowerCase();
+      const descLower = (ticket.description || '').toLowerCase();
+      const isInstall = catName.includes('installation') || subjectLower.includes('installation') || descLower.includes('installation');
+
+      const title = isInstall
+        ? `New Installation Request #${ticket.ticket_number}`
+        : (assignedTechId && user?.role === 'technician' ? `Ticket #${ticket.ticket_number} Assigned to You` : `New Ticket #${ticket.ticket_number}`);
+
+      let message = isInstall
+        ? `Installation Request #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`
+        : `Ticket #${ticket.ticket_number} created for ${ticket.customer_name || 'Customer'}.`;
+
+      if (techName) {
+        message += ` (Assigned: ${techName})`;
+      }
+
+      const notifItem = {
+        id: 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        title,
+        message,
+        type: isInstall ? 'installation' : 'ticket',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        reference_id: ticket.id,
+        category_name: ticket.category_name,
+        assigned_technician_name: techName
+      };
+      setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
       setTimeout(() => fetchNotifications(false), 2000);
     };
 
+    const handleTicketAssigned = (payload = {}) => {
+      const ticket = payload?.ticket || payload?.data || payload;
+      if (!ticket || !ticket.ticket_number) return;
+
+      const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
+      const techName = payload?.technicianName || ticket.assigned_technician_name || ticket.technicianName;
+
+      if (user?.role === 'technician') {
+        if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
+          return;
+        }
+      }
+
+      const title = `Ticket #${ticket.ticket_number} Assigned`;
+      const message = user?.role === 'technician'
+        ? `Ticket #${ticket.ticket_number} (${ticket.subject || 'Concern'}) has been assigned to you (${techName || user?.full_name || 'Technician'}).`
+        : `Ticket #${ticket.ticket_number} has been assigned to technician ${techName || 'Technician'}.`;
+
+      const notifItem = {
+        id: 'temp-assign-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        title,
+        message,
+        type: 'ticket',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        reference_id: ticket.id,
+        category_name: ticket.category_name,
+        assigned_technician_name: techName
+      };
+      setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== notifItem.id)]);
+      setTimeout(() => fetchNotifications(false), 1500);
+    };
+
     const handleNewPendingTechnician = (payload = {}) => {
+      if (user?.role !== 'admin') return; // Pending approvals are only for admins
       if (payload) {
         const notifItem = {
           id: 'temp-tech-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
@@ -143,15 +198,17 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     socket.on('notification:new', handleNewNotification);
     socket.on('ticket:created', handleTicketCreated);
     socket.on('ticket_created', handleTicketCreated);
+    socket.on('ticket:assigned', handleTicketAssigned);
     socket.on('technician:new_pending', handleNewPendingTechnician);
 
     return () => {
       socket.off('notification:new', handleNewNotification);
       socket.off('ticket:created', handleTicketCreated);
       socket.off('ticket_created', handleTicketCreated);
+      socket.off('ticket:assigned', handleTicketAssigned);
       socket.off('technician:new_pending', handleNewPendingTechnician);
     };
-  }, [socket]);
+  }, [socket, user]);
 
   const markAllRead = async () => {
     try {
@@ -335,6 +392,11 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
                                 <Ticket className="w-2.5 h-2.5" /> Tickets Management
                               </span>
                             ) : null}
+                            {(n.assigned_technician_name || n.data?.technicianName) && (
+                              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0 flex items-center gap-1">
+                                <UserCheck className="w-2.5 h-2.5" /> Tech: {n.assigned_technician_name || n.data?.technicianName}
+                              </span>
+                            )}
                           </div>
 
                           <p className={`text-xs font-semibold ${n.is_read ? 'text-slate-400' : 'text-slate-100'} leading-snug`}>

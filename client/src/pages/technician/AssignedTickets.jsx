@@ -160,6 +160,7 @@ const AssignedTickets = () => {
 
     socket.on('ticket:created', handleRefetch);
     socket.on('ticket_created', handleRefetch);
+    socket.on('ticket:assigned', handleRefetch);
     socket.on('ticket:updated', handleRefetch);
     socket.on('ticket_updated', handleRefetch);
     socket.on('connect', handleRefetch); // Refetch on socket reconnect
@@ -167,6 +168,7 @@ const AssignedTickets = () => {
     return () => {
       socket.off('ticket:created', handleRefetch);
       socket.off('ticket_created', handleRefetch);
+      socket.off('ticket:assigned', handleRefetch);
       socket.off('ticket:updated', handleRefetch);
       socket.off('ticket_updated', handleRefetch);
       socket.off('connect', handleRefetch);

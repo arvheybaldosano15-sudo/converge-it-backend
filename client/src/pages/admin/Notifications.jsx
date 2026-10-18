@@ -141,6 +141,11 @@ const Notifications = () => {
                         <Ticket className="w-3 h-3" /> Tickets Management
                       </span>
                     ) : null}
+                    {n.assigned_technician_name && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" /> Tech: {n.assigned_technician_name}
+                      </span>
+                    )}
                     <h4 className="text-sm font-bold text-white">{n.title}</h4>
                     {!n.is_read && <Badge variant="cyan">New</Badge>}
                   </div>

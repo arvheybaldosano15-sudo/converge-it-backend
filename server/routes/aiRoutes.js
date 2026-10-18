@@ -277,9 +277,10 @@ const applyRecommendationHandler = async (req, res, next) => {
       const match = rec.suggestion.match(/to\s+([^(]+)/i);
       if (match && match[1]) {
         const techName = match[1].replace(/\(.*?\)/g, '').trim();
-        const techResult = await query(`SELECT id FROM users WHERE LOWER(TRIM(full_name)) = LOWER(TRIM($1)) AND role = 'technician'`, [techName]);
+        const techResult = await query(`SELECT id, full_name FROM users WHERE LOWER(TRIM(full_name)) = LOWER(TRIM($1)) AND role = 'technician'`, [techName]);
         if (techResult.rows[0]) {
           const techId = techResult.rows[0].id;
+          const assignedTechName = techResult.rows[0].full_name || techName;
           const activeCheck = await query(
             `SELECT ticket_number FROM tickets 
              WHERE assigned_technician_id = $1 AND status::text NOT IN ('resolved', 'closed', 'cancelled') AND id != $2`,
@@ -289,9 +290,35 @@ const applyRecommendationHandler = async (req, res, next) => {
             return next({ statusCode: 400, message: `This technician currently has ${activeCheck.rows.length} active tickets and cannot receive new assignments (limit: 3 active tickets).` });
           }
           await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [techId, ticket.id]);
+          try {
+            const { clearTicketsCache } = require('../controllers/ticketController');
+            if (typeof clearTicketsCache === 'function') clearTicketsCache();
+            const { createNotification, notifyAdmins } = require('../services/notificationService');
+            const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
+
+            await createNotification({
+              userId: techId,
+              type: 'ticket',
+              title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+              body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${assignedTechName}).`,
+              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId }
+            }).catch(() => {});
+
+            await notifyAdmins({
+              type: 'ticket',
+              title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+              body: `Ticket #${ticket.ticket_number} has been assigned to technician ${assignedTechName}.`,
+              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId }
+            }).catch(() => {});
+
+            emitToUser(techId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName }, technicianName: assignedTechName });
+            emitToUser(techId, 'ticket:created', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName }, technicianName: assignedTechName });
+            emitToAdmins('ticket:updated', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName } });
+            emitToRoom(`ticket:${ticket.id}`, 'ticket:updated', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName } });
+          } catch (_) {}
         } else {
           const lowestTechResult = await query(`
-            SELECT u.id FROM users u 
+            SELECT u.id, u.full_name FROM users u 
             WHERE u.role = 'technician' AND u.status = 'active'
             AND (
               SELECT COUNT(*) FROM tickets t2 
@@ -304,7 +331,35 @@ const applyRecommendationHandler = async (req, res, next) => {
             LIMIT 1
           `, [ticket.id]);
           if (lowestTechResult.rows[0]) {
-            await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [lowestTechResult.rows[0].id, ticket.id]);
+            const fallbackTechId = lowestTechResult.rows[0].id;
+            const fallbackTechName = lowestTechResult.rows[0].full_name || 'Technician';
+            await query(`UPDATE tickets SET assigned_technician_id = $1, status = 'in_progress', updated_at = NOW() WHERE id = $2`, [fallbackTechId, ticket.id]);
+            try {
+              const { clearTicketsCache } = require('../controllers/ticketController');
+              if (typeof clearTicketsCache === 'function') clearTicketsCache();
+              const { createNotification, notifyAdmins } = require('../services/notificationService');
+              const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
+
+              await createNotification({
+                userId: fallbackTechId,
+                type: 'ticket',
+                title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+                body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${fallbackTechName}).`,
+                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId }
+              }).catch(() => {});
+
+              await notifyAdmins({
+                type: 'ticket',
+                title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+                body: `Ticket #${ticket.ticket_number} has been assigned to technician ${fallbackTechName}.`,
+                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId }
+              }).catch(() => {});
+
+              emitToUser(fallbackTechId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName }, technicianName: fallbackTechName });
+              emitToUser(fallbackTechId, 'ticket:created', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName }, technicianName: fallbackTechName });
+              emitToAdmins('ticket:updated', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName } });
+              emitToRoom(`ticket:${ticket.id}`, 'ticket:updated', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName } });
+            } catch (_) {}
           } else {
             return next({ statusCode: 400, message: 'All technicians currently have 3 active tickets and cannot receive new assignments.' });
           }
