@@ -7,35 +7,59 @@ export const isTechPath = () => {
   return path.startsWith('/technician') || path === '/technician-login';
 };
 
+export const isAdminPath = () => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname;
+  return path.startsWith('/admin');
+};
+
 export const getAuthToken = (roleHint) => {
-  const isTech = roleHint === 'technician' || (roleHint !== 'admin' && isTechPath());
-  if (isTech) {
+  if (roleHint === 'technician' || (!roleHint && isTechPath())) {
     return localStorage.getItem('tech_token') || localStorage.getItem('token');
   }
-  return localStorage.getItem('admin_token') || localStorage.getItem('token');
+  if (roleHint === 'admin' || (!roleHint && isAdminPath())) {
+    return localStorage.getItem('admin_token') || localStorage.getItem('token');
+  }
+  // Neutral paths (e.g., /, /unauthorized, /login) — check admin, then tech, then fallback
+  return (
+    localStorage.getItem('admin_token') ||
+    localStorage.getItem('tech_token') ||
+    localStorage.getItem('token')
+  );
 };
 
 export const getRefreshToken = (roleHint) => {
-  const isTech = roleHint === 'technician' || (roleHint !== 'admin' && isTechPath());
-  if (isTech) {
+  if (roleHint === 'technician' || (!roleHint && isTechPath())) {
     return localStorage.getItem('tech_refreshToken') || localStorage.getItem('refreshToken');
   }
-  return localStorage.getItem('admin_refreshToken') || localStorage.getItem('refreshToken');
+  if (roleHint === 'admin' || (!roleHint && isAdminPath())) {
+    return localStorage.getItem('admin_refreshToken') || localStorage.getItem('refreshToken');
+  }
+  return (
+    localStorage.getItem('admin_refreshToken') ||
+    localStorage.getItem('tech_refreshToken') ||
+    localStorage.getItem('refreshToken')
+  );
 };
 
 export const getCachedUser = (roleHint) => {
-  const isTech = roleHint === 'technician' || (roleHint !== 'admin' && isTechPath());
-  const primaryKey = isTech ? 'tech_user' : 'admin_user';
   try {
-    const cachedPrimary = localStorage.getItem(primaryKey);
-    if (cachedPrimary) return JSON.parse(cachedPrimary);
+    if (roleHint === 'technician' || (!roleHint && isTechPath())) {
+      const cached = localStorage.getItem('tech_user');
+      if (cached) return JSON.parse(cached);
+    } else if (roleHint === 'admin' || (!roleHint && isAdminPath())) {
+      const cached = localStorage.getItem('admin_user');
+      if (cached) return JSON.parse(cached);
+    } else {
+      const adminCached = localStorage.getItem('admin_user');
+      if (adminCached) return JSON.parse(adminCached);
+      const techCached = localStorage.getItem('tech_user');
+      if (techCached) return JSON.parse(techCached);
+    }
 
     const cachedFallback = localStorage.getItem('user');
     if (cachedFallback) {
-      const parsed = JSON.parse(cachedFallback);
-      if ((isTech && parsed.role === 'technician') || (!isTech && parsed.role !== 'technician')) {
-        return parsed;
-      }
+      return JSON.parse(cachedFallback);
     }
     return null;
   } catch {
