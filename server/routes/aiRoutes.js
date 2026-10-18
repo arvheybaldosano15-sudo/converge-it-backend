@@ -296,18 +296,12 @@ const applyRecommendationHandler = async (req, res, next) => {
             const { createNotification, notifyAdmins } = require('../services/notificationService');
             const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
 
+            // Notify ONLY the assigned technician (not shown in admin notification bell)
             await createNotification({
               userId: techId,
               type: 'ticket',
               title: `Ticket #${ticket.ticket_number} Assigned via AI`,
               body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${assignedTechName}).`,
-              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId }
-            }).catch(() => {});
-
-            await notifyAdmins({
-              type: 'ticket',
-              title: `Ticket #${ticket.ticket_number} Assigned via AI`,
-              body: `Ticket #${ticket.ticket_number} has been assigned to technician ${assignedTechName}.`,
               data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId }
             }).catch(() => {});
 
@@ -340,18 +334,12 @@ const applyRecommendationHandler = async (req, res, next) => {
               const { createNotification, notifyAdmins } = require('../services/notificationService');
               const { emitToUser, emitToAdmins, emitToRoom } = require('../services/socketService');
 
+              // Notify ONLY the assigned technician (not shown in admin notification bell)
               await createNotification({
                 userId: fallbackTechId,
                 type: 'ticket',
                 title: `Ticket #${ticket.ticket_number} Assigned via AI`,
                 body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${fallbackTechName}).`,
-                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId }
-              }).catch(() => {});
-
-              await notifyAdmins({
-                type: 'ticket',
-                title: `Ticket #${ticket.ticket_number} Assigned via AI`,
-                body: `Ticket #${ticket.ticket_number} has been assigned to technician ${fallbackTechName}.`,
                 data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId }
               }).catch(() => {});
 

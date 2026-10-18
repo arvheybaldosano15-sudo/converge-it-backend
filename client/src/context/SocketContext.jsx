@@ -242,28 +242,22 @@ export const SocketProvider = ({ children }) => {
     };
 
     const handleAssignedNotification = (payload = {}) => {
+      // Assignment notifications can ONLY be seen in the assigned technician's account
+      if (user?.role !== 'technician') return;
+
       const ticket = payload?.ticket || payload?.data || payload;
       if (!ticket) return;
 
       const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
       const techName = payload?.technicianName || ticket.assigned_technician_name || ticket.technicianName;
 
-      // Technicians on mobile ONLY see notifications when assigned to them
-      if (user?.role === 'technician') {
-        if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
-          return;
-        }
-        setUnreadNotifications((prev) => prev + 1);
-        if (ticket?.ticket_number) {
-          toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
-        }
+      if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
         return;
       }
 
-      // Admins: see assignment notification with technician's name
       setUnreadNotifications((prev) => prev + 1);
       if (ticket?.ticket_number) {
-        toast.info(`Ticket #${ticket.ticket_number} assigned to technician ${techName || 'Technician'}`);
+        toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
       }
     };
 

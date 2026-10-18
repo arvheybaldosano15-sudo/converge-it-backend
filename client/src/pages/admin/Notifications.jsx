@@ -51,7 +51,12 @@ const Notifications = () => {
     try {
       const res = await api.get('/notifications');
       if (res.success) {
-        setNotifications(res.data);
+        const filtered = (res.data || []).filter((n) => {
+          const titleLower = (n.title || '').toLowerCase();
+          const bodyLower = (n.body || n.message || '').toLowerCase();
+          return !titleLower.includes('assigned') && !bodyLower.includes('assigned to technician');
+        });
+        setNotifications(filtered);
       }
     } catch (e) {
       console.error(e);

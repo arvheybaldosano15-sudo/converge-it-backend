@@ -46,6 +46,10 @@ exports.getNotifications = async (req, res, next) => {
     const params = [req.user.id];
     let idx = 2;
     if (unreadOnly === 'true') { conditions.push(`n.is_read = FALSE`); }
+    // Ticket assignment notifications are exclusively for technicians — admins do not see them in the notification bell
+    if (req.user.role === 'admin') {
+      conditions.push(`n.title NOT ILIKE '%assigned%'`);
+    }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const [data, count] = await Promise.all([
       query(`
@@ -71,7 +75,11 @@ exports.getNotifications = async (req, res, next) => {
 exports.getUnreadCount = async (req, res, next) => {
   try {
     await syncPendingTechnicianNotifications(req.user.id, req.user.role);
-    const result = await query('SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE', [req.user.id]);
+    let countSql = 'SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE';
+    if (req.user.role === 'admin') {
+      countSql += ` AND title NOT ILIKE '%assigned%'`;
+    }
+    const result = await query(countSql, [req.user.id]);
     res.json({ success: true, data: { count: parseInt(result.rows[0].count) } });
   } catch (error) { next(error); }
 };

@@ -302,20 +302,12 @@ exports.updateTicket = async (req, res, next) => {
       const techRes = await client.query('SELECT full_name FROM users WHERE id = $1', [assignedTo]);
       techName = techRes.rows[0]?.full_name || 'Technician';
 
-      // Notify the newly assigned technician
+      // Notify ONLY the newly assigned technician (not shown in admin notification bell)
       await createNotification({
         userId: assignedTo,
         type: 'ticket',
         title: `Ticket #${updatedTicket.ticket_number} Assigned`,
         body: `Ticket #${updatedTicket.ticket_number} (${updatedTicket.subject || 'Concern'}) has been assigned to you (${techName}).`,
-        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo }
-      }).catch(() => {});
-
-      // Notify admins with technician name
-      await notifyAdmins({
-        type: 'ticket',
-        title: `Ticket #${updatedTicket.ticket_number} Assigned`,
-        body: `Ticket #${updatedTicket.ticket_number} has been assigned to technician ${techName}.`,
         data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo }
       }).catch(() => {});
 

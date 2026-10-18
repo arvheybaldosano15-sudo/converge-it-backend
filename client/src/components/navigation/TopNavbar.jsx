@@ -73,7 +73,17 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     if (showLoading) setNotifLoading(true);
     try {
       const res = await api.get('/notifications?limit=20');
-      if (res.success) setNotifications(res.data || []);
+      if (res.success) {
+        let list = res.data || [];
+        if (user?.role === 'admin') {
+          list = list.filter((n) => {
+            const titleLower = (n.title || '').toLowerCase();
+            const bodyLower = (n.body || n.message || '').toLowerCase();
+            return !titleLower.includes('assigned') && !bodyLower.includes('assigned to technician');
+          });
+        }
+        setNotifications(list);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -146,22 +156,21 @@ const TopNavbar = ({ onSearch, onMenuToggle, hideMobileMenu = false, onDesktopMe
     };
 
     const handleTicketAssigned = (payload = {}) => {
+      // Assignment notifications can ONLY be seen in the assigned technician's account!
+      if (user?.role !== 'technician') return;
+
       const ticket = payload?.ticket || payload?.data || payload;
       if (!ticket || !ticket.ticket_number) return;
 
       const assignedTechId = ticket.assigned_technician_id || ticket.assignedTo;
       const techName = payload?.technicianName || ticket.assigned_technician_name || ticket.technicianName;
 
-      if (user?.role === 'technician') {
-        if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
-          return;
-        }
+      if (assignedTechId && String(assignedTechId) !== String(user?.id)) {
+        return;
       }
 
       const title = `Ticket #${ticket.ticket_number} Assigned`;
-      const message = user?.role === 'technician'
-        ? `Ticket #${ticket.ticket_number} (${ticket.subject || 'Concern'}) has been assigned to you (${techName || user?.full_name || 'Technician'}).`
-        : `Ticket #${ticket.ticket_number} has been assigned to technician ${techName || 'Technician'}.`;
+      const message = `Ticket #${ticket.ticket_number} (${ticket.subject || 'Concern'}) has been assigned to you (${techName || user?.full_name || 'Technician'}).`;
 
       const notifItem = {
         id: 'temp-assign-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
