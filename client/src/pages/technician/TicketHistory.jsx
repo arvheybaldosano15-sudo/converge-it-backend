@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -25,6 +26,7 @@ import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 
 const TicketHistory = () => {
+  const queryClient = useQueryClient();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
@@ -75,6 +77,19 @@ const TicketHistory = () => {
       setDeletingId(ticket.id);
       await api.delete(`/tickets/${ticket.id}`);
       setTickets(prev => prev.filter(t => t.id !== ticket.id));
+      queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
+        if (!old) return [];
+        const list = Array.isArray(old) ? old : (old.data || []);
+        const filtered = list.filter((t) => t.id !== ticket.id);
+        return Array.isArray(old) ? filtered : { ...old, data: filtered };
+      });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      try {
+        localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
+        localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
+        localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
+      } catch (_) {}
       toast.success(`Ticket ${ticket.ticket_number} deleted from history.`);
       setIsDeleteConfirmOpen(false);
       setTicketToDelete(null);

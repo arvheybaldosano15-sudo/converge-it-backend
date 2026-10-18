@@ -9,17 +9,11 @@ import api from '../utils/axios';
 
 const prefetchTechData = async () => {
   try {
-    const [dashRes, ticketsRes] = await Promise.all([
-      api.get('/dashboard/technician'),
-      api.get('/tickets', { params: { limit: 50 } }),
-    ]);
+    const dashRes = await api.get('/dashboard/technician');
     if (dashRes?.data) {
       try { localStorage.setItem('CONVERGE_TECH_DASHBOARD_CACHE', JSON.stringify(dashRes.data)); } catch (_) {}
     }
-    if (ticketsRes?.data && Array.isArray(ticketsRes.data)) {
-      try { localStorage.setItem('CONVERGE_TECH_TICKETS_CACHE', JSON.stringify(ticketsRes.data)); } catch (_) {}
-    }
-    return { dashboard: dashRes?.data || null, tickets: ticketsRes?.data || [] };
+    return { dashboard: dashRes?.data || null };
   } catch (_) {}
   return null;
 };

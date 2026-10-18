@@ -69,21 +69,28 @@ if (savedTheme === 'light') {
   document.documentElement.classList.add('dark');
 }
 
-// Configure TanStack Query Client for ZERO-LOADING Instant Caching UI
+// Clear legacy tickets cache so old/deleted tickets never linger in localStorage
+try {
+  localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
+  localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
+  localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
+} catch (_) {}
+
+// Configure TanStack Query Client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 15,
-      gcTime: 1000 * 60 * 60 * 24,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
       placeholderData: (previousData) => previousData,
       retry: 1,
     },
   },
 });
 
-// Synchronous localStorage pre-seed
+// Synchronous localStorage pre-seed (only for non-ticket layout data)
 const preSeedCache = (localKey, queryKey) => {
   try {
     const cached = localStorage.getItem(localKey);
@@ -96,8 +103,6 @@ const preSeedCache = (localKey, queryKey) => {
   } catch (_) {}
 };
 
-preSeedCache('CONVERGE_TICKETS_MANAGEMENT_CACHE_V2', ['tickets']);
-preSeedCache('CONVERGE_TICKETS_MAIN_CACHE_V2',       ['tickets']);
 preSeedCache('CONVERGE_INSTALLATION_REQUESTS_CACHE', ['installation-requests']);
 preSeedCache('CONVERGE_TECH_DASHBOARD_CACHE',        ['dashboard', 'technician']);
 preSeedCache('CONVERGE_ADMIN_DASHBOARD_CACHE',       ['dashboard', 'admin']);
@@ -112,7 +117,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            // NEVER persist tickets to localStorage to prevent deleted/old data resurrection on refresh
+            if (query.queryKey && query.queryKey[0] === 'tickets') return false;
+            return true;
+          },
+        },
+      }}
     >
       <BrowserRouter>
         <AuthProvider>

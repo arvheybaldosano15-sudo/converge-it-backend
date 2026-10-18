@@ -141,7 +141,6 @@ const _moduleTicketFetch = (() => {
             ticketMemoryCache.totalItems = res.pagination?.total || filtered.length;
             try {
               localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(filtered));
-              localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(filtered));
             } catch (_) {}
           }
         }
@@ -274,9 +273,6 @@ const TicketManagement = () => {
             ticketMemoryCache.totalItems = Math.max(freshTotal, merged.length);
             try {
               localStorage.setItem(LOCAL_TICKETS_CACHE_KEY, JSON.stringify(merged));
-              localStorage.setItem(LOCAL_STORAGE_TICKETS_CACHE_KEY, JSON.stringify(merged));
-              localStorage.setItem('CONVERGE_TICKETS_MANAGEMENT_CACHE', JSON.stringify(merged));
-              localStorage.setItem('CONVERGE_TICKETS_MAIN_CACHE', JSON.stringify(merged));
             } catch (e) {}
           }
 

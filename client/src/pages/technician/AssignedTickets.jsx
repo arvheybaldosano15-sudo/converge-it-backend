@@ -72,18 +72,6 @@ const getSlaInfo = (deadlineStr, status) => {
   return { text, isBreached: false, isUrgent, colorClass };
 };
 
-// ─── Persistent localStorage cache so tickets show INSTANTLY on page load ────
-const CACHE_KEY = 'CONVERGE_ASSIGNED_TICKETS_CACHE';
-const getTicketCache = () => {
-  try {
-    const c = localStorage.getItem(CACHE_KEY);
-    return c ? JSON.parse(c) : null;
-  } catch { return null; }
-};
-const saveTicketCache = (data) => {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
-};
-
 const AssignedTickets = () => {
   const queryClient = useQueryClient();
 
@@ -128,7 +116,7 @@ const AssignedTickets = () => {
   const [reportTicket, setReportTicket] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Query Backend tickets — initialData from localStorage shows tickets INSTANTLY on mount
+  // Query Backend tickets — clean TanStack Query
   const { data: ticketsData, isLoading, isFetching, refetch } = useTickets({
     limit: 100,
     search: search ? search : undefined,
@@ -137,17 +125,14 @@ const AssignedTickets = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   });
 
-  // Show loading spinner ONLY when there's no cached data at all (true first-time load)
-  const cachedTickets = getTicketCache();
-  const loading = isLoading && !cachedTickets;
-
-  // Save fresh data to localStorage whenever it arrives
-  useEffect(() => {
-    if (ticketsData) {
-      const data = ticketsData?.data || ticketsData || [];
-      if (Array.isArray(data) && data.length > 0) saveTicketCache(data);
-    }
+  // Extract clean live tickets array
+  const rawTickets = useMemo(() => {
+    if (Array.isArray(ticketsData)) return ticketsData;
+    if (Array.isArray(ticketsData?.data)) return ticketsData.data;
+    return [];
   }, [ticketsData]);
+
+  const loading = isLoading && rawTickets.length === 0;
 
   // Socket for real-time instant updates
   const { socket } = useSocket();
@@ -156,13 +141,32 @@ const AssignedTickets = () => {
   useEffect(() => {
     if (!socket || typeof socket.on !== 'function') return;
 
-    const handleRefetch = () => refetch();
+    const handleRefetch = () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+    };
+
+    const handleTicketDeleted = (payload = {}) => {
+      const deletedId = payload?.id || payload?.ticketId || payload;
+      if (deletedId) {
+        queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
+          if (!old) return [];
+          const list = Array.isArray(old) ? old : (old.data || []);
+          const filtered = list.filter((t) => t.id !== deletedId);
+          return Array.isArray(old) ? filtered : { ...old, data: filtered };
+        });
+      }
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+    };
 
     socket.on('ticket:created', handleRefetch);
     socket.on('ticket_created', handleRefetch);
     socket.on('ticket:assigned', handleRefetch);
     socket.on('ticket:updated', handleRefetch);
     socket.on('ticket_updated', handleRefetch);
+    socket.on('ticket:deleted', handleTicketDeleted);
+    socket.on('ticket_deleted', handleTicketDeleted);
     socket.on('connect', handleRefetch); // Refetch on socket reconnect
 
     return () => {
@@ -171,23 +175,23 @@ const AssignedTickets = () => {
       socket.off('ticket:assigned', handleRefetch);
       socket.off('ticket:updated', handleRefetch);
       socket.off('ticket_updated', handleRefetch);
+      socket.off('ticket:deleted', handleTicketDeleted);
+      socket.off('ticket_deleted', handleTicketDeleted);
       socket.off('connect', handleRefetch);
     };
-  }, [socket, refetch]);
+  }, [socket, refetch, queryClient]);
 
   // Refetch when app/tab becomes visible again on mobile (e.g. switching back from another app)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         refetch();
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [refetch]);
-
-  // Use live data if available, fall back to localStorage cache for instant display
-  const rawTickets = ticketsData?.data || ticketsData || cachedTickets || [];
+  }, [refetch, queryClient]);
 
   // Client-side filtering & smart sorting
   const processedTickets = useMemo(() => {

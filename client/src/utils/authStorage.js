@@ -94,7 +94,38 @@ export const setAuthSession = (userData, accessToken, refreshToken) => {
   }
 };
 
+export const purgeAllTicketCaches = () => {
+  const keysToRemove = [
+    'CONVERGE_TICKETS_MAIN_CACHE_V2',
+    'CONVERGE_TICKETS_MANAGEMENT_CACHE_V2',
+    'CONVERGE_TICKETS_MANAGEMENT_CACHE',
+    'CONVERGE_TICKETS_MAIN_CACHE',
+    'CONVERGE_ASSIGNED_TICKETS_CACHE',
+    'CONVERGE_TECH_TICKETS_CACHE',
+    'CONVERGE_TECH_DASHBOARD_CACHE',
+    'CONVERGE_ADMIN_DASHBOARD_CACHE',
+    'CONVERGE_INSTALLATION_REQUESTS_CACHE',
+    'CONVERGE_TICKETS_STATS_CACHE_V2',
+    'CONVERGE_LOCAL_TICKETS_STATS_V2',
+    'CONVERGE_TANSTACK_QUERY_CACHE',
+  ];
+  keysToRemove.forEach((k) => {
+    try { localStorage.removeItem(k); } catch (_) {}
+  });
+
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('CONVERGE_ASSIGNED_TICKETS_') || key.startsWith('CONVERGE_TECH_') || key.startsWith('CONVERGE_TICKETS_'))) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (_) {}
+};
+
 export const clearAuthSession = (roleHint) => {
+  purgeAllTicketCaches();
+
   if (roleHint === 'all' || !roleHint) {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('tech_token');
