@@ -69,11 +69,13 @@ if (savedTheme === 'light') {
   document.documentElement.classList.add('dark');
 }
 
-// Clear legacy tickets cache so old/deleted tickets never linger in localStorage
+// Clear legacy tickets and dashboard cache so old/deleted tickets never linger in localStorage
 try {
   localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
   localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
   localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
+  localStorage.removeItem('CONVERGE_TECH_DASHBOARD_CACHE');
+  localStorage.removeItem('CONVERGE_ADMIN_DASHBOARD_CACHE');
 } catch (_) {}
 
 // Configure TanStack Query Client
@@ -104,8 +106,6 @@ const preSeedCache = (localKey, queryKey) => {
 };
 
 preSeedCache('CONVERGE_INSTALLATION_REQUESTS_CACHE', ['installation-requests']);
-preSeedCache('CONVERGE_TECH_DASHBOARD_CACHE',        ['dashboard', 'technician']);
-preSeedCache('CONVERGE_ADMIN_DASHBOARD_CACHE',       ['dashboard', 'admin']);
 
 const persister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -122,8 +122,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         maxAge: 1000 * 60 * 60 * 24,
         dehydrateOptions: {
           shouldDehydrateQuery: (query) => {
-            // NEVER persist tickets to localStorage to prevent deleted/old data resurrection on refresh
-            if (query.queryKey && query.queryKey[0] === 'tickets') return false;
+            // NEVER persist tickets or dashboards to localStorage to prevent deleted/old data resurrection on refresh
+            if (query.queryKey && (query.queryKey[0] === 'tickets' || query.queryKey[0] === 'dashboard')) return false;
             return true;
           },
         },

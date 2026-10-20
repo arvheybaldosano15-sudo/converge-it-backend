@@ -7,6 +7,7 @@ try {
   localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
   localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
   localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
+  localStorage.removeItem('CONVERGE_TECH_DASHBOARD_CACHE');
 } catch (_) {}
 
 // ─── Query: Fetch Tickets List with Clean TanStack Query Cache ────────────────
@@ -34,12 +35,13 @@ export const useTicket = (ticketId) => {
     queryKey: ['tickets', ticketId],
     queryFn: async () => {
       if (!ticketId) return null;
-      const res = await api.get(`/tickets/${ticketId}`);
+      const res = await api.get(`/tickets/${ticketId}`, { params: { fresh: true } });
       return res.data || null;
     },
     enabled: !!ticketId,
-    staleTime: 1000 * 60 * 10,
-    placeholderData: (previousData) => previousData,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 };
 

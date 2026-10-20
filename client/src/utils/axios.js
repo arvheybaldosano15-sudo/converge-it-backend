@@ -42,6 +42,18 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // Ensure all GET requests bypass browser/disk/proxy cache for strictly real-time data
+    if (config.method?.toLowerCase() === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now(),
+      };
+      config.headers = config.headers || {};
+      config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      config.headers['Pragma'] = 'no-cache';
+      config.headers['Expires'] = '0';
+    }
+
     const url = config.url || '';
     const isPublicAuthUrl =
       url.includes('/auth/login') ||

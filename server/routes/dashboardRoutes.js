@@ -8,10 +8,17 @@ let adminCache = null;
 let adminCacheTime = 0;
 const CACHE_TTL = 15000;
 
-router.get('/admin', authenticate, authorize('admin'), async (req, res, next) => {
+const noCache = (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+};
+
+router.get('/admin', authenticate, authorize('admin'), noCache, async (req, res, next) => {
   try {
     const now = Date.now();
-    if (adminCache && (now - adminCacheTime < CACHE_TTL)) {
+    if (!req.query.fresh && adminCache && (now - adminCacheTime < CACHE_TTL)) {
       return res.json(adminCache);
     }
 
@@ -132,7 +139,7 @@ router.get('/admin', authenticate, authorize('admin'), async (req, res, next) =>
   } catch (error) { next(error); }
 });
 
-router.get('/technician', authenticate, authorize('technician'), async (req, res, next) => {
+router.get('/technician', authenticate, authorize('technician'), noCache, async (req, res, next) => {
   try {
     const techId = req.user.id;
     const [

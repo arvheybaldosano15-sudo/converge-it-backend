@@ -19,7 +19,7 @@ const noCache = (req, res, next) => {
 
 router.get('/stats', authenticate, noCache, ticketController.getTicketStats);
 router.get('/', authenticate, noCache, ticketController.getTickets);
-router.get('/:id', authenticate, ticketController.getTicketById);
+router.get('/:id', authenticate, noCache, ticketController.getTicketById);
 router.post('/', authenticate, authorize('admin'), ticketController.createTicket);
 router.put('/:id', authenticate, ticketController.updateTicket);
 router.delete('/:id', authenticate, ticketController.deleteTicket);

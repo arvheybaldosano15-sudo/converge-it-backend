@@ -97,11 +97,29 @@ const TechnicianDashboard = () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
     };
 
+    const handleDeleted = (payload = {}) => {
+      const deletedId = payload?.id || payload?.ticketId || payload;
+      if (deletedId) {
+        queryClient.setQueryData(['dashboard', 'technician'], (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            assignedQueue: (old.assignedQueue || []).filter((t) => String(t.id) !== String(deletedId)),
+            requiresAttention: (old.requiresAttention || []).filter((t) => String(t.id) !== String(deletedId)),
+          };
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    };
+
     socket.on('ticket:created', handleUpdate);
     socket.on('ticket_created', handleUpdate);
     socket.on('ticket:assigned', handleUpdate);
     socket.on('ticket:updated', handleUpdate);
     socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket:deleted', handleDeleted);
+    socket.on('ticket_deleted', handleDeleted);
     socket.on('notification:new', handleUpdate);
 
     return () => {
@@ -111,6 +129,8 @@ const TechnicianDashboard = () => {
         socket.off('ticket:assigned', handleUpdate);
         socket.off('ticket:updated', handleUpdate);
         socket.off('ticket_updated', handleUpdate);
+        socket.off('ticket:deleted', handleDeleted);
+        socket.off('ticket_deleted', handleDeleted);
         socket.off('notification:new', handleUpdate);
       }
     };

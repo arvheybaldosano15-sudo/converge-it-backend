@@ -153,7 +153,7 @@ const AssignedTickets = () => {
         queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
           if (!old) return [];
           const list = Array.isArray(old) ? old : (old.data || []);
-          const filtered = list.filter((t) => t.id !== deletedId);
+          const filtered = list.filter((t) => String(t.id) !== String(deletedId));
           return Array.isArray(old) ? filtered : { ...old, data: filtered };
         });
       }

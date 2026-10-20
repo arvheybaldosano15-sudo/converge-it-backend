@@ -24,9 +24,11 @@ import {
 
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import { useSocket } from '../../context/SocketContext';
 
 const TicketHistory = () => {
   const queryClient = useQueryClient();
+  const { socket } = useSocket();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
@@ -51,7 +53,7 @@ const TicketHistory = () => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/tickets', { params: { page: 1, limit: 200, status: 'history' } });
+      const res = await api.get('/tickets', { params: { page: 1, limit: 200, status: 'history', fresh: true } });
       if (res.success) {
         setTickets(res.data || []);
       }
@@ -77,11 +79,11 @@ const TicketHistory = () => {
     try {
       setDeletingId(ticket.id);
       await api.delete(`/tickets/${ticket.id}`);
-      setTickets(prev => prev.filter(t => t.id !== ticket.id));
+      setTickets(prev => prev.filter(t => String(t.id) !== String(ticket.id)));
       queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
         if (!old) return [];
         const list = Array.isArray(old) ? old : (old.data || []);
-        const filtered = list.filter((t) => t.id !== ticket.id);
+        const filtered = list.filter((t) => String(t.id) !== String(ticket.id));
         return Array.isArray(old) ? filtered : { ...old, data: filtered };
       });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -114,6 +116,65 @@ const TicketHistory = () => {
     };
     fetchCats();
     fetchHistory();
+  }, []);
+
+
+  // Real-time socket synchronization for ticket history
+  useEffect(() => {
+    if (!socket || typeof socket.on !== 'function') return;
+
+    const handleRefetch = () => {
+      fetchHistory();
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+    };
+
+    const handleDeleted = (payload = {}) => {
+      const deletedId = payload?.id || payload?.ticketId || payload;
+      if (deletedId) {
+        setTickets((prev) => prev.filter((t) => String(t.id) !== String(deletedId)));
+        queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
+          if (!old) return [];
+          const list = Array.isArray(old) ? old : (old.data || []);
+          const filtered = list.filter((t) => String(t.id) !== String(deletedId));
+          return Array.isArray(old) ? filtered : { ...old, data: filtered };
+        });
+      }
+      fetchHistory();
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
+    };
+
+    socket.on('ticket:deleted', handleDeleted);
+    socket.on('ticket_deleted', handleDeleted);
+    socket.on('ticket:updated', handleRefetch);
+    socket.on('ticket_updated', handleRefetch);
+    socket.on('ticket:status_changed', handleRefetch);
+    socket.on('ticket:created', handleRefetch);
+    socket.on('ticket_created', handleRefetch);
+    socket.on('connect', handleRefetch);
+
+    return () => {
+      socket.off('ticket:deleted', handleDeleted);
+      socket.off('ticket_deleted', handleDeleted);
+      socket.off('ticket:updated', handleRefetch);
+      socket.off('ticket_updated', handleRefetch);
+      socket.off('ticket:status_changed', handleRefetch);
+      socket.off('ticket:created', handleRefetch);
+      socket.off('ticket_created', handleRefetch);
+      socket.off('connect', handleRefetch);
+    };
+  }, [socket, queryClient]);
+
+  // Refetch when tab becomes active again
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchHistory();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   // Compute KPI Summary Counts from real backend tickets

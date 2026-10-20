@@ -8,11 +8,7 @@ exports.getTickets = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, status, priority, category, assignedTo, slaStatus, search, sortBy = 'created_at', sortOrder = 'DESC', startDate, endDate } = req.query;
 
-    const cacheKey = `${req.user.id}:${req.user.role}:${JSON.stringify(req.query)}`;
-    const cached = ticketsCache.get(cacheKey);
-    if (!req.query.fresh && cached && Date.now() < cached.expiresAt) {
-      return res.json(cached.data);
-    }
+    // Strictly real-time: Direct query from PostgreSQL without stale in-memory cache
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const conditions = []; const params = []; let idx = 1;
@@ -94,7 +90,6 @@ exports.getTickets = async (req, res, next) => {
       query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
     const responsePayload = { success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } };
-    ticketsCache.set(cacheKey, { data: responsePayload, expiresAt: Date.now() + TICKETS_CACHE_TTL });
     res.json(responsePayload);
   } catch (error) { next(error); }
 };
@@ -432,11 +427,7 @@ exports.getTicketStats = async (req, res, next) => {
     }
 
     // Cache key combines role + userId + excludeCategoryName so each user gets their own cache
-    const cacheKey = `${req.user.role}:${req.user.id}:${req.query.excludeCategoryName || ''}`;
-    const cached = statsCache.get(cacheKey);
-    if (cached && Date.now() < cached.expiresAt) {
-      return res.json({ success: true, data: cached.data, cached: true });
-    }
+    // Strictly real-time: Direct query from PostgreSQL without stale in-memory cache
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -460,7 +451,6 @@ exports.getTicketStats = async (req, res, next) => {
     );
 
     // Store result in cache
-    statsCache.set(cacheKey, { data: result.rows[0], expiresAt: Date.now() + STATS_TTL_MS });
     res.json({ success: true, data: result.rows[0] });
   } catch (error) { next(error); }
 };

@@ -9,10 +9,7 @@ import api from '../utils/axios';
 
 const prefetchTechData = async () => {
   try {
-    const dashRes = await api.get('/dashboard/technician');
-    if (dashRes?.data) {
-      try { localStorage.setItem('CONVERGE_TECH_DASHBOARD_CACHE', JSON.stringify(dashRes.data)); } catch (_) {}
-    }
+    const dashRes = await api.get('/dashboard/technician', { params: { fresh: true } });
     return { dashboard: dashRes?.data || null };
   } catch (_) {}
   return null;
@@ -29,10 +26,8 @@ const TechnicianLayout = () => {
     queryClient.prefetchQuery({
       queryKey: ['dashboard', 'technician'],
       queryFn: async () => {
-        const res = await api.get('/dashboard/technician');
-        const data = res.data || {};
-        try { localStorage.setItem('CONVERGE_TECH_DASHBOARD_CACHE', JSON.stringify(data)); } catch (_) {}
-        return data;
+        const res = await api.get('/dashboard/technician', { params: { fresh: true } });
+        return res.data || {};
       },
       staleTime: 0,
     });

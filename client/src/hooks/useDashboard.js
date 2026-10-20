@@ -13,22 +13,15 @@ export const useAdminDashboard = () => {
   return useQuery({
     queryKey: ['dashboard', 'admin'],
     queryFn: async () => {
-      const res = await api.get('/dashboard/admin');
+      const res = await api.get('/dashboard/admin', { params: { fresh: true } });
       const data = res.data || {};
       safeSave(ADMIN_DASH_KEY, data);
       return data;
     },
     staleTime: 0, // Always stale → refetch immediately in background on mount
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-    initialData: () => {
-      try {
-        const cached = localStorage.getItem(ADMIN_DASH_KEY);
-        return cached ? JSON.parse(cached) : undefined;
-      } catch (_) { return undefined; }
-    },
-    initialDataUpdatedAt: 0, // epoch → always stale → triggers immediate background refetch
-    placeholderData: (previousData) => previousData,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
 };
 
@@ -37,21 +30,14 @@ export const useTechDashboard = () => {
   return useQuery({
     queryKey: ['dashboard', 'technician'],
     queryFn: async () => {
-      const res = await api.get('/dashboard/technician');
+      const res = await api.get('/dashboard/technician', { params: { fresh: true } });
       const data = res.data || {};
       safeSave(TECH_DASH_KEY, data);
       return data;
     },
     staleTime: 0, // Always stale → refetch immediately in background on mount
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-    initialData: () => {
-      try {
-        const cached = localStorage.getItem(TECH_DASH_KEY);
-        return cached ? JSON.parse(cached) : undefined;
-      } catch (_) { return undefined; }
-    },
-    initialDataUpdatedAt: 0, // epoch → always stale → triggers immediate background refetch
-    placeholderData: (previousData) => previousData,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
 };
