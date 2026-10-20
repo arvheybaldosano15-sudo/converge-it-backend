@@ -176,7 +176,7 @@ const TechnicianDashboard = () => {
   if (loading) return <Loader text="Loading field technician workspace..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative z-10">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

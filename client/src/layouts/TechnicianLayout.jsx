@@ -34,7 +34,17 @@ const TechnicianLayout = () => {
   }, [queryClient]);
 
   return (
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex min-h-screen bg-[#0f172a] text-slate-100 relative font-sans">
+      {/* Background Grid Pattern & Ambient Glow (Isolated with overflow-hidden so it never clips sticky sidebar) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Background Grid Pattern (Matching Landing Page) */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f1e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f1e_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+        {/* Ambient Glow Effects (Matching Landing Page) */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl animate-pulse-glow" />
+        <div className="absolute bottom-1/3 right-1/4 w-[30rem] h-[30rem] bg-blue-600/15 rounded-full blur-3xl animate-pulse-glow" />
+      </div>
+
       {/* Sidebar — desktop with collapse support, mobile via drawer */}
       <Sidebar
         mobileOpen={sidebarOpen}
