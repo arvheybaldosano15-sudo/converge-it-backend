@@ -40,6 +40,7 @@ const TechnicianNotifications = () => {
 
   // Modal State
   const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // Fetch all notifications for logged-in technician
@@ -130,6 +131,7 @@ const TechnicianNotifications = () => {
     }
     if (notif.reference_id) {
       setSelectedTicketId(notif.reference_id);
+      setSelectedTicket({ id: notif.reference_id, ticket_number: notif.ticket_number, subject: notif.title, description: notif.message, category_name: notif.category_name, customer_name: notif.customer_name });
       setIsViewModalOpen(true);
     }
   };
@@ -431,8 +433,13 @@ const TechnicianNotifications = () => {
       {/* ── TICKET DETAILS MODAL ── */}
       <ViewTicketModal
         isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setSelectedTicket(null);
+          setSelectedTicketId(null);
+        }}
         ticketId={selectedTicketId}
+        initialTicket={selectedTicket}
       />
     </div>
   );

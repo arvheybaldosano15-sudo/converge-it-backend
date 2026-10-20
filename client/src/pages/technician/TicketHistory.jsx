@@ -42,6 +42,7 @@ const TicketHistory = () => {
 
   // Modals state
   const [viewTicketId, setViewTicketId] = useState(null);
+  const [viewTicket, setViewTicket] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [deletingId, setDeletingId] = useState(null);
@@ -238,6 +239,7 @@ const TicketHistory = () => {
 
   const handleOpenView = (ticket, e) => {
     if (e) e.stopPropagation();
+    setViewTicket(ticket);
     setViewTicketId(ticket.id);
     setIsViewModalOpen(true);
   };
@@ -568,8 +570,13 @@ const TicketHistory = () => {
       {/* ── 6. MODALS INTEGRATED ── */}
       <ViewTicketModal
         isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setViewTicket(null);
+          setViewTicketId(null);
+        }}
         ticketId={viewTicketId}
+        initialTicket={viewTicket}
       />
 
       {/* Delete Confirmation Dialog */}

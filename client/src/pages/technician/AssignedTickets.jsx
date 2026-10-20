@@ -108,6 +108,7 @@ const AssignedTickets = () => {
 
   // Modal State
   const [viewTicketId, setViewTicketId] = useState(null);
+  const [viewTicket, setViewTicket] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [updateTicket, setUpdateTicket] = useState(null);

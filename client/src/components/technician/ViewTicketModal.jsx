@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/axios';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
+import Button from '../common/Button';
 import Loader from '../common/Loader';
+import { useSocket } from '../../context/SocketContext';
 import { getUploadUrl, parseImageUrls } from '../../utils/urlHelper';
 import {
   Clock,
@@ -13,12 +15,13 @@ import {
   FileText,
   CheckCircle,
   AlertTriangle,
-  Send,
   Camera,
   History,
   ShieldAlert,
   ChevronRight,
   ExternalLink,
+  Edit,
+  FileCheck,
   X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -58,52 +61,127 @@ const getSlaInfo = (deadlineStr, status, resolvedAtStr) => {
   };
 };
 
-const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenFileServiceReport }) => {
-  const [ticketData, setTicketData] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ViewTicketModal = ({
+  isOpen,
+  onClose,
+  ticketId,
+  initialTicket = null,
+  onOpenUpdateModal,
+  onOpenFileServiceReport
+}) => {
+  const { socket } = useSocket();
+  const [ticketData, setTicketData] = useState(() => initialTicket || null);
+  const [loading, setLoading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
+  // Sync initialTicket immediately whenever modal opens or props change (0ms latency!)
   useEffect(() => {
-    if (!ticketId || !isOpen) return;
-    const fetchDetail = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get(`/tickets/${ticketId}`);
-        if (res.success) {
-          setTicketData(res.data);
-        }
-      } catch (e) {
-        if (e?.response?.status === 404 || e?.status === 404) {
-          toast.error('Ticket no longer exists');
-          onClose();
-        } else {
-          toast.error('Failed to load ticket details');
-        }
-      } finally {
+    if (isOpen) {
+      if (initialTicket) {
+        setTicketData((prev) => ({ ...initialTicket, ...prev }));
         setLoading(false);
+      } else if (!ticketData) {
+        setLoading(true);
+      }
+    }
+  }, [isOpen, initialTicket]);
+
+  const effectiveTicketId = ticketId || initialTicket?.id || ticketData?.id;
+
+  // Realtime fetch detailed updates and report in the background
+  const fetchDetail = useCallback(async (isSilent = false) => {
+    if (!effectiveTicketId) return;
+    if (!isSilent && !ticketData && !initialTicket) {
+      setLoading(true);
+    }
+    try {
+      const res = await api.get(`/tickets/${effectiveTicketId}`, {
+        params: { fresh: true, _t: Date.now() }
+      });
+      if (res && res.success && res.data) {
+        setTicketData((prev) => ({ ...(prev || {}), ...res.data }));
+      }
+    } catch (e) {
+      if (e?.response?.status === 404 || e?.status === 404) {
+        toast.error('Ticket no longer exists');
+        onClose?.();
+      } else if (!ticketData && !initialTicket) {
+        toast.error('Failed to load ticket details');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [effectiveTicketId, ticketData, initialTicket, onClose]);
+
+  // Trigger background fetch on open
+  useEffect(() => {
+    if (isOpen && effectiveTicketId) {
+      fetchDetail(Boolean(initialTicket || ticketData));
+    }
+  }, [isOpen, effectiveTicketId]);
+
+  // Real-time socket listener: automatically refresh modal if this ticket is updated
+  useEffect(() => {
+    if (!isOpen || !effectiveTicketId || !socket || typeof socket.on !== 'function') return;
+
+    const handleSocketUpdate = (payload = {}) => {
+      const updatedTicket = payload?.ticket || payload?.data || payload;
+      const updatedId = updatedTicket?.id || payload?.ticketId || payload?.id;
+      if (String(updatedId) === String(effectiveTicketId)) {
+        if (updatedTicket && updatedTicket.ticket_number) {
+          setTicketData((prev) => ({ ...prev, ...updatedTicket }));
+        }
+        fetchDetail(true);
       }
     };
-    fetchDetail();
-  }, [ticketId, isOpen]);
+
+    socket.on('ticket:updated', handleSocketUpdate);
+    socket.on('ticket_updated', handleSocketUpdate);
+    socket.on('ticket:status_changed', handleSocketUpdate);
+    socket.on('service_report:created', handleSocketUpdate);
+    socket.on('service_report:updated', handleSocketUpdate);
+
+    return () => {
+      socket.off('ticket:updated', handleSocketUpdate);
+      socket.off('ticket_updated', handleSocketUpdate);
+      socket.off('ticket:status_changed', handleSocketUpdate);
+      socket.off('service_report:created', handleSocketUpdate);
+      socket.off('service_report:updated', handleSocketUpdate);
+    };
+  }, [isOpen, effectiveTicketId, socket, fetchDetail]);
 
   if (!isOpen) return null;
 
-  const ticket = ticketData;
-  const updates = ticketData?.updates || [];
-  const report = ticketData?.serviceReport || null;
+  const ticket = ticketData || initialTicket;
+  const updates = ticket?.updates || [];
+  const report = ticket?.serviceReport || null;
   const slaInfo = ticket ? getSlaInfo(ticket.sla_deadline, ticket.status, ticket.resolved_at || ticket.updated_at) : {};
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={ticket ? `Ticket Details: ${ticket.ticket_number}` : 'Ticket Details'} maxWidth="max-w-2xl">
-        {loading || !ticket ? (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={ticket?.ticket_number ? `Ticket Details: ${ticket.ticket_number}` : 'Ticket Details'}
+        maxWidth="max-w-2xl"
+      >
+        {loading && !ticket ? (
           <div className="py-12 flex justify-center">
-            <Loader text="Loading field ticket profile..." />
+            <Loader text="Retrieving real-time ticket profile..." />
+          </div>
+        ) : !ticket ? (
+          <div className="py-8 text-center space-y-3">
+            <ShieldAlert className="w-10 h-10 text-rose-400 mx-auto" />
+            <p className="text-sm font-semibold text-white">Ticket data unavailable</p>
+            <p className="text-xs text-slate-400">Unable to retrieve ticket profile details.</p>
+            <Button variant="secondary" size="sm" onClick={onClose}>
+              Close
+            </Button>
           </div>
         ) : (
-          <div className="space-y-5 text-xs">
+          <div className="space-y-4 text-xs">
             {/* Header Bar: ID, Priority, SLA, Status */}
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3 shadow-sm">
               <div className="flex flex-wrap justify-between items-start gap-2">
                 <div>
                   <span className="font-mono text-sm font-extrabold text-cyan-400">{ticket.ticket_number}</span>
@@ -114,14 +192,14 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
                     {ticket.priority} Priority
                   </Badge>
                   <Badge variant={ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'primary' : 'warning'}>
-                    {ticket.status === 'open' ? 'pending' : ticket.status.replace('_', ' ')}
+                    {ticket.status === 'open' ? 'pending' : ticket.status?.replace('_', ' ')}
                   </Badge>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
                 <span className="text-slate-400 font-medium flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5 text-cyan-400" /> {ticket.category_name}
+                  <Tag className="w-3.5 h-3.5 text-cyan-400" /> {ticket.category_name || 'General Support'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
                   ⏰ {slaInfo.text}
@@ -166,7 +244,34 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
               </p>
             </div>
 
-
+            {/* Work History / Progress Updates if available */}
+            {updates.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2.5">
+                <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block border-b border-slate-800 pb-1 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-cyan-400" /> Activity & Work Log ({updates.length})
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                  {updates.map((upd) => (
+                    <div key={upd.id} className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/80 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-slate-200">{upd.user_name || 'Technician'}</span>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {upd.created_at ? new Date(upd.created_at).toLocaleString() : ''}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">{upd.notes || upd.message}</p>
+                      {upd.status && (
+                        <div className="pt-0.5">
+                          <span className="text-[10px] text-cyan-400 font-medium">
+                            Status changed to: <span className="uppercase font-bold">{upd.status}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Filed Service Report Section if available */}
             {report && (
@@ -249,6 +354,38 @@ const ViewTicketModal = ({ isOpen, onClose, ticketId, onOpenUpdateModal, onOpenF
               </div>
             )}
 
+            {/* Modal Quick Actions Footer */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                {onOpenUpdateModal && ticket.status !== 'closed' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={Edit}
+                    onClick={() => {
+                      onOpenUpdateModal(ticket);
+                    }}
+                  >
+                    Update Status
+                  </Button>
+                )}
+                {onOpenFileServiceReport && ticket.status !== 'closed' && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    icon={FileCheck}
+                    onClick={() => {
+                      onOpenFileServiceReport(ticket);
+                    }}
+                  >
+                    File Report
+                  </Button>
+                )}
+              </div>
+              <Button variant="secondary" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
