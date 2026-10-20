@@ -90,7 +90,7 @@ exports.getTickets = async (req, res, next) => {
              LEFT JOIN service_categories cat ON t.service_category_id = cat.id
              LEFT JOIN users u ON t.assigned_technician_id = u.id
              LEFT JOIN service_reports sr ON sr.ticket_id = t.id
-             ${where} ORDER BY t.${col} ${ord} LIMIT ${limitIdx} OFFSET ${offsetIdx}`, dataParams),
+             ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
       query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
     const formattedRows = data.rows.map((r) => {
