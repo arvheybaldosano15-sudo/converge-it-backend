@@ -81,15 +81,34 @@ exports.getTickets = async (req, res, next) => {
              t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
              c.full_name AS customer_name, c.contact_number AS customer_contact, c.complete_address AS customer_address, c.messenger_psid,
              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color,
-             u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.employee_id AS assignee_employee_id
+             u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.employee_id AS assignee_employee_id,
+             sr.id AS sr_id, sr.report_number AS sr_report_number, sr.title AS sr_title, sr.work_performed AS sr_work_performed,
+             sr.materials_used AS sr_materials_used, sr.completion_notes AS sr_completion_notes, sr.images_urls AS sr_images_urls,
+             sr.signature_url AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at
              FROM tickets t
              LEFT JOIN customers c ON t.customer_id = c.id
              LEFT JOIN service_categories cat ON t.service_category_id = cat.id
              LEFT JOIN users u ON t.assigned_technician_id = u.id
-             ${where} ORDER BY t.${col} ${ord} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams),
+             LEFT JOIN service_reports sr ON sr.ticket_id = t.id
+             ${where} ORDER BY t.${col} ${ord} LIMIT ${limitIdx} OFFSET ${offsetIdx}`, dataParams),
       query(`SELECT COUNT(*) FROM tickets t ${countJoins} ${where}`, params)
     ]);
-    const responsePayload = { success: true, data: data.rows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } };
+    const formattedRows = data.rows.map((r) => {
+      const serviceReport = r.sr_id ? {
+        id: r.sr_id,
+        report_number: r.sr_report_number,
+        title: r.sr_title,
+        work_performed: r.sr_work_performed,
+        materials_used: r.sr_materials_used,
+        completion_notes: r.sr_completion_notes,
+        images_urls: r.sr_images_urls,
+        signature_url: r.sr_signature_url,
+        customer_name_signed: r.sr_customer_name_signed,
+        created_at: r.sr_created_at
+      } : null;
+      return { ...r, serviceReport };
+    });
+    const responsePayload = { success: true, data: formattedRows, pagination: { page: parseInt(page), limit: parseInt(limit), total: parseInt(count.rows[0].count), totalPages: Math.ceil(parseInt(count.rows[0].count) / parseInt(limit)) } };
     res.json(responsePayload);
   } catch (error) { next(error); }
 };
@@ -97,31 +116,57 @@ exports.getTickets = async (req, res, next) => {
 exports.getTicketById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const ticketRes = await query(`
-      SELECT t.*, c.full_name AS customer_name, c.contact_number AS customer_contact,
-             c.complete_address AS customer_address, c.messenger_psid, cat.name AS category_name, cat.icon AS category_icon,
-             u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.contact_number AS assignee_contact, u.employee_id AS assignee_employee_id
-      FROM tickets t
-      LEFT JOIN customers c ON t.customer_id = c.id LEFT JOIN service_categories cat ON t.service_category_id = cat.id
-      LEFT JOIN users u ON t.assigned_technician_id = u.id
-      WHERE t.id = $1`, [id]);
-    if (!ticketRes.rows[0]) throw createError('Ticket not found', 404);
-    const ticket = ticketRes.rows[0];
-    if (req.user.role === 'technician' && ticket.assigned_technician_id && String(ticket.assigned_technician_id) !== String(req.user.id)) throw createError('Access denied', 403);
-    const [updates, serviceReport] = await Promise.all([
-      query(`SELECT tu.*, u.full_name AS user_name, u.role AS user_role, u.profile_image_url AS user_avatar
-             FROM ticket_updates tu LEFT JOIN users u ON tu.updated_by = u.id WHERE tu.ticket_id = $1 ORDER BY tu.created_at ASC`, [id]),
-      query(`SELECT sr.*, u.full_name AS technician_name, u.employee_id AS technician_employee_id
-             FROM service_reports sr
-             LEFT JOIN users u ON sr.technician_id = u.id
-             WHERE sr.ticket_id = $1`, [id])
+    const [ticketRes, updatesRes] = await Promise.all([
+      query(`
+        SELECT t.*, c.full_name AS customer_name, c.contact_number AS customer_contact,
+               c.complete_address AS customer_address, c.messenger_psid, cat.name AS category_name, cat.icon AS category_icon,
+               u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.contact_number AS assignee_contact, u.employee_id AS assignee_employee_id,
+               sr.id AS sr_id, sr.report_number AS sr_report_number, sr.title AS sr_title, sr.work_performed AS sr_work_performed,
+               sr.materials_used AS sr_materials_used, sr.completion_notes AS sr_completion_notes, sr.images_urls AS sr_images_urls,
+               sr.signature_url AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at,
+               su.full_name AS sr_technician_name, su.employee_id AS sr_technician_employee_id
+        FROM tickets t
+        LEFT JOIN customers c ON t.customer_id = c.id
+        LEFT JOIN service_categories cat ON t.service_category_id = cat.id
+        LEFT JOIN users u ON t.assigned_technician_id = u.id
+        LEFT JOIN service_reports sr ON sr.ticket_id = t.id
+        LEFT JOIN users su ON sr.technician_id = su.id
+        WHERE t.id = $1`, [id]),
+      query(`
+        SELECT tu.*, u.full_name AS user_name, u.role AS user_role, u.profile_image_url AS user_avatar
+        FROM ticket_updates tu
+        LEFT JOIN users u ON tu.updated_by = u.id
+        WHERE tu.ticket_id = $1
+        ORDER BY tu.created_at ASC`, [id])
     ]);
+
+    if (!ticketRes.rows[0]) throw createError('Ticket not found', 404);
+    const row = ticketRes.rows[0];
+    if (req.user.role === 'technician' && row.assigned_technician_id && String(row.assigned_technician_id) !== String(req.user.id)) {
+      throw createError('Access denied', 403);
+    }
+
+    const serviceReport = row.sr_id ? {
+      id: row.sr_id,
+      report_number: row.sr_report_number,
+      title: row.sr_title,
+      work_performed: row.sr_work_performed,
+      materials_used: row.sr_materials_used,
+      completion_notes: row.sr_completion_notes,
+      images_urls: row.sr_images_urls,
+      signature_url: row.sr_signature_url,
+      customer_name_signed: row.sr_customer_name_signed,
+      created_at: row.sr_created_at,
+      technician_name: row.sr_technician_name,
+      technician_employee_id: row.sr_technician_employee_id
+    } : null;
+
     res.json({
       success: true,
       data: {
-        ...ticket,
-        updates: updates.rows,
-        serviceReport: serviceReport.rows[0] || null
+        ...row,
+        updates: updatesRes.rows,
+        serviceReport
       }
     });
   } catch (error) { next(error); }
