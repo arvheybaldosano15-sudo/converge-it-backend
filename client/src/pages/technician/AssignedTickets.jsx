@@ -300,7 +300,8 @@ const AssignedTickets = () => {
 
   const handleOpenView = (ticket, e) => {
     if (e) e.stopPropagation();
-    setViewTicketId(ticket.id);
+    setViewTicket(ticket);
+    setViewTicketId(ticket?.id || ticket);
     setIsViewModalOpen(true);
   };
 
@@ -782,8 +783,13 @@ const AssignedTickets = () => {
       {/* ── 6. ALL MODALS INTEGRATED ── */}
       <ViewTicketModal
         isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setViewTicket(null);
+          setViewTicketId(null);
+        }}
         ticketId={viewTicketId}
+        initialTicket={viewTicket}
         onOpenUpdateModal={handleOpenUpdate}
         onOpenFileServiceReport={handleOpenFileReport}
       />

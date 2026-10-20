@@ -74,51 +74,53 @@ const ViewTicketModal = ({
   const [loading, setLoading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  // Sync initialTicket immediately whenever modal opens or props change (0ms latency!)
+  // Sync initialTicket immediately whenever modal opens or initialTicket prop changes (0ms instant render!)
   useEffect(() => {
     if (isOpen) {
       if (initialTicket) {
-        setTicketData((prev) => ({ ...initialTicket, ...prev }));
+        setTicketData(initialTicket);
         setLoading(false);
       } else if (!ticketData) {
         setLoading(true);
       }
+    } else {
+      setTicketData(null);
+      setLoading(false);
     }
-  }, [isOpen, initialTicket]);
+  }, [isOpen, initialTicket, ticketId]);
 
   const effectiveTicketId = ticketId || initialTicket?.id || ticketData?.id;
 
   // Realtime fetch detailed updates and report in the background
   const fetchDetail = useCallback(async (isSilent = false) => {
     if (!effectiveTicketId) return;
-    if (!isSilent && !ticketData && !initialTicket) {
+    if (!isSilent && !initialTicket && !ticketData) {
       setLoading(true);
     }
     try {
       const res = await api.get(`/tickets/${effectiveTicketId}`, {
         params: { fresh: true, _t: Date.now() }
       });
-      if (res && res.success && res.data) {
-        setTicketData((prev) => ({ ...(prev || {}), ...res.data }));
+      const freshTicket = res?.data || res;
+      if (freshTicket && (freshTicket.id || freshTicket.ticket_number)) {
+        setTicketData((prev) => ({ ...(prev || {}), ...freshTicket }));
       }
     } catch (e) {
       if (e?.response?.status === 404 || e?.status === 404) {
         toast.error('Ticket no longer exists');
         onClose?.();
-      } else if (!ticketData && !initialTicket) {
-        toast.error('Failed to load ticket details');
       }
     } finally {
       setLoading(false);
     }
-  }, [effectiveTicketId, ticketData, initialTicket, onClose]);
+  }, [effectiveTicketId, initialTicket, onClose]);
 
   // Trigger background fetch on open
   useEffect(() => {
     if (isOpen && effectiveTicketId) {
       fetchDetail(Boolean(initialTicket || ticketData));
     }
-  }, [isOpen, effectiveTicketId]);
+  }, [isOpen, effectiveTicketId, fetchDetail]);
 
   // Real-time socket listener: automatically refresh modal if this ticket is updated
   useEffect(() => {

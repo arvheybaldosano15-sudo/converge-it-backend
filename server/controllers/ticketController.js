@@ -107,7 +107,7 @@ exports.getTicketById = async (req, res, next) => {
       WHERE t.id = $1`, [id]);
     if (!ticketRes.rows[0]) throw createError('Ticket not found', 404);
     const ticket = ticketRes.rows[0];
-    if (req.user.role === 'technician' && ticket.assigned_technician_id !== req.user.id) throw createError('Access denied', 403);
+    if (req.user.role === 'technician' && ticket.assigned_technician_id && String(ticket.assigned_technician_id) !== String(req.user.id)) throw createError('Access denied', 403);
     const [updates, serviceReport] = await Promise.all([
       query(`SELECT tu.*, u.full_name AS user_name, u.role AS user_role, u.profile_image_url AS user_avatar
              FROM ticket_updates tu LEFT JOIN users u ON tu.updated_by = u.id WHERE tu.ticket_id = $1 ORDER BY tu.created_at ASC`, [id]),
