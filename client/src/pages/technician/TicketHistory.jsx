@@ -26,11 +26,26 @@ import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { useSocket } from '../../context/SocketContext';
 
+const HISTORY_CACHE_KEY = 'CONVERGE_TECH_HISTORY_TICKETS_CACHE';
+
+// Synchronously read stored history tickets for instant 0ms mount on hard refresh
+const getInitialStoredHistoryTickets = () => {
+  try {
+    const raw = localStorage.getItem(HISTORY_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_) {}
+  return [];
+};
+
 const TicketHistory = () => {
   const queryClient = useQueryClient();
   const { socket } = useSocket();
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialHistory = useMemo(() => getInitialStoredHistoryTickets(), []);
+  const [tickets, setTickets] = useState(initialHistory);
+  const [loading, setLoading] = useState(initialHistory.length === 0);
   const [categories, setCategories] = useState([]);
 
   // Filters & Sorting state
@@ -50,12 +65,17 @@ const TicketHistory = () => {
   const [deletingId, setDeletingId] = useState(null);
 
   // Fetch History tickets
-  const fetchHistory = async () => {
-    setLoading(true);
+  const fetchHistory = async (isSilent = false) => {
+    if (!isSilent && tickets.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/tickets', { params: { page: 1, limit: 200, status: 'history', fresh: true } });
-      if (res.success) {
-        setTickets(res.data || []);
+      if (res.success && Array.isArray(res.data)) {
+        setTickets(res.data);
+        try {
+          localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(res.data));
+        } catch (_) {}
       }
     } catch (e) {
       console.error(e);
@@ -79,7 +99,21 @@ const TicketHistory = () => {
     try {
       setDeletingId(ticket.id);
       await api.delete(`/tickets/${ticket.id}`);
-      setTickets(prev => prev.filter(t => String(t.id) !== String(ticket.id)));
+      setTickets(prev => {
+        const next = prev.filter(t => String(t.id) !== String(ticket.id));
+        try {
+          localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(next));
+          const assignedKey = 'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3';
+          const rawAssigned = localStorage.getItem(assignedKey);
+          if (rawAssigned) {
+            const list = JSON.parse(rawAssigned);
+            if (Array.isArray(list)) {
+              localStorage.setItem(assignedKey, JSON.stringify(list.filter(t => String(t.id) !== String(ticket.id))));
+            }
+          }
+        } catch (_) {}
+        return next;
+      });
       queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
         if (!old) return [];
         const list = Array.isArray(old) ? old : (old.data || []);
@@ -88,11 +122,6 @@ const TicketHistory = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      try {
-        localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
-        localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
-        localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
-      } catch (_) {}
       toast.success(`Ticket ${ticket.ticket_number} deleted from history.`);
       setIsDeleteConfirmOpen(false);
       setTicketToDelete(null);
@@ -115,7 +144,7 @@ const TicketHistory = () => {
       }
     };
     fetchCats();
-    fetchHistory();
+    fetchHistory(initialHistory.length > 0);
   }, []);
 
 
@@ -124,7 +153,7 @@ const TicketHistory = () => {
     if (!socket || typeof socket.on !== 'function') return;
 
     const handleRefetch = () => {
-      fetchHistory();
+      fetchHistory(true);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
     };
@@ -132,7 +161,21 @@ const TicketHistory = () => {
     const handleDeleted = (payload = {}) => {
       const deletedId = payload?.id || payload?.ticketId || payload;
       if (deletedId) {
-        setTickets((prev) => prev.filter((t) => String(t.id) !== String(deletedId)));
+        setTickets((prev) => {
+          const next = prev.filter((t) => String(t.id) !== String(deletedId));
+          try {
+            localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(next));
+            const assignedKey = 'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3';
+            const rawAssigned = localStorage.getItem(assignedKey);
+            if (rawAssigned) {
+              const list = JSON.parse(rawAssigned);
+              if (Array.isArray(list)) {
+                localStorage.setItem(assignedKey, JSON.stringify(list.filter(t => String(t.id) !== String(deletedId))));
+              }
+            }
+          } catch (_) {}
+          return next;
+        });
         queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
           if (!old) return [];
           const list = Array.isArray(old) ? old : (old.data || []);
@@ -140,7 +183,7 @@ const TicketHistory = () => {
           return Array.isArray(old) ? filtered : { ...old, data: filtered };
         });
       }
-      fetchHistory();
+      fetchHistory(true);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'technician'] });
     };
@@ -170,7 +213,7 @@ const TicketHistory = () => {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchHistory();
+        fetchHistory(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -566,7 +609,7 @@ const TicketHistory = () => {
         <DataTable
           columns={columns}
           data={paginatedTickets}
-          isLoading={loading}
+          isLoading={loading && tickets.length === 0}
           onRowClick={(row) => handleOpenView(row)}
           emptyMessage="No service history found matching your filter criteria."
         />
@@ -574,7 +617,7 @@ const TicketHistory = () => {
 
       {/* ── 5. MOBILE RESPONSIVE STACKED CARDS ── */}
       <div className="sm:hidden space-y-3">
-        {loading ? (
+        {loading && tickets.length === 0 ? (
           <div className="py-12 flex justify-center">
             <Loader text="Loading history..." />
           </div>

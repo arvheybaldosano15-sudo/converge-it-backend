@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
 import Card from '../../components/common/Card';
@@ -8,33 +8,56 @@ import Loader from '../../components/common/Loader';
 import { ArrowLeft, Clock, MapPin, CheckCircle, FileText, Send, Wrench } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const getInitialTicket = (id) => {
+  if (!id) return null;
+  const keys = [
+    'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3',
+    'CONVERGE_TECH_HISTORY_TICKETS_CACHE',
+    'CONVERGE_ASSIGNED_TICKETS_CACHE'
+  ];
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const match = parsed.find((t) => String(t.id) === String(id));
+          if (match) return match;
+        }
+      }
+    } catch (_) {}
+  }
+  return null;
+};
+
 const UpdateTicket = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [ticket, setTicket] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState('in_progress');
+  const initialTicket = useMemo(() => getInitialTicket(id), [id]);
+  const [ticket, setTicket] = useState(initialTicket);
+  const [loading, setLoading] = useState(!initialTicket);
+  const [status, setStatus] = useState(initialTicket?.status || 'in_progress');
   const [note, setNote] = useState('');
-  const [resolutionSummary, setResolutionSummary] = useState('');
+  const [resolutionSummary, setResolutionSummary] = useState(initialTicket?.resolution_summary || '');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        const res = await api.get(`/tickets/${id}`);
-        if (res.success) {
+        const res = await api.get(`/tickets/${id}`, { params: { fresh: true } });
+        if (res.success && res.data) {
           setTicket(res.data);
           setStatus(res.data.status);
           setResolutionSummary(res.data.resolution_summary || '');
         }
       } catch (e) {
-        toast.error('Failed to load ticket details');
+        if (!initialTicket) toast.error('Failed to load ticket details');
       } finally {
         setLoading(false);
       }
     };
     fetchTicket();
-  }, [id]);
+  }, [id, initialTicket]);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -57,7 +80,7 @@ const UpdateTicket = () => {
     }
   };
 
-  if (loading) return <Loader text="Loading task details..." />;
+  if (loading && !ticket) return <Loader text="Loading task details..." />;
   if (!ticket) return <div className="text-slate-400">Ticket not found</div>;
 
   const isClosed = ticket?.status === 'closed';

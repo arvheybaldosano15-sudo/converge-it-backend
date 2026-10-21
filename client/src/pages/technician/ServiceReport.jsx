@@ -31,6 +31,20 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const REPORTS_CACHE_KEY = 'CONVERGE_TECH_SERVICE_REPORTS_CACHE';
+
+// Synchronously read stored service reports for instant 0ms mount on hard refresh
+const getInitialStoredReports = () => {
+  try {
+    const raw = localStorage.getItem(REPORTS_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_) {}
+  return [];
+};
+
 const ServiceReport = () => {
   const [searchParams] = useSearchParams();
   const ticketId = searchParams.get('ticketId');
@@ -50,9 +64,10 @@ const ServiceReport = () => {
   // Mode: 'list' or 'create'
   const [activeTab, setActiveTab] = useState(ticketId ? 'create' : 'list');
 
-  // Reports List State
-  const [reports, setReports] = useState([]);
-  const [listLoading, setListLoading] = useState(true);
+  // Reports List State with Instant Local Cache
+  const initialReports = useMemo(() => getInitialStoredReports(), []);
+  const [reports, setReports] = useState(initialReports);
+  const [listLoading, setListLoading] = useState(initialReports.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
 
@@ -194,8 +209,14 @@ const ServiceReport = () => {
     const deletedId = deletingReport.id;
     setDeleteLoading(true);
     try {
-      // Instant local state filter
-      setReports((prev) => prev.filter((r) => r.id !== deletedId));
+      // Instant local state filter & cache update
+      setReports((prev) => {
+        const next = prev.filter((r) => r.id !== deletedId);
+        try {
+          localStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
       if (selectedReport && selectedReport.id === deletedId) {
         setSelectedReport(null);
       }
@@ -204,23 +225,28 @@ const ServiceReport = () => {
       const res = await api.delete(`/service-reports/${deletedId}`);
       if (res.success) {
         toast.success('Service report deleted successfully');
-        fetchReports();
+        fetchReports(true);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to delete service report');
-      fetchReports();
+      fetchReports(true);
     } finally {
       setDeleteLoading(false);
     }
   };
 
   // Fetch submitted service reports
-  const fetchReports = async () => {
-    setListLoading(true);
+  const fetchReports = async (isSilent = false) => {
+    if (!isSilent && reports.length === 0) {
+      setListLoading(true);
+    }
     try {
       const res = await api.get('/service-reports');
-      if (res.success) {
-        setReports(res.data || []);
+      if (res.success && Array.isArray(res.data)) {
+        setReports(res.data);
+        try {
+          localStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(res.data));
+        } catch (_) {}
       }
     } catch (e) {
       console.error(e);
@@ -230,7 +256,7 @@ const ServiceReport = () => {
   };
 
   useEffect(() => {
-    fetchReports();
+    fetchReports(initialReports.length > 0);
   }, []);
 
   useEffect(() => {
@@ -535,7 +561,7 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) 
             />
           </div>
 
-          {listLoading ? (
+          {listLoading && reports.length === 0 ? (
             <Loader text="Loading service reports..." />
           ) : filteredReports.length === 0 ? (
             <Card className="text-center py-12 space-y-3">

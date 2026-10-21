@@ -173,7 +173,7 @@ const TechnicianDashboard = () => {
 
   const totalAssigned = stats.total_assigned || 0;
 
-  if (loading) return <Loader text="Loading field technician workspace..." />;
+  if (loading && !data) return <Loader text="Loading field technician workspace..." />;
 
   return (
     <div className="space-y-6 relative z-10">

@@ -28,10 +28,25 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
 
+const NOTIFS_CACHE_KEY = 'CONVERGE_TECH_NOTIFICATIONS_CACHE';
+
+// Synchronously read stored notifications for instant 0ms mount on hard refresh
+const getInitialStoredNotifications = () => {
+  try {
+    const raw = localStorage.getItem(NOTIFS_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_) {}
+  return [];
+};
+
 const TechnicianNotifications = () => {
   const { socket, setUnreadNotifications } = useSocket();
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialNotifs = useMemo(() => getInitialStoredNotifications(), []);
+  const [notifications, setNotifications] = useState(initialNotifs);
+  const [loading, setLoading] = useState(initialNotifs.length === 0);
 
   // Filter & Search states
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'unread', 'tickets', 'sla', 'reports', 'system'
@@ -44,25 +59,30 @@ const TechnicianNotifications = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // Fetch all notifications for logged-in technician
-  const fetchNotifications = async () => {
-    setLoading(true);
+  const fetchNotifications = async (isSilent = false) => {
+    if (!isSilent && notifications.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/notifications', { params: { limit: 100 } });
       if (res.success && res.data) {
         setNotifications(res.data);
+        try {
+          localStorage.setItem(NOTIFS_CACHE_KEY, JSON.stringify(res.data));
+        } catch (_) {}
         const unreadCount = res.data.filter((n) => !n.is_read).length;
         setUnreadNotifications(unreadCount);
       }
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load task alerts');
+      if (!isSilent) toast.error('Failed to load task alerts');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(initialNotifs.length > 0);
   }, []);
 
   // Listen to real-time socket events for new notifications
@@ -70,7 +90,13 @@ const TechnicianNotifications = () => {
     if (!socket) return;
 
     const handleNewNotification = (newNotif) => {
-      setNotifications((prev) => [newNotif, ...prev]);
+      setNotifications((prev) => {
+        const next = [newNotif, ...prev];
+        try {
+          localStorage.setItem(NOTIFS_CACHE_KEY, JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
       setUnreadNotifications((prev) => prev + 1);
     };
 
@@ -84,7 +110,13 @@ const TechnicianNotifications = () => {
   const handleMarkAllRead = async () => {
     try {
       await api.put('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setNotifications((prev) => {
+        const next = prev.map((n) => ({ ...n, is_read: true }));
+        try {
+          localStorage.setItem(NOTIFS_CACHE_KEY, JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
       setUnreadNotifications(0);
       toast.success('All task alerts marked as read');
     } catch (e) {
@@ -98,9 +130,13 @@ const TechnicianNotifications = () => {
     if (e) e.stopPropagation();
     try {
       await api.put(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
+      setNotifications((prev) => {
+        const next = prev.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+        try {
+          localStorage.setItem(NOTIFS_CACHE_KEY, JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
       setUnreadNotifications((prev) => Math.max(0, prev - 1));
     } catch (e) {
       console.error(e);
@@ -113,7 +149,13 @@ const TechnicianNotifications = () => {
     try {
       await api.delete(`/notifications/${id}`);
       const target = notifications.find((n) => n.id === id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setNotifications((prev) => {
+        const next = prev.filter((n) => n.id !== id);
+        try {
+          localStorage.setItem(NOTIFS_CACHE_KEY, JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
       if (target && !target.is_read) {
         setUnreadNotifications((prev) => Math.max(0, prev - 1));
       }
@@ -307,7 +349,7 @@ const TechnicianNotifications = () => {
 
       {/* ── NOTIFICATIONS LIST ── */}
       <div className="space-y-3">
-        {loading ? (
+        {loading && notifications.length === 0 ? (
           <div className="py-16 flex justify-center">
             <Loader text="Retrieving technician task alerts..." />
           </div>

@@ -197,6 +197,16 @@ const AssignedTickets = () => {
     const handleTicketDeleted = (payload = {}) => {
       const deletedId = payload?.id || payload?.ticketId || payload;
       if (deletedId) {
+        try {
+          const assignedKey = 'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3';
+          const raw = localStorage.getItem(assignedKey);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              localStorage.setItem(assignedKey, JSON.stringify(list.filter((t) => String(t.id) !== String(deletedId))));
+            }
+          }
+        } catch (_) {}
         queryClient.setQueriesData({ queryKey: ['tickets'] }, (old) => {
           if (!old) return [];
           const list = Array.isArray(old) ? old : (old.data || []);
