@@ -72,6 +72,30 @@ const getSlaInfo = (deadlineStr, status) => {
   return { text, isBreached: false, isUrgent, colorClass };
 };
 
+// Synchronously read stored technician tickets for instant 0ms mount on hard refresh
+const getInitialStoredTechTickets = () => {
+  try {
+    const keys = [
+      'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3',
+      'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE',
+      'CONVERGE_ASSIGNED_TICKETS_CACHE',
+      'CONVERGE_TECH_TICKETS_CACHE',
+      'CONVERGE_TECH_DASHBOARD_CACHE'
+    ];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.data?.recent_tickets || parsed?.recent_tickets || parsed?.data || []);
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
+    }
+  } catch (_) {}
+  return [];
+};
+
 const AssignedTickets = () => {
   const queryClient = useQueryClient();
 
@@ -117,21 +141,44 @@ const AssignedTickets = () => {
   const [reportTicket, setReportTicket] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Query Backend tickets — clean TanStack Query
-  const { data: ticketsData, isLoading, isFetching, refetch } = useTickets({
-    limit: 100,
-    search: search ? search : undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
-    category: categoryFilter !== 'all' ? categoryFilter : undefined,
-  });
+  const cleanFilters = useMemo(() => {
+    const f = { limit: 100 };
+    if (search && search.trim()) f.search = search.trim();
+    if (statusFilter && statusFilter !== 'all') f.status = statusFilter;
+    if (priorityFilter && priorityFilter !== 'all') f.priority = priorityFilter;
+    if (categoryFilter && categoryFilter !== 'all') f.category = categoryFilter;
+    return f;
+  }, [search, statusFilter, priorityFilter, categoryFilter]);
 
-  // Extract clean live tickets array
+  const isDefaultView = !cleanFilters.search && !cleanFilters.status && !cleanFilters.priority && !cleanFilters.category;
+
+  // Query Backend tickets — clean TanStack Query
+  const { data: ticketsData, isLoading, isFetching, refetch } = useTickets(cleanFilters);
+
+  // Extract clean live tickets array with instant synchronous fallback from cache
   const rawTickets = useMemo(() => {
-    if (Array.isArray(ticketsData)) return ticketsData;
-    if (Array.isArray(ticketsData?.data)) return ticketsData.data;
+    if (Array.isArray(ticketsData) && ticketsData.length > 0) {
+      try {
+        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(ticketsData));
+      } catch (_) {}
+      return ticketsData;
+    }
+    if (Array.isArray(ticketsData?.data) && ticketsData.data.length > 0) {
+      try {
+        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(ticketsData.data));
+      } catch (_) {}
+      return ticketsData.data;
+    }
+    // If query finished and truly returned empty list
+    if (Array.isArray(ticketsData) && ticketsData.length === 0 && !isLoading) {
+      return [];
+    }
+    // Instant hydration on page mount / hard refresh
+    if (isDefaultView) {
+      return getInitialStoredTechTickets();
+    }
     return [];
-  }, [ticketsData]);
+  }, [ticketsData, isLoading, isDefaultView]);
 
   const loading = isLoading && rawTickets.length === 0;
 

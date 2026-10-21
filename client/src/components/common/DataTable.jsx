@@ -1,5 +1,4 @@
 import React from 'react';
-import Card from './Card';
 import Loader from './Loader';
 
 const DataTable = ({
@@ -9,19 +8,6 @@ const DataTable = ({
   emptyMessage = 'No records found',
   onRowClick,
 }) => {
-  // Only show the blocking loader if there is literally no data yet (0ms instant display when cached data exists)
-  if (isLoading && (!data || data.length === 0)) {
-    return <Loader text="Loading data..." />;
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <Card className="text-center py-12">
-        <p className="text-slate-400 text-sm font-medium">{emptyMessage}</p>
-      </Card>
-    );
-  }
-
   return (
     <div className="w-full overflow-x-auto lg:overflow-x-visible glass-panel rounded-2xl border border-slate-800">
       <table className="w-full text-left text-xs sm:text-sm text-slate-300">
@@ -40,26 +26,40 @@ const DataTable = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/60">
-          {data.map((row, rowIdx) => (
-            <tr
-              key={row.id || rowIdx}
-              onClick={() => onRowClick && onRowClick(row)}
-              className={`transition-colors hover:bg-slate-800/40 align-middle ${
-                onRowClick ? 'cursor-pointer' : ''
-              }`}
-            >
-              {columns.map((col, colIdx) => (
-                <td
-                  key={colIdx}
-                  className={`px-3 py-3 font-sans align-middle ${
-                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''
-                  } ${col.className || ''}`}
-                >
-                  {col.cell ? col.cell(row) : row[col.accessorKey]}
-                </td>
-              ))}
+          {isLoading && (!data || data.length === 0) ? (
+            <tr>
+              <td colSpan={columns.length} className="py-12 text-center">
+                <Loader text="Fetching latest tasks..." />
+              </td>
             </tr>
-          ))}
+          ) : !data || data.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="py-12 text-center text-slate-400 text-sm font-medium">
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : (
+            data.map((row, rowIdx) => (
+              <tr
+                key={row.id || rowIdx}
+                onClick={() => onRowClick && onRowClick(row)}
+                className={`transition-colors hover:bg-slate-800/40 align-middle ${
+                  onRowClick ? 'cursor-pointer' : ''
+                }`}
+              >
+                {columns.map((col, colIdx) => (
+                  <td
+                    key={colIdx}
+                    className={`px-3 py-3 font-sans align-middle ${
+                      col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''
+                    } ${col.className || ''}`}
+                  >
+                    {col.cell ? col.cell(row) : row[col.accessorKey]}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
