@@ -5,7 +5,6 @@ import {
   Wrench,
   KeyRound,
   LogIn,
-  Search,
   CheckCircle2,
   Clock,
   ShieldCheck,
@@ -44,16 +43,6 @@ const LandingPage = () => {
 
   // Modal States — Unified for silky smooth 60fps mobile transitions
   const [authModal, setAuthModal] = useState(null); // null | 'login' | 'pin' | 'signup'
-  const [trackTicketId, setTrackTicketId] = useState('');
-
-  const handleTrackSubmit = (e) => {
-    e.preventDefault();
-    if (trackTicketId.trim()) {
-      navigate(`/track?ticketId=${encodeURIComponent(trackTicketId.trim())}`);
-    } else {
-      navigate('/track');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col relative overflow-hidden font-sans">
@@ -89,9 +78,6 @@ const LandingPage = () => {
             <a href="#features" className="hover:text-cyan-400 transition-colors">Features</a>
             <Link to="/kb" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
               Knowledge Base
-            </Link>
-            <Link to="/track" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
-              Track Ticket
             </Link>
           </nav>
 
@@ -148,37 +134,6 @@ const LandingPage = () => {
           >
             Empowering Converge IT Solutions with automated Facebook Messenger ticket creation, Starlink & CCTV installation management, real-time SLA tracking, and GPS service reports.
           </motion.p>
-
-          {/* 🔍 Quick Ticket Reference Tracker Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="pt-4 max-w-xl mx-auto"
-          >
-            <form onSubmit={handleTrackSubmit} className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 border border-cyan-500/40 shadow-2xl shadow-cyan-950/40 backdrop-blur-2xl">
-              <div className="pl-3 text-cyan-400 shrink-0">
-                <Search className="w-5 h-5" />
-              </div>
-              <input
-                type="text"
-                placeholder="Enter Ticket Reference ID (e.g. TKT-100293)..."
-                value={trackTicketId}
-                onChange={(e) => setTrackTicketId(e.target.value)}
-                className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 focus:outline-none px-2 font-medium"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 transition-all shrink-0 active:scale-95 flex items-center gap-1.5"
-              >
-                <span>Track Ticket</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </form>
-            <p className="text-[11px] text-slate-400 mt-2 font-medium">
-              Customers can check live dispatch status, assigned technician, and resolution progress anytime.
-            </p>
-          </motion.div>
 
           {/* Quick Metrics Bar */}
           <motion.div
@@ -479,23 +434,16 @@ const LandingPage = () => {
                 </div>
                 <h3 className="text-lg font-bold text-white font-display">Customer Self-Service</h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Track your pending ticket status online or read troubleshooting guides in our public knowledge base.
+                  Browse troubleshooting guides, installation FAQs, and articles in our public knowledge base.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  to="/track"
-                  className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                  <span>Track Ticket</span>
-                </Link>
+              <div>
                 <Link
                   to="/kb"
-                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-all active:scale-95 flex items-center justify-center gap-1.5"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
-                  <span>Help Base</span>
+                  <span>Browse Knowledge Base</span>
                 </Link>
               </div>
             </div>
@@ -529,7 +477,6 @@ const LandingPage = () => {
           <p>© {new Date().getFullYear()} Converge IT Solutions Inc. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link to="/kb" className="hover:text-cyan-400 transition-colors">Knowledge Base</Link>
-            <Link to="/track" className="hover:text-cyan-400 transition-colors">Track Ticket</Link>
           </div>
         </div>
       </footer>
