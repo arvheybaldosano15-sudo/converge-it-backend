@@ -3,8 +3,29 @@ import api from '../utils/axios';
 import toast from 'react-hot-toast';
 
 const TECH_ASSIGNED_TICKETS_KEY = 'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3';
+const TECH_HISTORY_TICKETS_KEY = 'CONVERGE_TECH_HISTORY_TICKETS_CACHE';
 
 const getStoredTickets = (filters = {}) => {
+  // Return stored history cache on frame 0 if status is 'history'
+  if (filters.status === 'history') {
+    try {
+      const rawHist = localStorage.getItem(TECH_HISTORY_TICKETS_KEY);
+      if (rawHist) {
+        const parsed = JSON.parse(rawHist);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const rawAssigned = localStorage.getItem(TECH_ASSIGNED_TICKETS_KEY);
+      if (rawAssigned) {
+        const parsed = JSON.parse(rawAssigned);
+        if (Array.isArray(parsed)) {
+          const completed = parsed.filter((t) => t.status === 'resolved' || t.status === 'closed');
+          if (completed.length > 0) return completed;
+        }
+      }
+    } catch (_) {}
+    return undefined;
+  }
+
   // Return stored cache on frame 0 if no custom search/filter is active
   const isDefaultFilter = !filters.search &&
     (!filters.status || filters.status === 'all') &&
@@ -33,6 +54,11 @@ export const useTickets = (filters = {}) => {
         params: { ...filters, fresh: true, _t: Date.now() },
       });
       const data = res.data || [];
+      if (filters.status === 'history' && Array.isArray(data)) {
+        try {
+          localStorage.setItem(TECH_HISTORY_TICKETS_KEY, JSON.stringify(data));
+        } catch (_) {}
+      }
       const isDefaultFilter = !filters.search &&
         (!filters.status || filters.status === 'all') &&
         (!filters.priority || filters.priority === 'all') &&

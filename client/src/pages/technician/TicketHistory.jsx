@@ -25,11 +25,13 @@ import {
 import ViewTicketModal from '../../components/technician/ViewTicketModal';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { useSocket } from '../../context/SocketContext';
+import { useTechDashboard } from '../../hooks/useDashboard';
 
 const HISTORY_CACHE_KEY = 'CONVERGE_TECH_HISTORY_TICKETS_CACHE';
 
 // Synchronously read stored history tickets for instant 0ms mount on hard refresh
 const getInitialStoredHistoryTickets = () => {
+  // 1. Direct history cache
   try {
     const raw = localStorage.getItem(HISTORY_CACHE_KEY);
     if (raw) {
@@ -37,12 +39,44 @@ const getInitialStoredHistoryTickets = () => {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (_) {}
+
+  // 2. Cross-cache fallback: extract resolved/closed tickets from assigned tickets caches
+  try {
+    const assignedKeys = [
+      'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3',
+      'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE',
+      'CONVERGE_ASSIGNED_TICKETS_CACHE',
+      'CONVERGE_TECH_TICKETS_CACHE',
+      'CONVERGE_TECH_DASHBOARD_CACHE'
+    ];
+    for (const k of assignedKeys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.data?.recent_tickets || parsed?.recent_tickets || parsed?.data || []);
+        if (Array.isArray(list) && list.length > 0) {
+          const completed = list.filter((t) => t.status === 'resolved' || t.status === 'closed');
+          if (completed.length > 0) {
+            try {
+              localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(completed));
+            } catch (_) {}
+            return completed;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
   return [];
 };
 
 const TicketHistory = () => {
   const queryClient = useQueryClient();
   const { socket } = useSocket();
+  const { data: dashboardData } = useTechDashboard();
+  const dashStats = dashboardData?.stats || {};
   const initialHistory = useMemo(() => getInitialStoredHistoryTickets(), []);
   const [tickets, setTickets] = useState(initialHistory);
   const [loading, setLoading] = useState(initialHistory.length === 0);
@@ -220,25 +254,31 @@ const TicketHistory = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Compute KPI Summary Counts from real backend tickets
+  // Compute KPI Summary Counts from real backend tickets + cached dashboard stats
   const stats = useMemo(() => {
-    const total = tickets.length;
-    const resolved = tickets.filter(t => t.status === 'resolved').length;
-    const closed = tickets.filter(t => t.status === 'closed').length;
+    const computedTotal = tickets.length;
+    const computedResolved = tickets.filter(t => t.status === 'resolved').length;
+    const computedClosed = tickets.filter(t => t.status === 'closed').length;
+
+    const total = computedTotal > 0 ? computedTotal : (dashStats.completed_tickets || 0);
+    const resolved = computedResolved > 0 ? computedResolved : (dashStats.resolved_tickets || 0);
+    const closed = computedClosed > 0 ? computedClosed : (dashStats.closed_tickets || 0);
 
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const thisMonth = tickets.filter(t => {
+    const computedThisMonth = tickets.filter(t => {
       const d = t.resolved_at || t.updated_at || t.created_at;
       if (!d) return false;
       const date = new Date(d);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     }).length;
 
+    const thisMonth = computedThisMonth > 0 ? computedThisMonth : total;
+
     return { total, resolved, closed, thisMonth };
-  }, [tickets]);
+  }, [tickets, dashStats]);
 
   // Client-side filtering & sorting engine
   const processedTickets = useMemo(() => {
