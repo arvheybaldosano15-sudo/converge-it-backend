@@ -1,6 +1,6 @@
 const { query } = require('../config/database');
-const { emitToUser } = require('./socketService');
-const { sendPushToUser, sendPushToAdmins } = require('./pushService');
+const { emitToUser, emitToAll } = require('./socketService');
+const { sendPushToUser, sendPushToAdmins, sendPushToAllDevices } = require('./pushService');
 const logger = require('../config/logger');
 
 // Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
@@ -71,4 +71,34 @@ exports.markAllAsRead = async (userId) =>
 exports.getUnreadCount = async (userId) => {
   const result = await query('SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE', [userId]);
   return parseInt(result.rows[0].count);
+};
+
+// Broadcast notification to ALL mobile devices whenever a technician is assigned
+exports.notifyAllDevicesOnAssignment = async ({ ticketNumber, technicianName, subject, ticketId, assignedTo }) => {
+  try {
+    const techName = technicianName || 'Technician';
+    const title = `Ticket #${ticketNumber} Assigned to ${techName}`;
+    const body = `Ticket #${ticketNumber}${subject ? ` (${subject})` : ''} has been assigned to technician ${techName}.`;
+
+    // 1. Broadcast push to ALL mobile devices with the app installed / active push subscriptions
+    await sendPushToAllDevices({
+      title,
+      body,
+      url: '/technician/assigned',
+      data: { ticketId, ticketNumber, technicianName: techName, assignedTo }
+    });
+
+    // 2. Broadcast realtime socket alert to ALL connected clients
+    emitToAll('ticket:assignment_alert', {
+      ticketNumber,
+      technicianName: techName,
+      subject,
+      ticketId,
+      assignedTo,
+      title,
+      body
+    });
+  } catch (error) {
+    logger.error('Failed to notify all devices on assignment:', error.message);
+  }
 };

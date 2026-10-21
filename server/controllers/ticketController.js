@@ -2,7 +2,7 @@ const { query, getClient } = require('../config/database');
 const { createError } = require('../middleware/errorHandler');
 const { logAudit } = require('../services/auditService');
 const { emitToUser, emitToAdmins, emitToRoom, emitToAll } = require('../services/socketService');
-const { createNotification, notifyAdmins } = require('../services/notificationService');
+const { createNotification, notifyAdmins, notifyAllDevicesOnAssignment } = require('../services/notificationService');
 
 exports.getTickets = async (req, res, next) => {
   try {
@@ -279,6 +279,15 @@ exports.createTicket = async (req, res, next) => {
         data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo },
         sendPush: true
       }).catch(() => {});
+
+      // Broadcast to ALL mobile devices with the assigned technician's name
+      notifyAllDevicesOnAssignment({
+        ticketNumber: ticket.ticket_number,
+        technicianName: techName,
+        subject: ticket.subject,
+        ticketId: ticket.id,
+        assignedTo
+      }).catch(() => {});
     }
 
     res.status(201).json({ success: true, data: fullPayload, message: 'Ticket created successfully' });
@@ -366,6 +375,15 @@ exports.updateTicket = async (req, res, next) => {
         body: `Ticket #${updatedTicket.ticket_number} has been assigned to technician ${techName}.`,
         data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo },
         sendPush: true
+      }).catch(() => {});
+
+      // 3. Broadcast notification to ALL mobile devices (installed apps) with the assigned technician's name
+      notifyAllDevicesOnAssignment({
+        ticketNumber: updatedTicket.ticket_number,
+        technicianName: techName,
+        subject: updatedTicket.subject,
+        ticketId: id,
+        assignedTo
       }).catch(() => {});
 
       emitToUser(assignedTo, 'ticket:assigned', { ticket: { ...updatedTicket, assigned_technician_name: techName }, technicianName: techName });

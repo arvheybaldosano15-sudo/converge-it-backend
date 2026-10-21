@@ -315,9 +315,50 @@ export const SocketProvider = ({ children }) => {
       }
     };
 
+    const handleAssignmentBroadcast = (payload = {}) => {
+      const techName = payload?.technicianName || 'Technician';
+      const ticketNum = payload?.ticketNumber || 'Ticket';
+      const notifTitle = payload?.title || `Ticket #${ticketNum} Assigned to ${techName}`;
+      const notifBody = payload?.body || `Ticket #${ticketNum} has been assigned to technician ${techName}.`;
+
+      playNotificationChime();
+      triggerDesktopNotification({
+        title: notifTitle,
+        body: notifBody,
+        data: payload
+      });
+
+      toast.custom(
+        (t) => (
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} fixed top-3 left-3 right-3 max-w-md mx-auto z-[9999] glass-panel bg-slate-950/95 text-white p-4 rounded-2xl shadow-2xl border-2 border-emerald-500/60 flex items-start space-x-3 pointer-events-auto backdrop-blur-xl`}>
+            <div className="bg-emerald-500/20 p-2.5 rounded-xl text-emerald-400 shrink-0 border border-emerald-500/40">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-emerald-300 font-display truncate">{notifTitle}</h4>
+                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-700/50">ASSIGNED</span>
+              </div>
+              <p className="text-xs text-slate-200 mt-1 leading-snug line-clamp-2">{notifBody}</p>
+              {techName && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+                  <span className="text-slate-400">Assigned Technician:</span>
+                  <span className="text-emerald-300 font-mono bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/30">{techName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ),
+        { position: 'top-center', duration: 6000 }
+      );
+
+      setUnreadNotifications((prev) => prev + 1);
+    };
+
     newSocket.on('ticket:created', handleCreatedNotification);
     newSocket.on('ticket_created', handleCreatedNotification);
     newSocket.on('ticket:assigned', handleAssignedNotification);
+    newSocket.on('ticket:assignment_alert', handleAssignmentBroadcast);
 
     setSocket(newSocket);
 

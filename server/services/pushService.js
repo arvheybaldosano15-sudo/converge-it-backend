@@ -146,3 +146,55 @@ exports.sendPushToAdmins = async (payload) => {
     logger.error('Failed to send push to admins:', error.message);
   }
 };
+
+// Send push notification to ALL registered mobile devices (installed apps / active subscriptions)
+exports.sendPushToAllDevices = async (payload) => {
+  if (!publicKey || !privateKey) return;
+  try {
+    const res = await query('SELECT * FROM push_subscriptions');
+    const subscriptions = res.rows || [];
+
+    if (subscriptions.length === 0) return;
+
+    const pushPayload = JSON.stringify({
+      title: payload.title || 'Converge IT Notification',
+      body: payload.body || payload.message || '',
+      icon: payload.icon || '/logo.png',
+      badge: '/logo.png',
+      url: payload.url || '/technician/assigned',
+      data: payload.data || {},
+      timestamp: Date.now()
+    });
+
+    const sendPromises = subscriptions.map(async (sub) => {
+      const pushSubscription = {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth
+        }
+      };
+
+      try {
+        await webpush.sendNotification(pushSubscription, pushPayload, {
+          TTL: 86400,
+          urgency: 'high',
+          headers: {
+            'Urgency': 'high'
+          }
+        });
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          logger.info(`Cleaning up expired push subscription: ${sub.id}`);
+          await query('DELETE FROM push_subscriptions WHERE id = $1', [sub.id]).catch(() => {});
+        } else {
+          logger.warn(`Push notification broadcast failed for subscription ${sub.id}:`, err.message);
+        }
+      }
+    });
+
+    await Promise.allSettled(sendPromises);
+  } catch (error) {
+    logger.error('Failed to broadcast push notification to all devices:', error.message);
+  }
+};

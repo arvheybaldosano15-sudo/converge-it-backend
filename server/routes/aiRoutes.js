@@ -314,6 +314,15 @@ const applyRecommendationHandler = async (req, res, next) => {
               sendPush: true
             }).catch(() => {});
 
+            const { notifyAllDevicesOnAssignment } = require('../services/notificationService');
+            notifyAllDevicesOnAssignment({
+              ticketNumber: ticket.ticket_number,
+              technicianName: assignedTechName,
+              subject: ticket.subject,
+              ticketId: ticket.id,
+              assignedTo: techId
+            }).catch(() => {});
+
             emitToUser(techId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName }, technicianName: assignedTechName });
             emitToUser(techId, 'ticket:created', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName }, technicianName: assignedTechName });
             emitToAdmins('ticket:updated', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName } });
@@ -359,6 +368,15 @@ const applyRecommendationHandler = async (req, res, next) => {
                 body: `Ticket #${ticket.ticket_number} has been assigned to technician ${fallbackTechName} via AI.`,
                 data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId },
                 sendPush: true
+              }).catch(() => {});
+
+              const { notifyAllDevicesOnAssignment: notifyAllFallback } = require('../services/notificationService');
+              notifyAllFallback({
+                ticketNumber: ticket.ticket_number,
+                technicianName: fallbackTechName,
+                subject: ticket.subject,
+                ticketId: ticket.id,
+                assignedTo: fallbackTechId
               }).catch(() => {});
 
               emitToUser(fallbackTechId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName }, technicianName: fallbackTechName });
