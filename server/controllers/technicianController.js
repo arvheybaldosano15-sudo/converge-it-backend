@@ -8,15 +8,15 @@ exports.getTechnicians = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, status, specialization, workload, search, sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    const conditions = ["u.role = 'technician'"];
+    // Unapproved technicians (pending) must never appear on the technician management roster page.
+    // They are exclusively listed on the approval page until approved by an administrator.
+    const conditions = ["u.role = 'technician'", "u.status != 'pending'"];
     const params = [];
     let idx = 1;
 
     if (status && status !== 'all') {
       if (status === 'active' || status === 'approved') {
         conditions.push(`u.status = 'active'`);
-      } else if (status === 'pending') {
-        conditions.push(`u.status = 'pending'`);
       } else if (status === 'inactive' || status === 'rejected') {
         conditions.push(`u.status IN ('inactive', 'rejected')`);
       } else {
@@ -100,7 +100,7 @@ exports.getTechnicianStats = async (req, res) => {
         COUNT(t.id) FILTER (WHERE t.status NOT IN ('resolved','closed')) AS active_tasks
       FROM users u
       LEFT JOIN tickets t ON u.id = t.assigned_technician_id
-      WHERE u.role = 'technician'
+      WHERE u.role = 'technician' AND u.status != 'pending'
       GROUP BY u.id, u.status
     `);
 

@@ -106,7 +106,6 @@ const TechnicianForm = ({ formData, onChange, onSubmit, onCancel, submitLabel, i
           className="glass-input w-full rounded-xl py-2 px-3 text-xs bg-slate-950 text-white"
         >
           <option value="active">Active (Approved)</option>
-          <option value="pending">Pending Review</option>
           <option value="inactive">Inactive (Suspended)</option>
         </select>
       </div>
@@ -412,18 +411,16 @@ const TechnicianManagement = () => {
       fetchTechnicians();
     };
 
-    socket.on('technician:new_pending', handleRealtimeRoster);
     socket.on('technician:approved', handleRealtimeRoster);
     socket.on('technician:rejected', handleRealtimeRoster);
     socket.on('technician:suspended', handleTechStatusChanged);
     socket.on('technician:status_changed', handleTechStatusChanged);
     socket.on('technician:updated', handleTechUpdated);
     socket.on('technician:deleted', handleTechDeleted);
-    socket.on('technician_deleted', handleTechDeleted);
+    socket.off('technician:new_pending');
 
     return () => {
       if (typeof socket.off === 'function') {
-        socket.off('technician:new_pending', handleRealtimeRoster);
         socket.off('technician:approved', handleRealtimeRoster);
         socket.off('technician:rejected', handleRealtimeRoster);
         socket.off('technician:suspended', handleTechStatusChanged);
@@ -648,9 +645,8 @@ const TechnicianManagement = () => {
       header: 'Status',
       cell: (row) => {
         const isActive = row.status === 'approved' || row.status === 'active';
-        const isPending = row.status === 'pending';
         return (
-          <Badge variant={isActive ? 'success' : isPending ? 'warning' : 'danger'} className="capitalize">
+          <Badge variant={isActive ? 'success' : 'danger'} className="capitalize">
             {row.status === 'approved' ? 'active' : row.status}
           </Badge>
         );
@@ -660,7 +656,6 @@ const TechnicianManagement = () => {
       header: 'Actions',
       cell: (row) => {
         const isActive = row.status === 'approved' || row.status === 'active';
-        const isPending = row.status === 'pending';
 
         return (
           <div className="flex items-center gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
@@ -682,26 +677,16 @@ const TechnicianManagement = () => {
               <Pencil className="w-3.5 h-3.5" />
             </button>
 
-            {/* Toggle Status / Approve */}
-            {isPending ? (
-              <button
-                onClick={() => navigate('/admin/approvals')}
-                className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
-                title="Review Pending Application"
-              >
-                <UserSearch className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <button
-                onClick={(e) => toggleStatus(row, e)}
-                className={`p-1.5 rounded-lg bg-slate-900 border border-slate-800 transition-colors ${
-                  isActive ? 'text-amber-400 hover:text-amber-300' : 'text-emerald-400 hover:text-emerald-300'
-                }`}
-                title={isActive ? 'Deactivate Technician' : 'Activate Technician'}
-              >
-                <Power className="w-3.5 h-3.5" />
-              </button>
-            )}
+            {/* Toggle Status */}
+            <button
+              onClick={(e) => toggleStatus(row, e)}
+              className={`p-1.5 rounded-lg bg-slate-900 border border-slate-800 transition-colors ${
+                isActive ? 'text-amber-400 hover:text-amber-300' : 'text-emerald-400 hover:text-emerald-300'
+              }`}
+              title={isActive ? 'Deactivate Technician' : 'Activate Technician'}
+            >
+              <Power className="w-3.5 h-3.5" />
+            </button>
 
             {/* Delete Record */}
             <button
@@ -817,7 +802,6 @@ const TechnicianManagement = () => {
           >
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
-            <option value="pending">Pending Approval</option>
             <option value="inactive">Inactive Only</option>
           </select>
 
