@@ -254,21 +254,27 @@ exports.createTicket = async (req, res, next) => {
     const catNameLower = (fullPayload.category_name || '').toLowerCase();
     const isInstallCat = catNameLower.includes('installation');
     const assignedSuffix = techName ? ` (Assigned to: ${techName})` : ' (Unassigned)';
+    const hasAssignedTech = Boolean(assignedTo && techName);
     notifyAdmins({
       type: isInstallCat ? 'installation' : 'ticket',
-      title: isInstallCat ? `New Installation Request #${ticket.ticket_number}` : `New Ticket Created #${ticket.ticket_number}`,
-      message: isInstallCat
-        ? `Installation Request #${ticket.ticket_number} created for ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`
-        : `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`,
+      title: hasAssignedTech
+        ? `Ticket #${ticket.ticket_number} Assigned to ${techName}`
+        : (isInstallCat ? `New Installation Request #${ticket.ticket_number}` : `New Ticket Created #${ticket.ticket_number}`),
+      message: hasAssignedTech
+        ? `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to technician ${techName}.`
+        : (isInstallCat
+          ? `Installation Request #${ticket.ticket_number} created for ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`
+          : `A new ticket has been submitted by ${fullPayload.customer_name || 'Customer'}${assignedSuffix}.`),
       referenceId: ticket.id,
-      data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo }
+      data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo },
+      sendPush: hasAssignedTech
     }).catch(() => {});
 
     if (assignedTo) {
       createNotification({
         userId: assignedTo,
         type: 'ticket',
-        title: `New Ticket Assigned #${ticket.ticket_number}`,
+        title: `Ticket #${ticket.ticket_number} Assigned to You`,
         body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${techName || 'Technician'}).`,
         data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo },
         sendPush: true
@@ -343,12 +349,21 @@ exports.updateTicket = async (req, res, next) => {
       const techRes = await client.query('SELECT full_name FROM users WHERE id = $1', [assignedTo]);
       techName = techRes.rows[0]?.full_name || 'Technician';
 
-      // Notify ONLY the newly assigned technician (not shown in admin notification bell)
+      // 1. Notify the assigned technician
       await createNotification({
         userId: assignedTo,
         type: 'ticket',
-        title: `Ticket #${updatedTicket.ticket_number} Assigned`,
+        title: `Ticket #${updatedTicket.ticket_number} Assigned to You`,
         body: `Ticket #${updatedTicket.ticket_number} (${updatedTicket.subject || 'Concern'}) has been assigned to you (${techName}).`,
+        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo },
+        sendPush: true
+      }).catch(() => {});
+
+      // 2. Trigger mobile notification to admins including the assigned technician's name
+      await notifyAdmins({
+        type: 'ticket',
+        title: `Ticket #${updatedTicket.ticket_number} Assigned to ${techName}`,
+        body: `Ticket #${updatedTicket.ticket_number} has been assigned to technician ${techName}.`,
         data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo },
         sendPush: true
       }).catch(() => {});

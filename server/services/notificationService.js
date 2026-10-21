@@ -54,7 +54,7 @@ exports.notifyAdmins = async ({ type, title, body, message, data, sendPush = fal
         title,
         body: body || message,
         data,
-        sendPush: false // Tickets created via Messenger / manual creation never trigger mobile push notifications
+        sendPush: Boolean(sendPush) // Only send mobile push when technician is assigned or explicitly enabled
       });
     }
   } catch (error) {

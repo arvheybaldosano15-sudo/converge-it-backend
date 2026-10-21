@@ -300,8 +300,16 @@ const applyRecommendationHandler = async (req, res, next) => {
             await createNotification({
               userId: techId,
               type: 'ticket',
-              title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+              title: `Ticket #${ticket.ticket_number} Assigned to You`,
               body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${assignedTechName}).`,
+              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId },
+              sendPush: true
+            }).catch(() => {});
+
+            await notifyAdmins({
+              type: 'ticket',
+              title: `Ticket #${ticket.ticket_number} Assigned to ${assignedTechName}`,
+              body: `Ticket #${ticket.ticket_number} has been assigned to technician ${assignedTechName} via AI.`,
               data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId },
               sendPush: true
             }).catch(() => {});
@@ -339,8 +347,16 @@ const applyRecommendationHandler = async (req, res, next) => {
               await createNotification({
                 userId: fallbackTechId,
                 type: 'ticket',
-                title: `Ticket #${ticket.ticket_number} Assigned via AI`,
+                title: `Ticket #${ticket.ticket_number} Assigned to You`,
                 body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${fallbackTechName}).`,
+                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId },
+                sendPush: true
+              }).catch(() => {});
+
+              await notifyAdmins({
+                type: 'ticket',
+                title: `Ticket #${ticket.ticket_number} Assigned to ${fallbackTechName}`,
+                body: `Ticket #${ticket.ticket_number} has been assigned to technician ${fallbackTechName} via AI.`,
                 data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId },
                 sendPush: true
               }).catch(() => {});
