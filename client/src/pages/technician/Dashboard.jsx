@@ -38,33 +38,81 @@ import UpdateTicketModal from '../../components/technician/UpdateTicketModal';
 import FileServiceReportModal from '../../components/technician/FileServiceReportModal';
 
 // Helper for live SLA countdown calculations
-const getSlaInfo = (deadlineStr, status) => {
+const getSlaInfo = (deadlineStr, status, resolvedAt) => {
   if (status === 'resolved' || status === 'closed') {
-    return { text: 'Resolved', isBreached: false, isUrgent: false, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+    const isLate = deadlineStr && resolvedAt && new Date(resolvedAt) > new Date(deadlineStr);
+    if (isLate) {
+      return {
+        label: 'SLA Breached',
+        text: 'SLA Breached',
+        desc: 'Resolved Late',
+        isBreached: true,
+        isUrgent: true,
+        colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40'
+      };
+    }
+    return {
+      label: 'Within SLA',
+      text: 'Within SLA',
+      desc: 'Resolved',
+      isBreached: false,
+      isUrgent: false,
+      colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+    };
   }
+
   if (!deadlineStr) {
-    return { text: 'No Target Set', isBreached: false, isUrgent: false, colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50' };
+    return {
+      label: 'Within SLA',
+      text: 'Within SLA',
+      desc: 'No Target Set',
+      isBreached: false,
+      isUrgent: false,
+      colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50'
+    };
   }
 
   const deadline = new Date(deadlineStr);
   const now = new Date();
   const diffMs = deadline - now;
+  const diffHours = diffMs / (1000 * 60 * 60);
 
   if (diffMs <= 0) {
-    return { text: 'SLA Breached', isBreached: true, isUrgent: true, colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40 animate-pulse' };
+    const overHours = Math.abs(Math.floor(diffHours));
+    return {
+      label: 'SLA Breached',
+      text: 'SLA Breached',
+      desc: overHours > 0 ? `${overHours}h overdue` : 'Overdue',
+      isBreached: true,
+      isUrgent: true,
+      colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40 animate-pulse'
+    };
   }
 
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const hours = Math.floor(diffHours);
   const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const remainingStr = hours > 0 ? `${hours}h ${mins}m remaining` : `${mins}m remaining`;
+  const isUrgent = diffHours <= 4;
 
-  const text = hours > 0 ? `${hours}h ${mins}m remaining` : `${mins}m remaining`;
-  const isUrgent = hours < 4;
+  if (isUrgent) {
+    return {
+      label: 'At Risk',
+      text: 'At Risk',
+      desc: remainingStr,
+      isBreached: false,
+      isUrgent: true,
+      colorClass: 'text-amber-400 bg-amber-500/15 border-amber-500/40 animate-pulse'
+    };
+  }
 
-  const colorClass = isUrgent
-    ? 'text-amber-400 bg-amber-500/15 border-amber-500/40'
-    : 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
-
-  return { text, isBreached: false, isUrgent, colorClass };
+  return {
+    label: 'Within SLA',
+    text: 'Within SLA',
+    desc: remainingStr,
+    isBreached: false,
+    isUrgent: false,
+    colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+  };
 };
 
 const TechnicianDashboard = () => {
@@ -279,7 +327,7 @@ const TechnicianDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {requiresAttention.map((t) => {
-              const slaInfo = getSlaInfo(t.sla_deadline, t.status);
+              const slaInfo = getSlaInfo(t.sla_deadline, t.status, t.resolved_at);
               return (
                 <div
                   key={t.id}
@@ -311,9 +359,19 @@ const TechnicianDashboard = () => {
                   </div>
 
                   <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
-                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
-                      ⏰ {slaInfo.text}
-                    </span>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className={`px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>
+                        {slaInfo.label === 'SLA Breached' && <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />}
+                        {slaInfo.label === 'At Risk' && <Clock className="w-3 h-3 text-amber-400 shrink-0" />}
+                        {slaInfo.label === 'Within SLA' && <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        <span>{slaInfo.label}</span>
+                      </span>
+                      {slaInfo.desc && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {slaInfo.desc}
+                        </span>
+                      )}
+                    </div>
                     <Button variant="ghost" size="sm" onClick={(e) => handleOpenUpdate(t, e)} icon={Eye}>
                       View Ticket
                     </Button>
@@ -461,9 +519,19 @@ const TechnicianDashboard = () => {
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                    <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
-                      ⏰ {slaInfo.text}
-                    </span>
+                    <div className="flex flex-col items-start sm:items-end gap-0.5">
+                      <span className={`px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>
+                        {slaInfo.label === 'SLA Breached' && <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />}
+                        {slaInfo.label === 'At Risk' && <Clock className="w-3 h-3 text-amber-400 shrink-0" />}
+                        {slaInfo.label === 'Within SLA' && <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        <span>{slaInfo.label}</span>
+                      </span>
+                      {slaInfo.desc && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {slaInfo.desc}
+                        </span>
+                      )}
+                    </div>
                     <Button
                       variant="primary"
                       size="sm"

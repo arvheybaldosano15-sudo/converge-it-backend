@@ -44,32 +44,81 @@ const isInstallation = (t) => {
 };
 
 // Helper for live SLA countdown calculation
-const getSlaInfo = (deadlineStr, status) => {
+const getSlaInfo = (deadlineStr, status, resolvedAt) => {
   if (status === 'resolved' || status === 'closed') {
-    return { text: 'Resolved', isBreached: false, isUrgent: false, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+    const isLate = deadlineStr && resolvedAt && new Date(resolvedAt) > new Date(deadlineStr);
+    if (isLate) {
+      return {
+        label: 'SLA Breached',
+        text: 'SLA Breached',
+        desc: 'Resolved Late',
+        isBreached: true,
+        isUrgent: true,
+        colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40'
+      };
+    }
+    return {
+      label: 'Within SLA',
+      text: 'Within SLA',
+      desc: 'Resolved',
+      isBreached: false,
+      isUrgent: false,
+      colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+    };
   }
+
   if (!deadlineStr) {
-    return { text: 'No Target Set', isBreached: false, isUrgent: false, colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50' };
+    return {
+      label: 'Within SLA',
+      text: 'Within SLA',
+      desc: 'No Target Set',
+      isBreached: false,
+      isUrgent: false,
+      colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50'
+    };
   }
 
   const deadline = new Date(deadlineStr);
   const now = new Date();
   const diffMs = deadline - now;
+  const diffHours = diffMs / (1000 * 60 * 60);
 
   if (diffMs <= 0) {
-    return { text: 'SLA Breached', isBreached: true, isUrgent: true, colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40 animate-pulse' };
+    const overHours = Math.abs(Math.floor(diffHours));
+    return {
+      label: 'SLA Breached',
+      text: 'SLA Breached',
+      desc: overHours > 0 ? `${overHours}h overdue` : 'Overdue',
+      isBreached: true,
+      isUrgent: true,
+      colorClass: 'text-rose-400 bg-rose-500/15 border-rose-500/40 animate-pulse'
+    };
   }
 
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const hours = Math.floor(diffHours);
   const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  const text = hours > 0 ? `${hours}h ${mins}m remaining` : `${mins}m remaining`;
-  const isUrgent = hours < 4;
+  const remainingStr = hours > 0 ? `${hours}h ${mins}m remaining` : `${mins}m remaining`;
+  const isUrgent = diffHours <= 4;
 
-  const colorClass = isUrgent
-    ? 'text-amber-400 bg-amber-500/15 border-amber-500/40'
-    : 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+  if (isUrgent) {
+    return {
+      label: 'At Risk',
+      text: 'At Risk',
+      desc: remainingStr,
+      isBreached: false,
+      isUrgent: true,
+      colorClass: 'text-amber-400 bg-amber-500/15 border-amber-500/40 animate-pulse'
+    };
+  }
 
-  return { text, isBreached: false, isUrgent, colorClass };
+  return {
+    label: 'Within SLA',
+    text: 'Within SLA',
+    desc: remainingStr,
+    isBreached: false,
+    isUrgent: false,
+    colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+  };
 };
 
 // Synchronously read stored technician tickets for instant 0ms mount on hard refresh
@@ -448,11 +497,21 @@ const AssignedTickets = () => {
       header: 'SLA Status',
       align: 'center',
       cell: (row) => {
-        const slaInfo = getSlaInfo(row.sla_deadline, row.status);
+        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at);
         return (
-          <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1 ${slaInfo.colorClass}`}>
-            ⏰ {slaInfo.text}
-          </span>
+          <div className="flex flex-col items-center justify-center">
+            <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>
+              {slaInfo.label === 'SLA Breached' && <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />}
+              {slaInfo.label === 'At Risk' && <Clock className="w-3 h-3 text-amber-400 shrink-0" />}
+              {slaInfo.label === 'Within SLA' && <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />}
+              <span>{slaInfo.label}</span>
+            </span>
+            {slaInfo.desc && (
+              <span className="text-[10px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
+                {slaInfo.desc}
+              </span>
+            )}
+          </div>
         );
       },
     },
@@ -557,6 +616,28 @@ const AssignedTickets = () => {
           {row.priority}
         </Badge>
       ),
+    },
+    {
+      header: 'SLA Status',
+      align: 'center',
+      cell: (row) => {
+        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at);
+        return (
+          <div className="flex flex-col items-center justify-center">
+            <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>
+              {slaInfo.label === 'SLA Breached' && <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />}
+              {slaInfo.label === 'At Risk' && <Clock className="w-3 h-3 text-amber-400 shrink-0" />}
+              {slaInfo.label === 'Within SLA' && <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />}
+              <span>{slaInfo.label}</span>
+            </span>
+            {slaInfo.desc && (
+              <span className="text-[10px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
+                {slaInfo.desc}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       header: 'Status',
