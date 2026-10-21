@@ -157,10 +157,17 @@ const AssignedTickets = () => {
 
   // Extract clean live tickets array with instant synchronous fallback from cache
   const rawTickets = useMemo(() => {
+    const cleanList = (list) =>
+      list.map((t) => {
+        const { assignee_avatar, sr_images_urls, sr_signature_url, ...rest } = t;
+        return rest;
+      });
+
     if (Array.isArray(ticketsData) && ticketsData.length > 0) {
       try {
-        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(ticketsData));
-        const historyTickets = ticketsData.filter((t) => t.status === 'resolved' || t.status === 'closed');
+        const cleaned = cleanList(ticketsData);
+        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(cleaned));
+        const historyTickets = cleaned.filter((t) => t.status === 'resolved' || t.status === 'closed');
         if (historyTickets.length > 0) {
           localStorage.setItem('CONVERGE_TECH_HISTORY_TICKETS_CACHE', JSON.stringify(historyTickets));
         }
@@ -169,8 +176,9 @@ const AssignedTickets = () => {
     }
     if (Array.isArray(ticketsData?.data) && ticketsData.data.length > 0) {
       try {
-        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(ticketsData.data));
-        const historyTickets = ticketsData.data.filter((t) => t.status === 'resolved' || t.status === 'closed');
+        const cleaned = cleanList(ticketsData.data);
+        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(cleaned));
+        const historyTickets = cleaned.filter((t) => t.status === 'resolved' || t.status === 'closed');
         if (historyTickets.length > 0) {
           localStorage.setItem('CONVERGE_TECH_HISTORY_TICKETS_CACHE', JSON.stringify(historyTickets));
         }

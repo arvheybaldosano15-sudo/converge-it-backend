@@ -81,10 +81,10 @@ exports.getTickets = async (req, res, next) => {
              t.created_at, t.updated_at, t.sla_deadline, t.resolved_at, t.assigned_technician_id AS assigned_to,
              c.full_name AS customer_name, c.contact_number AS customer_contact, c.complete_address AS customer_address, c.messenger_psid,
              cat.name AS category_name, cat.icon AS category_icon, cat.color_code AS category_color,
-             u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.employee_id AS assignee_employee_id,
+             u.full_name AS assignee_name, CASE WHEN LENGTH(u.profile_image_url) > 2048 THEN NULL ELSE u.profile_image_url END AS assignee_avatar, u.employee_id AS assignee_employee_id,
              sr.id AS sr_id, sr.report_number AS sr_report_number, sr.title AS sr_title, sr.work_performed AS sr_work_performed,
              sr.materials_used AS sr_materials_used, sr.completion_notes AS sr_completion_notes, sr.images_urls AS sr_images_urls,
-             sr.signature_url AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at
+             CASE WHEN LENGTH(sr.signature_url) > 2048 THEN NULL ELSE sr.signature_url END AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at
              FROM tickets t
              LEFT JOIN customers c ON t.customer_id = c.id
              LEFT JOIN service_categories cat ON t.service_category_id = cat.id
@@ -120,10 +120,10 @@ exports.getTicketById = async (req, res, next) => {
       query(`
         SELECT t.*, c.full_name AS customer_name, c.contact_number AS customer_contact,
                c.complete_address AS customer_address, c.messenger_psid, cat.name AS category_name, cat.icon AS category_icon,
-               u.full_name AS assignee_name, u.profile_image_url AS assignee_avatar, u.contact_number AS assignee_contact, u.employee_id AS assignee_employee_id,
+               u.full_name AS assignee_name, CASE WHEN LENGTH(u.profile_image_url) > 2048 THEN NULL ELSE u.profile_image_url END AS assignee_avatar, u.contact_number AS assignee_contact, u.employee_id AS assignee_employee_id,
                sr.id AS sr_id, sr.report_number AS sr_report_number, sr.title AS sr_title, sr.work_performed AS sr_work_performed,
                sr.materials_used AS sr_materials_used, sr.completion_notes AS sr_completion_notes, sr.images_urls AS sr_images_urls,
-               sr.signature_url AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at,
+               CASE WHEN LENGTH(sr.signature_url) > 2048 THEN NULL ELSE sr.signature_url END AS sr_signature_url, sr.customer_name_signed AS sr_customer_name_signed, sr.created_at AS sr_created_at,
                su.full_name AS sr_technician_name, su.employee_id AS sr_technician_employee_id
         FROM tickets t
         LEFT JOIN customers c ON t.customer_id = c.id

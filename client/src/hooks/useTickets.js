@@ -54,9 +54,15 @@ export const useTickets = (filters = {}) => {
         params: { ...filters, fresh: true, _t: Date.now() },
       });
       const data = res.data || [];
+      const cleanData = Array.isArray(data)
+        ? data.map((t) => {
+            const { assignee_avatar, sr_images_urls, sr_signature_url, ...rest } = t;
+            return rest;
+          })
+        : [];
       if (filters.status === 'history' && Array.isArray(data)) {
         try {
-          localStorage.setItem(TECH_HISTORY_TICKETS_KEY, JSON.stringify(data));
+          localStorage.setItem(TECH_HISTORY_TICKETS_KEY, JSON.stringify(cleanData));
         } catch (_) {}
       }
       const isDefaultFilter = !filters.search &&
@@ -65,7 +71,7 @@ export const useTickets = (filters = {}) => {
         (!filters.category || filters.category === 'all');
       if (isDefaultFilter && Array.isArray(data) && data.length > 0) {
         try {
-          localStorage.setItem(TECH_ASSIGNED_TICKETS_KEY, JSON.stringify(data));
+          localStorage.setItem(TECH_ASSIGNED_TICKETS_KEY, JSON.stringify(cleanData));
         } catch (_) {}
       }
       return data;

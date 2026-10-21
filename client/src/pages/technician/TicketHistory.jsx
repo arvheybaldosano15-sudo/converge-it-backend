@@ -55,12 +55,16 @@ const getInitialStoredHistoryTickets = () => {
         const parsed = JSON.parse(raw);
         const list = Array.isArray(parsed)
           ? parsed
-          : (parsed?.data?.recent_tickets || parsed?.recent_tickets || parsed?.data || []);
+          : (parsed?.assignedQueue || parsed?.data?.recent_tickets || parsed?.recent_tickets || parsed?.data || []);
         if (Array.isArray(list) && list.length > 0) {
           const completed = list.filter((t) => t.status === 'resolved' || t.status === 'closed');
           if (completed.length > 0) {
             try {
-              localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(completed));
+              const clean = completed.map((t) => {
+                const { assignee_avatar, sr_images_urls, sr_signature_url, ...rest } = t;
+                return rest;
+              });
+              localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(clean));
             } catch (_) {}
             return completed;
           }
@@ -108,7 +112,11 @@ const TicketHistory = () => {
       if (res.success && Array.isArray(res.data)) {
         setTickets(res.data);
         try {
-          localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(res.data));
+          const clean = res.data.map((t) => {
+            const { assignee_avatar, sr_images_urls, sr_signature_url, ...rest } = t;
+            return rest;
+          });
+          localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(clean));
         } catch (_) {}
       }
     } catch (e) {

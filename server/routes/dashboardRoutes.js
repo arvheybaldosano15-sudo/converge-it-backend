@@ -156,6 +156,8 @@ router.get('/technician', authenticate, authorize('technician'), noCache, async 
            COUNT(*) FILTER (WHERE status = 'open') AS open_tickets,
            COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress_tickets,
            COUNT(*) FILTER (WHERE status IN ('resolved','closed')) AS completed_tickets,
+           COUNT(*) FILTER (WHERE status = 'resolved') AS resolved_tickets,
+           COUNT(*) FILTER (WHERE status = 'closed') AS closed_tickets,
            COUNT(*) FILTER (WHERE priority IN ('high','critical') AND status NOT IN ('resolved','closed')) AS urgent_tickets,
            COUNT(*) FILTER (WHERE sla_deadline < NOW() AND status NOT IN ('resolved','closed')) AS sla_breached,
            COUNT(*) AS total_assigned
