@@ -43,10 +43,28 @@ const isInstallation = (t) => {
   );
 };
 
-// Helper for live SLA countdown calculation
-const getSlaInfo = (deadlineStr, status, resolvedAt) => {
+// SLA predicted resolution hours: 48 hours for Medium, 24 hours for High, 15 hours for Critical
+const SLA_PREDICTED_HOURS = {
+  critical: 15,
+  high: 24,
+  medium: 48,
+  low: 48
+};
+
+// Helper for live SLA countdown calculation based on predicted resolution time
+const getSlaInfo = (deadlineStr, status, resolvedAt, priority, createdAt) => {
+  const priorityLower = (priority || 'medium').toLowerCase();
+  const slaHours = SLA_PREDICTED_HOURS[priorityLower] || 48;
+
+  let deadline = null;
+  if (deadlineStr) {
+    deadline = new Date(deadlineStr);
+  } else if (createdAt) {
+    deadline = new Date(new Date(createdAt).getTime() + slaHours * 60 * 60 * 1000);
+  }
+
   if (status === 'resolved' || status === 'closed') {
-    const isLate = deadlineStr && resolvedAt && new Date(resolvedAt) > new Date(deadlineStr);
+    const isLate = deadline && resolvedAt && new Date(resolvedAt) > deadline;
     if (isLate) {
       return {
         label: 'SLA Breached',
@@ -67,18 +85,17 @@ const getSlaInfo = (deadlineStr, status, resolvedAt) => {
     };
   }
 
-  if (!deadlineStr) {
+  if (!deadline) {
     return {
       label: 'Within SLA',
       text: 'Within SLA',
-      desc: 'No Target Set',
+      desc: `Target: ${slaHours}h`,
       isBreached: false,
       isUrgent: false,
-      colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50'
+      colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
     };
   }
 
-  const deadline = new Date(deadlineStr);
   const now = new Date();
   const diffMs = deadline - now;
   const diffHours = diffMs / (1000 * 60 * 60);
@@ -338,20 +355,13 @@ const AssignedTickets = () => {
     }
 
     // Filter by SLA status dropdown
-    if (slaFilter === 'breached') {
-      result = result.filter(t => t.sla_deadline && new Date(t.sla_deadline) < new Date() && t.status !== 'resolved' && t.status !== 'closed');
-    } else if (slaFilter === 'at_risk') {
+    if (slaFilter !== 'all') {
       result = result.filter(t => {
-        if (!t.sla_deadline || t.status === 'resolved' || t.status === 'closed') return false;
-        const diffHours = (new Date(t.sla_deadline) - new Date()) / (1000 * 60 * 60);
-        return diffHours >= 0 && diffHours <= 4;
-      });
-    } else if (slaFilter === 'within') {
-      result = result.filter(t => {
-        if (t.status === 'resolved' || t.status === 'closed') return true;
-        if (!t.sla_deadline) return true;
-        const diffHours = (new Date(t.sla_deadline) - new Date()) / (1000 * 60 * 60);
-        return diffHours > 4;
+        const sla = getSlaInfo(t.sla_deadline, t.status, t.resolved_at, t.priority, t.created_at);
+        if (slaFilter === 'breached') return sla.label === 'SLA Breached';
+        if (slaFilter === 'at_risk') return sla.label === 'At Risk';
+        if (slaFilter === 'within') return sla.label === 'Within SLA';
+        return true;
       });
     }
 
@@ -497,7 +507,7 @@ const AssignedTickets = () => {
       header: 'SLA Status',
       align: 'center',
       cell: (row) => {
-        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at);
+        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at, row.priority, row.created_at);
         return (
           <div className="flex flex-col items-center justify-center">
             <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>
@@ -621,7 +631,7 @@ const AssignedTickets = () => {
       header: 'SLA Status',
       align: 'center',
       cell: (row) => {
-        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at);
+        const slaInfo = getSlaInfo(row.sla_deadline, row.status, row.resolved_at, row.priority, row.created_at);
         return (
           <div className="flex flex-col items-center justify-center">
             <span className={`px-2.5 py-1 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center gap-1.5 ${slaInfo.colorClass}`}>

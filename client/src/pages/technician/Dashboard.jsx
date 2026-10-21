@@ -37,10 +37,28 @@ import { useTechDashboard } from '../../hooks/useDashboard';
 import UpdateTicketModal from '../../components/technician/UpdateTicketModal';
 import FileServiceReportModal from '../../components/technician/FileServiceReportModal';
 
-// Helper for live SLA countdown calculations
-const getSlaInfo = (deadlineStr, status, resolvedAt) => {
+// SLA predicted resolution hours: 48 hours for Medium, 24 hours for High, 15 hours for Critical
+const SLA_PREDICTED_HOURS = {
+  critical: 15,
+  high: 24,
+  medium: 48,
+  low: 48
+};
+
+// Helper for live SLA countdown calculations based on predicted resolution time
+const getSlaInfo = (deadlineStr, status, resolvedAt, priority, createdAt) => {
+  const priorityLower = (priority || 'medium').toLowerCase();
+  const slaHours = SLA_PREDICTED_HOURS[priorityLower] || 48;
+
+  let deadline = null;
+  if (deadlineStr) {
+    deadline = new Date(deadlineStr);
+  } else if (createdAt) {
+    deadline = new Date(new Date(createdAt).getTime() + slaHours * 60 * 60 * 1000);
+  }
+
   if (status === 'resolved' || status === 'closed') {
-    const isLate = deadlineStr && resolvedAt && new Date(resolvedAt) > new Date(deadlineStr);
+    const isLate = deadline && resolvedAt && new Date(resolvedAt) > deadline;
     if (isLate) {
       return {
         label: 'SLA Breached',
@@ -61,18 +79,17 @@ const getSlaInfo = (deadlineStr, status, resolvedAt) => {
     };
   }
 
-  if (!deadlineStr) {
+  if (!deadline) {
     return {
       label: 'Within SLA',
       text: 'Within SLA',
-      desc: 'No Target Set',
+      desc: `Target: ${slaHours}h`,
       isBreached: false,
       isUrgent: false,
-      colorClass: 'text-slate-400 bg-slate-800/50 border-slate-700/50'
+      colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
     };
   }
 
-  const deadline = new Date(deadlineStr);
   const now = new Date();
   const diffMs = deadline - now;
   const diffHours = diffMs / (1000 * 60 * 60);
@@ -327,7 +344,7 @@ const TechnicianDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {requiresAttention.map((t) => {
-              const slaInfo = getSlaInfo(t.sla_deadline, t.status, t.resolved_at);
+              const slaInfo = getSlaInfo(t.sla_deadline, t.status, t.resolved_at, t.priority, t.created_at);
               return (
                 <div
                   key={t.id}
@@ -487,7 +504,7 @@ const TechnicianDashboard = () => {
             </div>
           ) : (
             assignedQueue.map((t) => {
-              const slaInfo = getSlaInfo(t.sla_deadline, t.status);
+              const slaInfo = getSlaInfo(t.sla_deadline, t.status, t.resolved_at, t.priority, t.created_at);
               return (
                 <div
                   key={t.id}

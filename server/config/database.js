@@ -115,6 +115,26 @@ const testConnection = async () => {
     `).catch(() => {});
 
     await query(`
+      CREATE OR REPLACE FUNCTION set_sla_deadline()
+      RETURNS TRIGGER AS $$
+      DECLARE
+          sla_hours INTEGER := 48;
+      BEGIN
+          IF NEW.priority = 'critical' THEN sla_hours := 15;
+          ELSIF NEW.priority = 'high' THEN sla_hours := 24;
+          ELSIF NEW.priority = 'medium' THEN sla_hours := 48;
+          ELSE sla_hours := 48;
+          END IF;
+          
+          IF NEW.sla_deadline IS NULL THEN
+              NEW.sla_deadline := COALESCE(NEW.created_at, NOW()) + (sla_hours || ' hours')::INTERVAL;
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `).catch(() => {});
+
+    await query(`
       CREATE OR REPLACE FUNCTION set_sla_due_date()
       RETURNS TRIGGER AS $$
       DECLARE
@@ -123,14 +143,14 @@ const testConnection = async () => {
           IF NEW.priority = 'critical' THEN sla_hours := 15;
           ELSIF NEW.priority = 'high' THEN sla_hours := 24;
           ELSIF NEW.priority = 'medium' THEN sla_hours := 48;
-          ELSE sla_hours := 72;
+          ELSE sla_hours := 48;
           END IF;
           
-          NEW.sla_deadline := NOW() + (sla_hours || ' hours')::INTERVAL;
+          NEW.sla_deadline := COALESCE(NEW.created_at, NOW()) + (sla_hours || ' hours')::INTERVAL;
           RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
-    `);
+    `).catch(() => {});
 
     await query(`
       UPDATE tickets 
