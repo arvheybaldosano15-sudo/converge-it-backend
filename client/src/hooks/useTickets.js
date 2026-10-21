@@ -2,13 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/axios';
 import toast from 'react-hot-toast';
 
-// Clean up any legacy shared localStorage cache from previous versions
-try {
-  localStorage.removeItem('CONVERGE_TICKETS_MAIN_CACHE_V2');
-  localStorage.removeItem('CONVERGE_ASSIGNED_TICKETS_CACHE');
-  localStorage.removeItem('CONVERGE_TECH_TICKETS_CACHE');
-  localStorage.removeItem('CONVERGE_TECH_DASHBOARD_CACHE');
-} catch (_) {}
+const TECH_ASSIGNED_TICKETS_KEY = 'CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3';
+
+const getStoredTickets = (filters = {}) => {
+  // Return stored cache on frame 0 if no custom search/filter is active
+  const isDefaultFilter = !filters.search &&
+    (!filters.status || filters.status === 'all') &&
+    (!filters.priority || filters.priority === 'all') &&
+    (!filters.category || filters.category === 'all');
+  if (!isDefaultFilter) return undefined;
+
+  try {
+    const raw = localStorage.getItem(TECH_ASSIGNED_TICKETS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return undefined;
+};
 
 // ─── Query: Fetch Tickets List with Clean TanStack Query Cache ────────────────
 export const useTickets = (filters = {}) => {
@@ -18,8 +32,19 @@ export const useTickets = (filters = {}) => {
       const res = await api.get('/tickets', {
         params: { ...filters, fresh: true, _t: Date.now() },
       });
-      return res.data || [];
+      const data = res.data || [];
+      const isDefaultFilter = !filters.search &&
+        (!filters.status || filters.status === 'all') &&
+        (!filters.priority || filters.priority === 'all') &&
+        (!filters.category || filters.category === 'all');
+      if (isDefaultFilter && Array.isArray(data) && data.length > 0) {
+        try {
+          localStorage.setItem(TECH_ASSIGNED_TICKETS_KEY, JSON.stringify(data));
+        } catch (_) {}
+      }
+      return data;
     },
+    initialData: () => getStoredTickets(filters),
     staleTime: 0,                    // Always consider data stale → always refetch in background immediately
     refetchOnMount: 'always',        // Refetch every time component mounts (including page refresh / hard refresh)
     refetchOnWindowFocus: true,      // Refetch when tab/app regains focus on mobile

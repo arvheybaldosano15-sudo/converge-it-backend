@@ -9,7 +9,8 @@ const DataTable = ({
   emptyMessage = 'No records found',
   onRowClick,
 }) => {
-  if (isLoading) {
+  // Only show the blocking loader if there is literally no data yet (0ms instant display when cached data exists)
+  if (isLoading && (!data || data.length === 0)) {
     return <Loader text="Loading data..." />;
   }
 

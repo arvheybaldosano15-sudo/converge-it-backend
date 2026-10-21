@@ -15,13 +15,26 @@ const prefetchTechData = async () => {
   return null;
 };
 
+const prefetchTechTickets = async () => {
+  try {
+    const res = await api.get('/tickets', { params: { limit: 100, fresh: true } });
+    if (res && res.success && Array.isArray(res.data)) {
+      try {
+        localStorage.setItem('CONVERGE_TECH_ASSIGNED_TICKETS_CACHE_V3', JSON.stringify(res.data));
+      } catch (_) {}
+      return res.data;
+    }
+  } catch (_) {}
+  return [];
+};
+
 const TechnicianLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const queryClient = useQueryClient();
 
-  // Prefetch technician data on mount so all pages load instantly on navigation
+  // Prefetch technician dashboard & assigned tickets on mount so all pages load instantly on navigation
   useEffect(() => {
     queryClient.prefetchQuery({
       queryKey: ['dashboard', 'technician'],
@@ -29,6 +42,12 @@ const TechnicianLayout = () => {
         const res = await api.get('/dashboard/technician', { params: { fresh: true } });
         return res.data || {};
       },
+      staleTime: 0,
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: ['tickets', { limit: 100 }],
+      queryFn: prefetchTechTickets,
       staleTime: 0,
     });
   }, [queryClient]);
