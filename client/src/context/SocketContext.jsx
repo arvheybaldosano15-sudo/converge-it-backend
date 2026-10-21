@@ -254,6 +254,12 @@ export const SocketProvider = ({ children }) => {
           return; // DO NOT display notification or increment count on mobile for unassigned tickets or tickets assigned to others
         }
         setUnreadNotifications((prev) => prev + 1);
+        playNotificationChime();
+        triggerDesktopNotification({
+          title: `Ticket #${ticket.ticket_number} Assigned`,
+          body: `Ticket #${ticket.ticket_number} (${ticket.subject || 'Concern'}) has been assigned to you.`,
+          data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, assignedTo: assignedTechId, technicianName: techName }
+        });
         if (ticket?.ticket_number) {
           toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
         }
@@ -298,6 +304,12 @@ export const SocketProvider = ({ children }) => {
       }
 
       setUnreadNotifications((prev) => prev + 1);
+      playNotificationChime();
+      triggerDesktopNotification({
+        title: `Ticket #${ticket.ticket_number} Assigned`,
+        body: `Ticket #${ticket.ticket_number} (${ticket.subject || 'Concern'}) has been assigned to you (${techName || 'Technician'}).`,
+        data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, assignedTo: assignedTechId, technicianName: techName }
+      });
       if (ticket?.ticket_number) {
         toast.info(`Ticket #${ticket.ticket_number} assigned to you (${techName || user?.full_name || 'Technician'})`);
       }
