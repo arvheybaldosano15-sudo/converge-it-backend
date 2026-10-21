@@ -5,7 +5,7 @@ const logger = require('../config/logger');
 
 // Actual DB schema: id, user_id, title, message, type, reference_id, is_read, created_at
 // Valid type enum values: 'ticket', 'system', 'approval'
-exports.createNotification = async ({ userId, type, title, body, message, data }) => {
+exports.createNotification = async ({ userId, type, title, body, message, data, sendPush = false }) => {
   try {
     const content = body || message || '';
     const referenceId = data?.ticketId || data?.technicianId || null;
@@ -25,11 +25,17 @@ exports.createNotification = async ({ userId, type, title, body, message, data }
       emitToUser(userId, 'notification:new', notification);
 
       // 2. Real Mobile Device Push Notification (Lock-screen alert)
-      sendPushToUser(userId, {
-        title: title || 'Converge Support Notification',
-        body: content,
-        data: data || {}
-      }).catch(err => logger.error('Mobile Push error:', err.message));
+      // ONLY trigger mobile push for assigned tickets or when explicitly enabled
+      const isAssigned = (title && /assigned/i.test(title)) || (content && /assigned/i.test(content));
+      const shouldPush = Boolean(sendPush) || (isAssigned && !/created/i.test(title || ''));
+
+      if (shouldPush) {
+        sendPushToUser(userId, {
+          title: title || 'Converge Support Notification',
+          body: content,
+          data: data || {}
+        }).catch(err => logger.error('Mobile Push error:', err.message));
+      }
     }
     return notification;
   } catch (error) {
@@ -37,7 +43,7 @@ exports.createNotification = async ({ userId, type, title, body, message, data }
   }
 };
 
-exports.notifyAdmins = async ({ type, title, body, message, data }) => {
+exports.notifyAdmins = async ({ type, title, body, message, data, sendPush = false }) => {
   try {
     const adminRes = await query(`SELECT id FROM users WHERE role = 'admin' AND status = 'active'`);
     const admins = adminRes.rows || [];
@@ -47,7 +53,8 @@ exports.notifyAdmins = async ({ type, title, body, message, data }) => {
         type: type || 'ticket',
         title,
         body: body || message,
-        data
+        data,
+        sendPush: false // Tickets created via Messenger / manual creation never trigger mobile push notifications
       });
     }
   } catch (error) {

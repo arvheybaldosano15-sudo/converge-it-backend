@@ -270,7 +270,8 @@ exports.createTicket = async (req, res, next) => {
         type: 'ticket',
         title: `New Ticket Assigned #${ticket.ticket_number}`,
         body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${techName || 'Technician'}).`,
-        data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo }
+        data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: techName, assignedTo },
+        sendPush: true
       }).catch(() => {});
     }
 
@@ -348,7 +349,8 @@ exports.updateTicket = async (req, res, next) => {
         type: 'ticket',
         title: `Ticket #${updatedTicket.ticket_number} Assigned`,
         body: `Ticket #${updatedTicket.ticket_number} (${updatedTicket.subject || 'Concern'}) has been assigned to you (${techName}).`,
-        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo }
+        data: { ticketId: id, ticketNumber: updatedTicket.ticket_number, technicianName: techName, assignedTo },
+        sendPush: true
       }).catch(() => {});
 
       emitToUser(assignedTo, 'ticket:assigned', { ticket: { ...updatedTicket, assigned_technician_name: techName }, technicianName: techName });

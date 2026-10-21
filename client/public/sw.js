@@ -174,6 +174,16 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Mobile / Push Rule: Only show notifications for assigned tickets (or system/account updates)
+  // General ticket creation notifications (e.g. via Messenger or unassigned) must not trigger mobile push
+  const titleText = data.title || '';
+  const bodyText = data.body || '';
+  const isAssigned = /assigned/i.test(titleText) || /assigned/i.test(bodyText) || Boolean(data.data?.assignedTo);
+  const isCreated = /created/i.test(titleText) || /created/i.test(bodyText);
+  if (isCreated && !isAssigned) {
+    return;
+  }
+
   const options = {
     body: data.body,
     icon: data.icon || '/CSiLogo.png',

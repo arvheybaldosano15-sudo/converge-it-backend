@@ -302,7 +302,8 @@ const applyRecommendationHandler = async (req, res, next) => {
               type: 'ticket',
               title: `Ticket #${ticket.ticket_number} Assigned via AI`,
               body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${assignedTechName}).`,
-              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId }
+              data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: assignedTechName, assignedTo: techId },
+              sendPush: true
             }).catch(() => {});
 
             emitToUser(techId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: techId, status: 'in_progress', assigned_technician_name: assignedTechName }, technicianName: assignedTechName });
@@ -340,7 +341,8 @@ const applyRecommendationHandler = async (req, res, next) => {
                 type: 'ticket',
                 title: `Ticket #${ticket.ticket_number} Assigned via AI`,
                 body: `Ticket #${ticket.ticket_number} (${ticket.subject}) has been assigned to you (${fallbackTechName}).`,
-                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId }
+                data: { ticketId: ticket.id, ticketNumber: ticket.ticket_number, technicianName: fallbackTechName, assignedTo: fallbackTechId },
+                sendPush: true
               }).catch(() => {});
 
               emitToUser(fallbackTechId, 'ticket:assigned', { ticket: { ...ticket, assigned_technician_id: fallbackTechId, status: 'in_progress', assigned_technician_name: fallbackTechName }, technicianName: fallbackTechName });

@@ -138,8 +138,17 @@ export const SocketProvider = ({ children }) => {
           window.matchMedia('(display-mode: standalone)').matches ||
           window.navigator.standalone === true;
         const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isMobileDevice = isStandalone || isMobileUA;
 
-        if ((isStandalone || isMobileUA) && 'serviceWorker' in navigator) {
+        const isAssigned = /assigned/i.test(notifTitle) || /assigned/i.test(notifBody);
+
+        // RULE: On mobile devices, ONLY assigned tickets trigger an OS notification / vibration!
+        // Ticket creations (Messenger, unassigned tickets) must NOT trigger on mobile.
+        if (isMobileDevice && !isAssigned) {
+          return;
+        }
+
+        if (isMobileDevice && 'serviceWorker' in navigator) {
           // PWA/mobile: use Service Worker showNotification (supports vibrate, badge, actions)
           try {
             const reg = await navigator.serviceWorker.ready;
@@ -169,6 +178,27 @@ export const SocketProvider = ({ children }) => {
         if (notification?.user_id && String(notification.user_id) !== String(user.id)) {
           return;
         }
+      }
+
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+      const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isMobileDevice = isStandalone || isMobileUA;
+
+      const notifTitle = notification?.title || '';
+      const notifBody = notification?.body || notification?.message || '';
+      const isAssigned = /assigned/i.test(notifTitle) || /assigned/i.test(notifBody);
+
+      // On mobile devices, ONLY assigned tickets trigger alert sound and custom popup toast
+      // Tickets created via Messenger or unassigned tickets update unread counts silently
+      if (isMobileDevice && !isAssigned) {
+        if (notification?.type === 'ticket') {
+          setTimeout(() => fetchUnreadCount(), 500);
+        } else {
+          setUnreadNotifications((prev) => prev + 1);
+        }
+        return;
       }
 
       playNotificationChime();
@@ -232,6 +262,18 @@ export const SocketProvider = ({ children }) => {
 
       // Admins: receive notifications for all created tickets, showing technician name if assigned
       setUnreadNotifications((prev) => prev + 1);
+
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+      const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isMobileDevice = isStandalone || isMobileUA;
+
+      // On mobile devices, do not pop up toast notifications for unassigned/messenger ticket creations
+      if (isMobileDevice && !assignedTechId) {
+        return;
+      }
+
       if (ticket?.ticket_number) {
         if (techName) {
           toast.info(`New Ticket #${ticket.ticket_number} created (Assigned: ${techName})`);
